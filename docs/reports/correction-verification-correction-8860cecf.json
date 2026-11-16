@@ -1,0 +1,64 @@
+{
+  "network": "local",
+  "channel": "batterybusiness",
+  "id": "correction-8860cecf",
+  "transactions": [
+    {
+      "action": "lifecycle-corrections",
+      "txId": "38f65cbc5b1acaba3947e2a63c597e32728934eece62b105d9dcc787eef05149",
+      "stage": "ledger-verified"
+    },
+    {
+      "action": "lifecycle-correction-approvals",
+      "txId": "5645b49ec859e3ecaa29079a1bac7fbefaf0418b58390dc4b9cffd7a25e9fc04",
+      "stage": "ledger-verified"
+    },
+    {
+      "action": "lifecycle-correction-approvals",
+      "txId": "ba89d1e954abe6a736cfbb52d9e3b22de6ea4452d50e89d773e83769e63796db",
+      "stage": "ledger-verified"
+    },
+    {
+      "action": "lifecycle-correction-applications",
+      "txId": "7e7fa527d0e0edcbfcfc0d31c1e14d66a9cb01b9a159b99a090734df616d2c61",
+      "stage": "ledger-verified"
+    },
+    {
+      "action": "lifecycle-corrections",
+      "txId": "d3692324cc185f048da6b311a28beba7e8a8d5e14e4f41100a614210547bfb48",
+      "stage": "ledger-verified"
+    },
+    {
+      "action": "lifecycle-correction-approvals",
+      "txId": "eb2642b1d10576ffb399d509e4162679aac45fe9be2e2c03215f7ceb991c1727",
+      "stage": "ledger-verified"
+    },
+    {
+      "action": "lifecycle-correction-approvals",
+      "txId": "60b217c744f9e003072d408777dd9f5f1ccbd47bb71058cbef48fdee274acb07",
+      "stage": "ledger-verified"
+    },
+    {
+      "action": "lifecycle-correction-approvals",
+      "txId": "ffa7fc612c2f0d0569cde16cc625b2c250e9a9380adda6c05162b310fa20b0f2",
+      "stage": "ledger-verified"
+    },
+    {
+      "action": "lifecycle-correction-applications",
+      "txId": "b48f7d4ac08d387cd8dab92e4ad7fb7c7fbfb4240d1f344bfaf5dd2d544714a9",
+      "stage": "ledger-verified"
+    },
+    {
+      "action": "assembly",
+      "txId": "fa81512a79319651f94119444c9f6fdb71dd8b4b6ca8e76c5ef5365d1bc8ccbc",
+      "stage": "ledger-verified"
+    }
+  ],
+  "result": "PASS",
+  "independentCorrectionReviews": true,
+  "processedNeverRevived": true,
+  "originalHistoryRetainedOnFourPeers": true,
+  "completeDisassembly": true,
+  "childAgeNotInvented": true,
+  "completedAt": "2026-11-16T01:20:03.769Z"
+}

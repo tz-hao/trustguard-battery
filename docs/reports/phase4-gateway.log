@@ -1,0 +1,10 @@
+
+> trustguard-battery@0.1.0 verify:fabric
+> npm run verify:fabric --workspace @trustguard/api
+
+
+> @trustguard/api@0.1.0 verify:fabric
+> node scripts/verify-fabric.mjs
+
+CreateAsset: VALID, block=6, both MSP endorsements and both peer ledger reads verified; tx=cfc3c9985cf662c920dc534c81b688d35be6c5837c4d4258cd118656a118f27b
+TransferAsset: VALID, block=7, both MSP endorsements and both peer ledger reads verified; tx=1abe41ebb4fae90c460b642ceeb3cedf59079feeaac6928b8a9eec2f2cdef8f6

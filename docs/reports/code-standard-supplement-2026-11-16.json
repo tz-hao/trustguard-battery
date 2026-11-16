@@ -1,0 +1,53 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-11-16T10:06:10.502353+08:00",
+  "scope": "用户补充 PDF 后的 24 位新产品编码规则补充；前端不实现",
+  "standard": {
+    "id": "GB/T 34014-2017+A1:2026",
+    "pdf": "docs/sources/GBT_34014-2017_with_amendment_1.pdf",
+    "sha256": "dfc7df9019e3aef3d4d2c86b1443df1ab4592d1e2b3e81c20202c3c406d9426b",
+    "amendmentEffectiveDate": "2026-08-01",
+    "dateInference": "30-year cycle; full date requires source evidence"
+  },
+  "localDeployment": {
+    "channel": "batterybusiness",
+    "chaincode": "battery",
+    "version": "1.3",
+    "sequence": 4,
+    "peerOrganizations": 4,
+    "ruleProof": {
+      "verified": true,
+      "version": "1.3",
+      "sequence": "4",
+      "packageId": "battery_1.3:d6d1f3fbb91ac4105fad39681d32882a87f63f8a9479ce6ad6eb614b19b47665",
+      "ruleSourceHash": "b94933f3b3b590a33705f1642a0147ea48e8e461970d655d1c0bee86727f311b",
+      "testSourceHash": "427cd8470934b93663f8a5ebc15968856913d16c16915aab2480d514360846b4"
+    }
+  },
+  "checks": {
+    "goTests": 25,
+    "goVet": "PASS",
+    "nodeSubtests": 7,
+    "apiBuild": "PASS",
+    "propertyCases": 1000,
+    "codingIntegration": "PASS",
+    "verifiedBusinessTransactions": 42,
+    "blockedAttackScenarios": 8,
+    "legacyProvisionalReads": "PASS",
+    "protectedResourcesPreserved": "PASS"
+  },
+  "evidence": {
+    "coding": "docs/reports/code-standard-verification.json",
+    "unit": "docs/reports/code-standard-unit-tests.json",
+    "deployment": "docs/reports/business-chaincode-deployment-1.3.json",
+    "business": "docs/reports/business-demo-demo-d4a12aa7.json",
+    "preservation": "docs/reports/code-standard-preservation-2026-11-16.json"
+  },
+  "boundaries": [
+    "formal manufacturer registration remains disabled pending real allocation/qualification/filing evidence",
+    "all demonstration assets remain explicitly simulated",
+    "only 24-character new-product fields; echelon recoding and physical barcode/RFID conformity are outside this delivery",
+    "no testnet/mainnet or remote deployment",
+    "prior full-backend acceptance JSON retained as a historical version 1.2 snapshot"
+  ]
+}

@@ -1,0 +1,496 @@
+{
+  "network": "local",
+  "channel": "batterybusiness",
+  "chaincode": "battery",
+  "runId": "demo-edafb836",
+  "simulation": true,
+  "transactions": [
+    {
+      "action": "makers",
+      "identity": "cell-admin",
+      "requestId": "demo-edafb836-request-0",
+      "txId": "22dcce32e506a0ece59b99ee546f65a542f1ebb59eeadb845afc37a1ebe7c6d3",
+      "stage": "ledger-verified",
+      "blockNumber": "7",
+      "latencyMs": 1170.6004919999998
+    },
+    {
+      "action": "makers",
+      "identity": "pack-admin",
+      "requestId": "demo-edafb836-request-1",
+      "txId": "f315e8631a07a0948e506ecacace7a8db3c8af7f017767cea9e865bd9a6999d2",
+      "stage": "ledger-verified",
+      "blockNumber": "8",
+      "latencyMs": 1107.763214
+    },
+    {
+      "action": "material-lots",
+      "identity": "cell-manufacturer",
+      "requestId": "demo-edafb836-request-2",
+      "txId": "d2d14d5bfa17ee9b94eba42f120ecb067993dfcff03f28e79e97d804e69ead67",
+      "stage": "ledger-verified",
+      "blockNumber": "9",
+      "latencyMs": 1143.9807309999997
+    },
+    {
+      "action": "batches",
+      "identity": "cell-manufacturer",
+      "requestId": "demo-edafb836-request-3",
+      "txId": "a9513827ae1cb5b05df92a63a81b9ffddfd905fd888676413c35fc3b41e1408a",
+      "stage": "ledger-verified",
+      "blockNumber": "10",
+      "latencyMs": 1086.6737869999997
+    },
+    {
+      "action": "assets",
+      "identity": "cell-manufacturer",
+      "requestId": "demo-edafb836-request-4",
+      "txId": "7ca03bb64d5c852ca7951ffede1e629e3ce4425238e35b7f41e8b9df8000a151",
+      "stage": "ledger-verified",
+      "blockNumber": "11",
+      "latencyMs": 1102.4590450000005
+    },
+    {
+      "action": "batches",
+      "identity": "cell-manufacturer",
+      "requestId": "demo-edafb836-request-5",
+      "txId": "394b2b0f654f237052160e48e6e07d08fbe53e100889dba2ba2d7b308364de7a",
+      "stage": "ledger-verified",
+      "blockNumber": "12",
+      "latencyMs": 1083.5810210000009
+    },
+    {
+      "action": "assets",
+      "identity": "cell-manufacturer",
+      "requestId": "demo-edafb836-request-6",
+      "txId": "2501d69e512174bf916746e80896e41eb9eedaadda9508adf933028bc706fa00",
+      "stage": "ledger-verified",
+      "blockNumber": "13",
+      "latencyMs": 1096.077577
+    },
+    {
+      "action": "assets",
+      "identity": "pack-manufacturer",
+      "requestId": "demo-edafb836-request-7",
+      "txId": "a5eb32c437ee88c0f3cc8fefc45791483c3e0215739ba8703d71a837e3fd278b",
+      "stage": "ledger-verified",
+      "blockNumber": "14",
+      "latencyMs": 1110.2560620000004
+    },
+    {
+      "action": "assets",
+      "identity": "pack-manufacturer",
+      "requestId": "demo-edafb836-request-8",
+      "txId": "29d2335f6d8e592632863ca25ac934ab2a470682614d3b89e40ae54ffe80449d",
+      "stage": "ledger-verified",
+      "blockNumber": "15",
+      "latencyMs": 1102.5837319999991
+    },
+    {
+      "action": "assembly-authorizations",
+      "identity": "cell-manufacturer",
+      "requestId": "demo-edafb836-request-9",
+      "txId": "3655facc5c063aea9ad5773c46734aefeede99a758bc4449cd4d3c37c4dcde56",
+      "stage": "ledger-verified",
+      "blockNumber": "16",
+      "latencyMs": 1081.1682279999986
+    },
+    {
+      "action": "assembly",
+      "identity": "pack-assembler",
+      "requestId": "demo-edafb836-request-10",
+      "txId": "92b2b93fc71b01baf6cf06c67edcebf9d0d5b8ae782511b3e1e03b03757d7991",
+      "stage": "ledger-verified",
+      "blockNumber": "17",
+      "latencyMs": 1098.4785759999995
+    },
+    {
+      "action": "assembly",
+      "identity": "pack-assembler",
+      "requestId": "demo-edafb836-request-11",
+      "txId": "dc8b9ee2a53d1b5a5858a5790952103a9f7a4c265fd44c6d18b51e0ba7ed7af1",
+      "stage": "ledger-verified",
+      "blockNumber": "18",
+      "latencyMs": 1102.8399310000004
+    },
+    {
+      "action": "inspections",
+      "identity": "lab-inspector",
+      "requestId": "demo-edafb836-request-14",
+      "txId": "c52b6f40533bf7ef7bd05b035f7e71bc3d59f39a88d9b95b81fe1f4627ac7c25",
+      "stage": "ledger-verified",
+      "blockNumber": "19",
+      "latencyMs": 1109.4270639999995
+    },
+    {
+      "action": "inspections",
+      "identity": "lab-inspector",
+      "requestId": "demo-edafb836-request-16",
+      "txId": "b89df93306188a64261a1f00042fe8298e2c0fcfb94bcc817eb2e50aedfb964c",
+      "stage": "ledger-verified",
+      "blockNumber": "20",
+      "latencyMs": 1108.7447070000017
+    },
+    {
+      "action": "inspections",
+      "identity": "lab-inspector",
+      "requestId": "demo-edafb836-request-18",
+      "txId": "792bde029c874f0b84ec491c8e912c16e41905e8839f6fd3d040238fceb71a52",
+      "stage": "ledger-verified",
+      "blockNumber": "21",
+      "latencyMs": 1105.3937240000014
+    },
+    {
+      "action": "inspections",
+      "identity": "lab-inspector",
+      "requestId": "demo-edafb836-request-20",
+      "txId": "a7be9b922f7d8e9fc4dec35e0880429fe8cbe647ebdf978ea5262af6f6e2d3e2",
+      "stage": "ledger-verified",
+      "blockNumber": "22",
+      "latencyMs": 1101.4179430000004
+    },
+    {
+      "action": "release-request",
+      "requestId": "demo-edafb836-request-22",
+      "txId": "c0dd40b1e6fd56c8ac4cd1cad190ccbb0d3a814dc9e4858174c9de84606f5276",
+      "stage": "ledger-verified",
+      "blockNumber": "23"
+    },
+    {
+      "action": "release-approvals",
+      "identity": "cell-approver",
+      "requestId": "demo-edafb836-request-23",
+      "txId": "824c72b326798362c77d682be4913b4523163923e3c3b6093647340263db5a74",
+      "stage": "ledger-verified",
+      "blockNumber": "24",
+      "latencyMs": 1166.8008120000013
+    },
+    {
+      "action": "release-approvals",
+      "identity": "lab-approver",
+      "requestId": "demo-edafb836-request-24",
+      "txId": "4940a2d069325546ee3fa45fdf7c92c0616c5cd96d2d655a50cdd413838fc147",
+      "stage": "ledger-verified",
+      "blockNumber": "25",
+      "latencyMs": 1117.0378300000011
+    },
+    {
+      "action": "release-approvals",
+      "identity": "pack-approver",
+      "requestId": "demo-edafb836-request-25",
+      "txId": "cf642f6bfd94b137e72626f02dfc710d2688584e39894750fd44eba2615875a0",
+      "stage": "ledger-verified",
+      "blockNumber": "26",
+      "latencyMs": 1128.5417329999982
+    },
+    {
+      "action": "release-approvals",
+      "identity": "recycle-approver",
+      "requestId": "demo-edafb836-request-26",
+      "txId": "54135f7884f62891146c1ce3a91b4920bef4b4d7908620987b41bdfdcdf73353",
+      "stage": "ledger-verified",
+      "blockNumber": "27",
+      "latencyMs": 1120.6700759999985
+    },
+    {
+      "action": "release-finalizations",
+      "identity": "pack-release",
+      "requestId": "demo-edafb836-request-27",
+      "txId": "cd57eb4e86a5b94f61f1bb3d013c1e594db28d0e96bc6723ef797e27d9fa3928",
+      "stage": "ledger-verified",
+      "blockNumber": "28",
+      "latencyMs": 1102.3152840000002
+    },
+    {
+      "action": "installations",
+      "identity": "pack-operator",
+      "requestId": "demo-edafb836-request-28",
+      "txId": "d17752434fe47d0f6a9a4410c26e2ec9503c26d86123496109dc95f5fac9062a",
+      "stage": "ledger-verified",
+      "blockNumber": "29",
+      "latencyMs": 1136.4481339999984
+    },
+    {
+      "action": "first-use",
+      "identity": "pack-operator",
+      "requestId": "demo-edafb836-request-29",
+      "txId": "ff11ff80cccf6ef9823f882e4c178a08c734954bdc2786dde584ffe576c0c12c",
+      "stage": "ledger-verified",
+      "blockNumber": "30",
+      "latencyMs": 1093.1905310000002
+    },
+    {
+      "action": "batches",
+      "identity": "cell-manufacturer",
+      "requestId": "demo-edafb836-request-30",
+      "txId": "169f161989b5e0823901d421ba6ba3097b7dc56f8a8bfa2d690c8c9c403f27cf",
+      "stage": "ledger-verified",
+      "blockNumber": "31",
+      "latencyMs": 1084.7661740000003
+    },
+    {
+      "action": "assets",
+      "identity": "cell-manufacturer",
+      "requestId": "demo-edafb836-request-31",
+      "txId": "d1d6de40de29c1999c2fe5794376df66f434b1f4c4861f6a8f737ac928769d76",
+      "stage": "ledger-verified",
+      "blockNumber": "32",
+      "latencyMs": 1098.338083999999
+    },
+    {
+      "action": "assets",
+      "identity": "pack-manufacturer",
+      "requestId": "demo-edafb836-request-32",
+      "txId": "747acbb849452e3e39a994c3e985578e20925d3a0c255158b6c8905526bfa8a2",
+      "stage": "ledger-verified",
+      "blockNumber": "33",
+      "latencyMs": 1101.0988230000003
+    },
+    {
+      "action": "assets",
+      "identity": "pack-manufacturer",
+      "requestId": "demo-edafb836-request-33",
+      "txId": "a6d50152bf0b396ffaf14dbfbe16fcf721ecf11d4dd453ba7380dfa1dfae3276",
+      "stage": "ledger-verified",
+      "blockNumber": "34",
+      "latencyMs": 1098.5717919999988
+    },
+    {
+      "action": "assembly-authorizations",
+      "identity": "cell-manufacturer",
+      "requestId": "demo-edafb836-request-34",
+      "txId": "3bb09cd0342f2bc69f21ebd6d38056f95df2831c1a9a364ed856163744caecf2",
+      "stage": "ledger-verified",
+      "blockNumber": "35",
+      "latencyMs": 1096.9590869999956
+    },
+    {
+      "action": "assembly",
+      "identity": "pack-assembler",
+      "requestId": "demo-edafb836-request-35",
+      "txId": "2bf7c8ffcdfa022e5c6a7f4c2ffa47875a86e6e92a42c7ba9defa14aaf998884",
+      "stage": "ledger-verified",
+      "blockNumber": "36",
+      "latencyMs": 1113.8964520000009
+    },
+    {
+      "action": "assembly",
+      "identity": "pack-assembler",
+      "requestId": "demo-edafb836-request-36",
+      "txId": "fc34546b533fd9ca7cf49f44e4fb42b3f3c0b83ab91da46dc457f55cb6157b89",
+      "stage": "ledger-verified",
+      "blockNumber": "37",
+      "latencyMs": 1103.4035030000014
+    },
+    {
+      "action": "inspections",
+      "identity": "lab-inspector",
+      "requestId": "demo-edafb836-request-39",
+      "txId": "8cd33259527b61a40e1c69ea06244a3564d2206413f99c81971d4962731877fe",
+      "stage": "ledger-verified",
+      "blockNumber": "38",
+      "latencyMs": 1071.4572879999978
+    },
+    {
+      "action": "inspections",
+      "identity": "lab-inspector",
+      "requestId": "demo-edafb836-request-41",
+      "txId": "3659f9e36e1f1f7d1f7229208e1e31821ee352980af719289b1eee4077df04cb",
+      "stage": "ledger-verified",
+      "blockNumber": "39",
+      "latencyMs": 1105.7115800000029
+    },
+    {
+      "action": "inspections",
+      "identity": "lab-inspector",
+      "requestId": "demo-edafb836-request-43",
+      "txId": "d4ccdace01b4c9a010f222cdb0d44e3a3cb35289185b4c1a7c3ef89ec607d00c",
+      "stage": "ledger-verified",
+      "blockNumber": "40",
+      "latencyMs": 1078.8063450000045
+    },
+    {
+      "action": "release-request",
+      "requestId": "demo-edafb836-request-45",
+      "txId": "65b209c35b2fb6f512b154955825325ec805fca2c015cf1d6a53bbcae4953a25",
+      "stage": "ledger-verified",
+      "blockNumber": "41"
+    },
+    {
+      "action": "release-approvals",
+      "identity": "cell-approver",
+      "requestId": "demo-edafb836-request-46",
+      "txId": "c4349009a0ef85e50e72399e1d21bc16c3e40e107946fa70876ae655acb13db6",
+      "stage": "ledger-verified",
+      "blockNumber": "42",
+      "latencyMs": 1077.1667680000028
+    },
+    {
+      "action": "release-approvals",
+      "identity": "lab-approver",
+      "requestId": "demo-edafb836-request-47",
+      "txId": "8a4bea663149ffa40526297d73f7d129861fe6d340377c93edec291964978d8f",
+      "stage": "ledger-verified",
+      "blockNumber": "43",
+      "latencyMs": 1093.7343669999973
+    },
+    {
+      "action": "release-approvals",
+      "identity": "pack-approver",
+      "requestId": "demo-edafb836-request-48",
+      "txId": "fbb00804a35020db1533c92adfeb77c28fcb0e4075bd26a2e818cc25fa7bea4e",
+      "stage": "ledger-verified",
+      "blockNumber": "44",
+      "latencyMs": 1095.9909590000025
+    },
+    {
+      "action": "release-finalizations",
+      "identity": "pack-release",
+      "requestId": "demo-edafb836-request-49",
+      "txId": "a768cb1da150ce761354a09956740feefa7a447b35e635c64005defbf152ca9a",
+      "stage": "ledger-verified",
+      "blockNumber": "45",
+      "latencyMs": 1095.466253999999
+    },
+    {
+      "action": "retirements",
+      "identity": "pack-operator",
+      "requestId": "demo-edafb836-request-50",
+      "txId": "2a689992155859e59ee21551a45ce6ce49a564acb33a4cc095ab18eaf185eb44",
+      "stage": "ledger-verified",
+      "blockNumber": "46",
+      "latencyMs": 1111.8254510000043
+    },
+    {
+      "action": "transfers",
+      "identity": "pack-custodian",
+      "requestId": "demo-edafb836-request-51",
+      "txId": "738ae5a4ffe0c080e2b69e53946e9721058082507c6c2083d3d200e96a279dd3",
+      "stage": "ledger-verified",
+      "blockNumber": "47",
+      "latencyMs": 1115.6634649999978
+    },
+    {
+      "action": "transfer-confirmations",
+      "identity": "recycle-custodian",
+      "requestId": "demo-edafb836-request-53",
+      "txId": "5d1c073be2082afb7cde26a642341bd47e6f8878d724f19dc85a413d5aac5059",
+      "stage": "ledger-verified",
+      "blockNumber": "48",
+      "latencyMs": 1126.1363589999964
+    },
+    {
+      "action": "recycling-receipts",
+      "identity": "recycle-recycler",
+      "requestId": "demo-edafb836-request-54",
+      "txId": "43c102f668640890b83780638d6b7c7785eff763e8ef9a64ce5aed81484f0d77",
+      "stage": "ledger-verified",
+      "blockNumber": "49",
+      "latencyMs": 1133.9736709999997
+    },
+    {
+      "action": "scrap-confirmations",
+      "identity": "recycle-recycler",
+      "requestId": "demo-edafb836-request-55",
+      "txId": "5ab061c6687f294a245a0aa94cbcda9ed42df244cba5247e046f43658f732161",
+      "stage": "ledger-verified",
+      "blockNumber": "50",
+      "latencyMs": 1106.6945540000015
+    }
+  ],
+  "attacks": [
+    {
+      "id": "A1",
+      "result": "BLOCKED",
+      "verifiedStateUnchanged": true
+    },
+    {
+      "id": "A2",
+      "result": "BLOCKED",
+      "verifiedStateUnchanged": true
+    },
+    {
+      "id": "A3",
+      "result": "BLOCKED",
+      "verifiedStateUnchanged": true
+    },
+    {
+      "id": "A4",
+      "result": "BLOCKED",
+      "verifiedStateUnchanged": true
+    },
+    {
+      "id": "A5",
+      "result": "BLOCKED",
+      "verifiedStateUnchanged": true
+    },
+    {
+      "id": "A6",
+      "result": "BLOCKED",
+      "verifiedStateUnchanged": true
+    },
+    {
+      "id": "A7",
+      "result": "BLOCKED",
+      "verifiedStateUnchanged": true
+    },
+    {
+      "id": "A8",
+      "result": "BLOCKED",
+      "verifiedStateUnchanged": true
+    }
+  ],
+  "samples": [
+    {
+      "code": "SMACB010000001E114481563",
+      "id": "demo-edafb836-standalone",
+      "state": "REGISTERED",
+      "statusLabel": "未装配",
+      "serviceAge": null,
+      "scrapped": false,
+      "simulation": true
+    },
+    {
+      "code": "DMAPE010000001E114481566",
+      "id": "demo-edafb836-live-pack",
+      "state": "IN_USE",
+      "statusLabel": "使用中",
+      "serviceAge": {
+        "years": 2,
+        "months": 4,
+        "days": 14
+      },
+      "scrapped": false,
+      "simulation": true
+    },
+    {
+      "code": "DMAPB010000001E114481569",
+      "id": "demo-edafb836-retired-pack",
+      "state": "PROCESSED",
+      "statusLabel": "已报废",
+      "serviceAge": null,
+      "scrapped": true,
+      "simulation": true
+    }
+  ],
+  "startedAt": "2026-11-15T12:26:27.212Z",
+  "fileRevocation": {
+    "result": "PASS",
+    "newDownloadsDenied": true
+  },
+  "trace": {
+    "result": "PASS",
+    "precision": 1,
+    "recall": 1,
+    "indexedBlock": "50",
+    "ledgerHeight": "51"
+  },
+  "performance": {
+    "transactions": 44,
+    "p50Ms": 1102.8399310000004,
+    "p95Ms": 1143.9807309999997,
+    "scope": "Sequential local four-peer, one-orderer development workload only"
+  },
+  "result": "PASS",
+  "completedAt": "2026-11-15T12:27:17.122Z"
+}

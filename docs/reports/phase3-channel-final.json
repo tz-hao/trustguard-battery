@@ -1,0 +1,48 @@
+{
+  "channel": "trustguardchannel",
+  "chaincode": "basic",
+  "peers": [
+    {
+      "mspId": "Org1MSP",
+      "endpoint": "localhost:7051",
+      "channelInfo": {
+        "height": 8,
+        "currentBlockHash": "zsBkKrBdLhzpSPyvauoUquIuZgoVnzHbH0dGPzIaCVY=",
+        "previousBlockHash": "XJW0AoTLCvI0o4wXyeSa2epRYXikYYc5VZf6e3FQgKM="
+      },
+      "committedChaincode": {
+        "sequence": 1,
+        "version": "1.0",
+        "endorsement_plugin": "escc",
+        "validation_plugin": "vscc",
+        "validation_parameter": "CiwSDBIKCAISAggAEgIIARoNEgsKB09yZzFNU1AQAxoNEgsKB09yZzJNU1AQAw==",
+        "collections": {},
+        "approvals": {
+          "Org1MSP": true,
+          "Org2MSP": true
+        }
+      }
+    },
+    {
+      "mspId": "Org2MSP",
+      "endpoint": "localhost:9051",
+      "channelInfo": {
+        "height": 8,
+        "currentBlockHash": "zsBkKrBdLhzpSPyvauoUquIuZgoVnzHbH0dGPzIaCVY=",
+        "previousBlockHash": "XJW0AoTLCvI0o4wXyeSa2epRYXikYYc5VZf6e3FQgKM="
+      },
+      "committedChaincode": {
+        "sequence": 1,
+        "version": "1.0",
+        "endorsement_plugin": "escc",
+        "validation_plugin": "vscc",
+        "validation_parameter": "CiwSDBIKCAISAggAEgIIARoNEgsKB09yZzFNU1AQAxoNEgsKB09yZzJNU1AQAw==",
+        "collections": {},
+        "approvals": {
+          "Org1MSP": true,
+          "Org2MSP": true
+        }
+      }
+    }
+  ]
+}

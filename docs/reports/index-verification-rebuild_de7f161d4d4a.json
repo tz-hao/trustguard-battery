@@ -1,0 +1,15 @@
+{
+  "network": "local",
+  "channel": "batterybusiness",
+  "result": "PASS",
+  "isolatedSchema": "rebuild_de7f161d4d4a",
+  "assets": 7,
+  "initialHeight": "57",
+  "checkpointResumeVerified": true,
+  "rebuiltStateEqualsPrimary": true,
+  "duplicateDeliveryDeduplicated": true,
+  "interruptedTransactionRolledBack": true,
+  "concurrentDeliveryDeduplicated": true,
+  "anchorTx": "f378e905b7297c7ef05c926747f8694afadc560b05ec872c8ae4974fcb387961",
+  "completedAt": "2026-11-15T12:36:54.926Z"
+}

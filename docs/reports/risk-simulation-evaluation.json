@@ -1,0 +1,30 @@
+{
+  "simulation": true,
+  "seed": 20261115,
+  "modelVersion": "quality-iforest-v1",
+  "trainingSamples": 600,
+  "testSamples": 200,
+  "batchOverlap": 0,
+  "model": {
+    "precision": 0.7352941176470589,
+    "recall": 1.0,
+    "f1": 0.847457627118644,
+    "falsePositiveRate": 0.05142857142857143,
+    "tp": 25,
+    "fp": 9,
+    "tn": 166,
+    "fn": 0
+  },
+  "ruleBaseline": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "falsePositiveRate": 0.0,
+    "tp": 25,
+    "fp": 0,
+    "tn": 175,
+    "fn": 0
+  },
+  "latencyP95Ms": 4.869259895349386,
+  "limitations": "Synthetic held-out batches only; not evidence of industrial accuracy or safety certification."
+}

@@ -1,0 +1,9 @@
+{
+  "network": "local",
+  "result": "PASS",
+  "activatedPreviewReplayPreserved": true,
+  "revocationReplayPreserved": true,
+  "originalRevocationTimeUnchanged": true,
+  "conflictingPayloadRejected": true,
+  "completedAt": "2026-11-16T01:42:05.638Z"
+}

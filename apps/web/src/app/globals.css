@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+:root {
+  --navy-950: #0b192c;
+  --navy-900: #10243a;
+  --navy-800: #17324f;
+  --tech-blue: #2563eb;
+  --teal-core: #0f9d8a;
+  --bg-main: #f4f7fa;
+  --bg-card: #ffffff;
+  --bg-subtle: #edf2f7;
+  --text-main: #172b3a;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --border-color: #dce4ee;
+  --status-success: #159b76;
+  --status-warning: #d99a2b;
+  --status-danger: #dc5353;
+  --status-info: #3185d8;
+}
+
+html,
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Deep Navy Industrial Control Center Surface (Dashboard & Security Lab) */
+.navy-control-panel {
+  background-color: var(--navy-950);
+  background-image:
+    linear-gradient(to right, rgba(49, 133, 216, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(49, 133, 216, 0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+  border: 1px solid #1c3554;
+  border-radius: 12px;
+  color: #f1f5f9;
+}
+
+.navy-subcard {
+  background-color: var(--navy-900);
+  border: 1px solid #1e3a5c;
+  border-radius: 10px;
+}
+
+/* Clean Enterprise SaaS Workspace Card */
+.card-surface {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(16, 36, 58, 0.04);
+}
+
+.subtle-surface {
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+.page-header-strip {
+  background-color: var(--navy-900);
+  border-radius: 12px;
+  color: #ffffff;
+}
+
+.trace-dark-grid {
+  background-color: #0b192c;
+  background-image:
+    linear-gradient(to right, rgba(49, 133, 216, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(49, 133, 216, 0.07) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.32);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.55);
+}

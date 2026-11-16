@@ -1,0 +1,15 @@
+{
+  "network": "local",
+  "channel": "batterybusiness",
+  "chaincode": "battery",
+  "runId": "demo-84200965",
+  "simulation": true,
+  "transactions": [],
+  "attacks": [],
+  "samples": [],
+  "startedAt": "2026-11-15T12:25:52.927Z",
+  "result": "FAIL",
+  "failure": {
+    "code": "ECONNREFUSED"
+  }
+}

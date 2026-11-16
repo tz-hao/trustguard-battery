@@ -1,0 +1,163 @@
+{
+  "network": "local",
+  "channel": "batterybusiness",
+  "id": "policy-check-03762935",
+  "result": "PASS",
+  "baseVersion": 2,
+  "activeVersion": 3,
+  "preview": {
+    "report": {
+      "id": "policy-check-03762935",
+      "policyHash": "21559cc9497722d38e1a1714f8903fb1bbeb044e8eff22805c67f6d4bc13bf58",
+      "baseVersion": 2,
+      "candidateVersion": 3,
+      "passed": true,
+      "ruleProof": {
+        "verified": true,
+        "version": "1.2",
+        "sequence": "3",
+        "packageId": "battery_1.2:a6567b7b1d8caff875d1f6efc9b92384d72e53bd85f21a73e45b6ac4d90ffbf3",
+        "ruleSourceHash": "8a82f46623045285cf208dbd3650263dc190abc7e7a7ecec8faf5555363d7f72",
+        "testSourceHash": "d06513b46f61e41097102d6983e53ff2e4260b5f0aa522b859e67a038c7dde63"
+      },
+      "tests": [
+        {
+          "name": "TestEnrollmentCertificateValidityIsEnforced",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestLifecycleCorrectionRequiresIndependentReviewAndPreservesHistory",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestCorrectionCannotCreateScrapOrBreakChronology",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestCorrectionExpiresAndAssetChangesInvalidateVotes",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestAncestryKeepsChildUsageUnknownAndExposesParentContext",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestCompleteDisassemblyClosesEdgesWithoutDeletingHistory",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestFullLifecycleAndImmutableScrap",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestQualityAndAuthorizationGates",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestApprovalReplayAndRiskBinding",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestRiskExpiryAndHighRiskReview",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestIdempotencyAndConflictingPayload",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestBindingAndHistoricalEdges",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestManufacturerAndCodeUniqueness",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestLifecycleCannotSkipOrRewriteEvents",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestPolicyCannotWeakenSecurityAndRequiresEveryOrganization",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestProvisionalParserNeverClaimsCompliance",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestTransferCanContinueAfterCompletedTransfer",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestReassemblyRequiresNewParentInspection",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestInstallationRejectsQualityChangedAfterRelease",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestParserFieldsPreserveOriginalCode",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestStrictJSONRejectsIdentityInjection",
+          "result": "pass",
+          "elapsedSeconds": 0
+        }
+      ],
+      "changedFields": [
+        "version"
+      ],
+      "authorizationDifference": {
+        "before": [
+          "CellOrgMSP",
+          "LabOrgMSP",
+          "PackOrgMSP"
+        ],
+        "after": [
+          "CellOrgMSP",
+          "LabOrgMSP",
+          "PackOrgMSP"
+        ]
+      },
+      "newUnauthorizedReleasePathsInPresetCases": 0,
+      "normalFlowPassed": true,
+      "scope": "isolated in-memory ledger executing the deployed Go domain rules; no Fabric transactions sent"
+    },
+    "testsHash": "783ac6fe6d95157d6f6baec7ab39549a0e9dda303518f70dd451387e3581e209",
+    "signature": "QkTEeUanuvaZ1DZNih/CfWKyUYUBM3oGjAi8z2AFyjeUr6zxi8eA7U2xZWf6C8/ykgUa0gZAvxIklhxA3IxFDg=="
+  },
+  "proposalTx": "f8c8db376596fc4b1779c488f6624d2a98ce5252d14c2ad1e96888a50b377d60",
+  "approvalTxs": [
+    "01649feddfc651ebdc87e06788a8af3214226efb6af9d05a1d99c01fb7e86ff0",
+    "4a4d645fe30dc7d2a4e9bd30069aa449d98d5d49de1cc133e797839da630ff23",
+    "71dce000055de7c42478e5195c19d05ccb27906a53de0dfe634b7a63072cfa03",
+    "d938f75d1bff38cc6d943a4c0a860a9a569a139c4913d286a6dd614b181a7b0d"
+  ],
+  "activationTx": "bbd796a6e9f528dc0f878bf20597eaa64390673360c5908c4bd88e9cfd9b779c",
+  "insufficientApprovalsBlocked": true,
+  "signatureVerified": true,
+  "completedAt": "2026-11-16T01:18:55.363Z"
+}

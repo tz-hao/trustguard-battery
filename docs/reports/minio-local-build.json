@@ -1,0 +1,10 @@
+{
+  "network": "local",
+  "image": "trustguard/minio:2025-10-15",
+  "imageId": "sha256:ce1510789a911961defcbfdeab34bed8e0594759b4784e1dd2cbfef013cfe96d",
+  "source": "https://github.com/minio/minio/releases/tag/RELEASE.2025-10-15T17-29-55Z",
+  "revision": "9e49d5e7a648",
+  "binarySha256": "921702620a61621f3a842bd96dfade828ce991b5d07869b556fd3bae8f727cef",
+  "static": true,
+  "note": "Community source repository is archived. This pinned development build is not a production support claim."
+}

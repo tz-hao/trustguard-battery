@@ -1,0 +1,20 @@
+{
+  "network": "local",
+  "channel": "batterybusiness",
+  "name": "mvcc-5a7200bc",
+  "result": "PASS",
+  "first": {
+    "txId": "fd41b1f00a2b39559a78fcccd991ad3527257000f6f96be64cbbdc4b5b647107",
+    "stage": "ledger-verified",
+    "blockNumber": "127"
+  },
+  "second": {
+    "txId": "c8cb02fe53a5391ecba48e2f3b90536f1baecefa4d752ba77efc2dcdd254cc5b",
+    "stage": "invalid",
+    "validationCode": 11,
+    "blockNumber": "128"
+  },
+  "singleEffectiveBinding": true,
+  "reconciliationDistinguishesInvalid": true,
+  "completedAt": "2026-11-16T01:19:52.580Z"
+}

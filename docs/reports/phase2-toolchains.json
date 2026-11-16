@@ -1,0 +1,20 @@
+{
+  "fabric": "2.5.16",
+  "go": "1.26.4",
+  "jq": "1.8.2",
+  "samplesCommit": "5789681b4f4d24e58fa40f19a69f5496892374b6",
+  "goArchiveSha256": "1153d3d50e0ac764b447adfe05c2bcf08e889d42a02e0fe0259bd47f6733ad7f",
+  "fabricArchiveSha256": "18c91e7f2f11b601e6622cc70454d568af897707ee9adf111e9fa91a233881bf",
+  "jqBinarySha256": "b1c22172dd303f3be49e935aa56aa48a8b7a46e0bc838b4997d3bb451495870f",
+  "verifiedCommands": [
+    "go version",
+    "peer version",
+    "orderer version",
+    "configtxgen -version",
+    "configtxlator version",
+    "cryptogen version",
+    "osnadmin --help",
+    "jq --version"
+  ],
+  "result": "PASS"
+}

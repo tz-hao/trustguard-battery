@@ -1,0 +1,28 @@
+org1.example.com
+org2.example.com
+Initialized project volume trustguard-battery-fabric_cfg1
+Initialized project volume trustguard-battery-fabric_cfg2
+Initialized project volume trustguard-battery-fabric_cfg3
+Initialized project volume trustguard-battery-fabric_cfg4
+Initialized project volume trustguard-battery-fabric_cfg5
+ Network trustguard_battery_fabric Creating 
+ Network trustguard_battery_fabric Created 
+ Volume trustguard-battery-fabric_orderer.example.com Creating 
+ Volume trustguard-battery-fabric_orderer.example.com Created 
+ Volume trustguard-battery-fabric_peer0.org1.example.com Creating 
+ Volume trustguard-battery-fabric_peer0.org1.example.com Created 
+ Volume trustguard-battery-fabric_peer0.org2.example.com Creating 
+ Volume trustguard-battery-fabric_peer0.org2.example.com Created 
+ Container orderer.example.com Creating 
+ Container peer0.org1.example.com Creating 
+ Container peer0.org2.example.com Creating 
+ Container peer0.org1.example.com Created 
+ Container peer0.org2.example.com Created 
+ Container orderer.example.com Created 
+ Container peer0.org1.example.com Starting 
+ Container orderer.example.com Starting 
+ Container peer0.org2.example.com Starting 
+ Container peer0.org2.example.com Started 
+ Container orderer.example.com Started 
+ Container peer0.org1.example.com Started 
+Started official test-network topology using project-owned configuration volumes.

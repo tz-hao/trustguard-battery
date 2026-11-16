@@ -1,0 +1,66 @@
+{
+  "network": "local",
+  "channel": "batterybusiness",
+  "chaincode": "battery",
+  "version": "1.0",
+  "sequence": 1,
+  "packageId": "battery_1.0:2ab9b1b3a9d3348a479006f98b25c5eaa8bac322938f2af596ff8e5e0c342a87",
+  "organizations": {
+    "CellOrgMSP": {
+      "sequence": 1,
+      "version": "1.0",
+      "endorsement_plugin": "escc",
+      "validation_plugin": "vscc",
+      "validation_parameter": "CmASFBISCAMSAggAEgIIARICCAISAggDGhASDgoKQ2VsbE9yZ01TUBADGhASDgoKUGFja09yZ01TUBADGg8SDQoJTGFiT3JnTVNQEAMaExIRCg1SZWN5Y2xlT3JnTVNQEAM=",
+      "collections": {},
+      "approvals": {
+        "CellOrgMSP": true,
+        "LabOrgMSP": true,
+        "PackOrgMSP": true,
+        "RecycleOrgMSP": true
+      }
+    },
+    "PackOrgMSP": {
+      "sequence": 1,
+      "version": "1.0",
+      "endorsement_plugin": "escc",
+      "validation_plugin": "vscc",
+      "validation_parameter": "CmASFBISCAMSAggAEgIIARICCAISAggDGhASDgoKQ2VsbE9yZ01TUBADGhASDgoKUGFja09yZ01TUBADGg8SDQoJTGFiT3JnTVNQEAMaExIRCg1SZWN5Y2xlT3JnTVNQEAM=",
+      "collections": {},
+      "approvals": {
+        "CellOrgMSP": true,
+        "LabOrgMSP": true,
+        "PackOrgMSP": true,
+        "RecycleOrgMSP": true
+      }
+    },
+    "LabOrgMSP": {
+      "sequence": 1,
+      "version": "1.0",
+      "endorsement_plugin": "escc",
+      "validation_plugin": "vscc",
+      "validation_parameter": "CmASFBISCAMSAggAEgIIARICCAISAggDGhASDgoKQ2VsbE9yZ01TUBADGhASDgoKUGFja09yZ01TUBADGg8SDQoJTGFiT3JnTVNQEAMaExIRCg1SZWN5Y2xlT3JnTVNQEAM=",
+      "collections": {},
+      "approvals": {
+        "CellOrgMSP": true,
+        "LabOrgMSP": true,
+        "PackOrgMSP": true,
+        "RecycleOrgMSP": true
+      }
+    },
+    "RecycleOrgMSP": {
+      "sequence": 1,
+      "version": "1.0",
+      "endorsement_plugin": "escc",
+      "validation_plugin": "vscc",
+      "validation_parameter": "CmASFBISCAMSAggAEgIIARICCAISAggDGhASDgoKQ2VsbE9yZ01TUBADGhASDgoKUGFja09yZ01TUBADGg8SDQoJTGFiT3JnTVNQEAMaExIRCg1SZWN5Y2xlT3JnTVNQEAM=",
+      "collections": {},
+      "approvals": {
+        "CellOrgMSP": true,
+        "LabOrgMSP": true,
+        "PackOrgMSP": true,
+        "RecycleOrgMSP": true
+      }
+    }
+  }
+}

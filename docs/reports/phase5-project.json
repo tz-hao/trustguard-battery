@@ -1,0 +1,30 @@
+{
+  "directories": [
+    "apps/web",
+    "services/api",
+    "services/risk",
+    "chaincode",
+    "infrastructure",
+    "datasets",
+    "tests",
+    "docs"
+  ],
+  "node": "22.23.1",
+  "npm": "10.9.8",
+  "python": "3.12.3",
+  "pip": "24.0",
+  "next": "16.4.6",
+  "react": "19.3.1",
+  "gatewaySdk": "1.13.0",
+  "checks": {
+    "npm run check:env": "PASS",
+    "npm run check --workspace @trustguard/web": "PASS",
+    "python venv and pyproject parsing": "PASS",
+    "Python infrastructure scripts compile": "PASS",
+    "node --check services/api/scripts/verify-fabric.mjs": "PASS",
+    "resume existing Fabric containers": "PASS"
+  },
+  "webPagesImplemented": false,
+  "webBuildAndBrowserTest": "Not applicable: dependency environment only, no web pages implemented",
+  "result": "PASS"
+}

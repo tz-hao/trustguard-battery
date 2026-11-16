@@ -1,0 +1,41 @@
+{
+  "network": "local",
+  "channel": "batterybusiness",
+  "name": "security-bb260063",
+  "checks": [
+    {
+      "name": "API requires client certificate",
+      "passed": true
+    },
+    {
+      "name": "Risk service requires Gateway workload certificate",
+      "passed": true
+    },
+    {
+      "name": "Expired TLS certificate rejected",
+      "passed": true
+    },
+    {
+      "name": "Revoked TLS certificate rejected during handshake",
+      "passed": true
+    },
+    {
+      "name": "Expired Fabric enrollment cannot sign inspection",
+      "passed": true
+    },
+    {
+      "name": "Risk outage pauses finalize gateway before transaction submission",
+      "passed": true
+    },
+    {
+      "name": "Key broker outage yields no plaintext",
+      "passed": true
+    },
+    {
+      "name": "Post-commit observation failure reconciles by original txId without resubmission",
+      "passed": true
+    }
+  ],
+  "result": "PASS",
+  "completedAt": "2026-11-15T13:25:24.968Z"
+}

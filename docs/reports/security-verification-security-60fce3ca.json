@@ -1,0 +1,13 @@
+{
+  "network": "local",
+  "channel": "batterybusiness",
+  "name": "security-60fce3ca",
+  "checks": [
+    {
+      "name": "API requires client certificate",
+      "passed": true
+    }
+  ],
+  "result": "FAIL",
+  "failure": "The validation function is expected to return \"true\". Received false\n\nCaught error:\n\nError: connect ECONNREFUSED 127.0.0.1:18000"
+}

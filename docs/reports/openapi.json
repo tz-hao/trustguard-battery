@@ -1,0 +1,534 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "operationId": "BatteryController_health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/codes/{code}": {
+      "get": {
+        "operationId": "BatteryController_parse",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/makers/{code}": {
+      "get": {
+        "operationId": "BatteryController_maker",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/policies/current": {
+      "get": {
+        "operationId": "BatteryController_policy",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/batteries/{code}": {
+      "get": {
+        "operationId": "BatteryController_battery",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/batteries/{code}/lifecycle": {
+      "get": {
+        "operationId": "BatteryController_lifecycle",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/batteries/{code}/health": {
+      "get": {
+        "operationId": "BatteryController_healthData",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/assets/{id}": {
+      "get": {
+        "operationId": "BatteryController_asset",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/assets/{id}/inspections": {
+      "get": {
+        "operationId": "BatteryController_inspections",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/assets/{id}/history": {
+      "get": {
+        "operationId": "BatteryController_history",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/assets/{id}/assembly-history": {
+      "get": {
+        "operationId": "BatteryController_edges",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/assets/{id}/snapshot": {
+      "get": {
+        "operationId": "BatteryController_snapshot",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/assets/{id}/corrections": {
+      "get": {
+        "operationId": "BatteryController_corrections",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/transactions/{requestId}": {
+      "get": {
+        "operationId": "BatteryController_transaction",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/trace/batch/{id}": {
+      "get": {
+        "operationId": "BatteryController_traceBatch",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/release/requests": {
+      "post": {
+        "operationId": "BatteryController_release",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "requestId",
+                  "id",
+                  "packId"
+                ],
+                "properties": {
+                  "requestId": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "packId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "由服务端生成风险凭证后提交放行申请",
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/commands/{resource}": {
+      "post": {
+        "description": "initialize, makers, material-lots, batches, assets, inspections, assembly-authorizations, assembly, release-approvals, release-finalizations, transfers, transfer-confirmations, transfer-cancellations, installations, first-use, retirements, recycling-receipts, scrap-confirmations, lifecycle-corrections, lifecycle-correction-approvals, lifecycle-correction-applications, policy-candidates, policy-approvals, policy-activations, audit-anchors",
+        "operationId": "BatteryController_command",
+        "parameters": [
+          {
+            "name": "resource",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "requestId",
+                  "data"
+                ],
+                "properties": {
+                  "requestId": {
+                    "type": "string"
+                  },
+                  "data": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "提交受链码身份和状态规则约束的业务命令",
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/reports": {
+      "post": {
+        "operationId": "BatteryController_uploadReport",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/imports/measurements": {
+      "post": {
+        "operationId": "BatteryController_importMeasurements",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/imports/health": {
+      "post": {
+        "operationId": "BatteryController_importHealth",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/policies/previews": {
+      "post": {
+        "operationId": "BatteryController_previewPolicy",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/reports/{id}/content": {
+      "get": {
+        "operationId": "BatteryController_reportContent",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    },
+    "/api/v1/reports/{id}/revocations": {
+      "post": {
+        "operationId": "BatteryController_revokeReport",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "battery-backend"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "智权链·锂安溯 Backend",
+    "description": "",
+    "version": "0.1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "schemas": {}
+  }
+}

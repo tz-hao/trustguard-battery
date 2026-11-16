@@ -1,0 +1,13 @@
+{
+  "network": "local",
+  "id": "health-b6a72bc4",
+  "result": "PASS",
+  "assetId": "demo-bc010168-live-pack",
+  "signedSnapshotStored": true,
+  "idempotentReplayVerified": true,
+  "unauthorizedReaderDenied": true,
+  "tamperingRejected": true,
+  "remainingLifeNotInvented": true,
+  "simulation": true,
+  "completedAt": "2026-11-16T01:19:43.464Z"
+}

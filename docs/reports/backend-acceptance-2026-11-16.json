@@ -1,0 +1,98 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-11-16T09:44:36.466688+08:00",
+  "scope": "完整后端 local 开发与模拟业务；前端不实现，标准全文核验按用户决定暂缓",
+  "network": {
+    "type": "Hyperledger Fabric local",
+    "channel": "batterybusiness",
+    "chaincode": "battery",
+    "version": "1.2",
+    "sequence": 3,
+    "peerOrganizations": 4,
+    "orderers": 1,
+    "businessPolicyVersion": 3
+  },
+  "checks": {
+    "environment": "PASS (reviewed execution permission)",
+    "typescriptBuild": "PASS",
+    "nodeSubtests": 6,
+    "pythonTests": 13,
+    "goTests": 21,
+    "goVet": "PASS",
+    "verifiedBusinessTransactions": 43,
+    "blockedAttackScenarios": 8,
+    "sampleStates": [
+      {
+        "code": "SMACB010000001E114363023",
+        "id": "demo-bc010168-standalone",
+        "state": "REGISTERED",
+        "statusLabel": "未装配",
+        "serviceAge": null,
+        "scrapped": false,
+        "simulation": true
+      },
+      {
+        "code": "DMAPE010000001E114363026",
+        "id": "demo-bc010168-live-pack",
+        "state": "IN_USE",
+        "statusLabel": "使用中",
+        "serviceAge": {
+          "years": 2,
+          "months": 4,
+          "days": 15
+        },
+        "scrapped": false,
+        "simulation": true
+      },
+      {
+        "code": "DMAPB010000001E114363029",
+        "id": "demo-bc010168-retired-pack",
+        "state": "PROCESSED",
+        "statusLabel": "已报废",
+        "serviceAge": null,
+        "scrapped": true,
+        "simulation": true
+      }
+    ],
+    "performance": {
+      "transactions": 43,
+      "p50Ms": 1065.2842190000001,
+      "p95Ms": 1092.4956389999988,
+      "scope": "Sequential local four-peer, one-orderer development workload only"
+    },
+    "indexAssetsRebuilt": 18,
+    "signedAuditRecordsVerified": 552,
+    "auditBatchesVerified": 3,
+    "openApiRoutes": 23
+  },
+  "evidence": {
+    "business": "docs/reports/business-demo-demo-bc010168.json",
+    "policy": "docs/reports/policy-verification-policy-check-03762935.json",
+    "health": "docs/reports/health-verification-health-b6a72bc4.json",
+    "security": "docs/reports/security-verification-security-7921fe1b.json",
+    "concurrency": "docs/reports/concurrency-verification-mvcc-5a7200bc.json",
+    "corrections": "docs/reports/correction-verification-correction-8860cecf.json",
+    "index": "docs/reports/index-verification-rebuild_ee8144a99a55.json",
+    "audit": "docs/reports/audit-verification.json",
+    "idempotency": "docs/reports/idempotency-verification.json",
+    "runtime": "docs/reports/backend-runtime-verification.json",
+    "preservation": "docs/reports/backend-preservation-2026-11-16.json",
+    "secretScan": "docs/reports/source-secret-check.json"
+  },
+  "deferredByUser": [
+    "GB/T 34014 全文、日期字典及修改单细则核验；正式厂商登记保持关闭"
+  ],
+  "notIncluded": [
+    "前端",
+    "真实 MES/BMS 或全国平台连接",
+    "生产级多主机/KMS 隔离",
+    "测试网和主网操作",
+    "Git 提交/推送/PR/远程部署"
+  ],
+  "limitations": [
+    "所有演示资产及模型样本为显式模拟",
+    "健康记录不生成未经验证的剩余寿命或报废预测",
+    "性能结果仅适用于顺序本地开发负载",
+    "签名日志早期 v1 不绑定时间，新记录 v2 绑定时间；版本已保留"
+  ]
+}

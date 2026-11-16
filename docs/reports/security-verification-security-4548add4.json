@@ -1,0 +1,25 @@
+{
+  "network": "local",
+  "channel": "batterybusiness",
+  "name": "security-4548add4",
+  "checks": [
+    {
+      "name": "API requires client certificate",
+      "passed": true
+    },
+    {
+      "name": "Risk service requires Gateway workload certificate",
+      "passed": true
+    },
+    {
+      "name": "Expired TLS certificate rejected",
+      "passed": true
+    },
+    {
+      "name": "Revoked TLS certificate rejected during handshake",
+      "passed": true
+    }
+  ],
+  "result": "FAIL",
+  "failure": "The validation function is expected to return \"true\". Received false\n\nCaught error:\n\nEndorseError: 10 ABORTED: failed to collect enough transaction endorsements, see attached details for more info"
+}

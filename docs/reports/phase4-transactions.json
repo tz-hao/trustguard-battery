@@ -1,0 +1,128 @@
+{
+  "network": "local Fabric test-network",
+  "channel": "trustguardchannel",
+  "chaincode": "basic",
+  "assetId": "trustguard-d078d6e7-fc96-45df-a3d3-4f6bb6c99a7c",
+  "transactions": [
+    {
+      "function": "CreateAsset",
+      "transactionId": "cfc3c9985cf662c920dc534c81b688d35be6c5837c4d4258cd118656a118f27b",
+      "stage": "ledger-verified",
+      "endorsingOrganizations": [
+        "Org1MSP",
+        "Org2MSP"
+      ],
+      "commitStatus": {
+        "blockNumber": "6",
+        "code": 0,
+        "successful": true,
+        "transactionId": "cfc3c9985cf662c920dc534c81b688d35be6c5837c4d4258cd118656a118f27b"
+      },
+      "peerBlocks": [
+        {
+          "organization": "Org1MSP",
+          "blockNumber": "6",
+          "validationCode": 0,
+          "dataHash": "24b9bb243d40104d0162b6ab4e94d425a32d349ff2057d7e28f2d071213a1277",
+          "previousHash": "646a839477190f8b2db02c34aca7f77b2be01e08d7dcc8727afd9de16f3fc746"
+        },
+        {
+          "organization": "Org2MSP",
+          "blockNumber": "6",
+          "validationCode": 0,
+          "dataHash": "24b9bb243d40104d0162b6ab4e94d425a32d349ff2057d7e28f2d071213a1277",
+          "previousHash": "646a839477190f8b2db02c34aca7f77b2be01e08d7dcc8727afd9de16f3fc746"
+        }
+      ],
+      "peerReads": [
+        {
+          "organization": "Org1MSP",
+          "asset": {
+            "AppraisedValue": 100,
+            "Color": "blue",
+            "ID": "trustguard-d078d6e7-fc96-45df-a3d3-4f6bb6c99a7c",
+            "Owner": "TrustGuard-QA",
+            "Size": 10
+          }
+        },
+        {
+          "organization": "Org2MSP",
+          "asset": {
+            "AppraisedValue": 100,
+            "Color": "blue",
+            "ID": "trustguard-d078d6e7-fc96-45df-a3d3-4f6bb6c99a7c",
+            "Owner": "TrustGuard-QA",
+            "Size": 10
+          }
+        }
+      ]
+    },
+    {
+      "function": "TransferAsset",
+      "transactionId": "1abe41ebb4fae90c460b642ceeb3cedf59079feeaac6928b8a9eec2f2cdef8f6",
+      "stage": "ledger-verified",
+      "endorsingOrganizations": [
+        "Org1MSP",
+        "Org2MSP"
+      ],
+      "commitStatus": {
+        "blockNumber": "7",
+        "code": 0,
+        "successful": true,
+        "transactionId": "1abe41ebb4fae90c460b642ceeb3cedf59079feeaac6928b8a9eec2f2cdef8f6"
+      },
+      "peerBlocks": [
+        {
+          "organization": "Org1MSP",
+          "blockNumber": "7",
+          "validationCode": 0,
+          "dataHash": "095d4d5a1c65ec424bd3a2d9a312a0f209d1698f957781220aa7d89e2a44ebbf",
+          "previousHash": "5c95b40284cb0af234a38c17c9e49ad9ea516178a46187395597fa7b715080a3"
+        },
+        {
+          "organization": "Org2MSP",
+          "blockNumber": "7",
+          "validationCode": 0,
+          "dataHash": "095d4d5a1c65ec424bd3a2d9a312a0f209d1698f957781220aa7d89e2a44ebbf",
+          "previousHash": "5c95b40284cb0af234a38c17c9e49ad9ea516178a46187395597fa7b715080a3"
+        }
+      ],
+      "peerReads": [
+        {
+          "organization": "Org1MSP",
+          "asset": {
+            "AppraisedValue": 100,
+            "Color": "blue",
+            "ID": "trustguard-d078d6e7-fc96-45df-a3d3-4f6bb6c99a7c",
+            "Owner": "TrustGuard-QA-Verified",
+            "Size": 10
+          }
+        },
+        {
+          "organization": "Org2MSP",
+          "asset": {
+            "AppraisedValue": 100,
+            "Color": "blue",
+            "ID": "trustguard-d078d6e7-fc96-45df-a3d3-4f6bb6c99a7c",
+            "Owner": "TrustGuard-QA-Verified",
+            "Size": 10
+          }
+        }
+      ]
+    }
+  ],
+  "identities": [
+    {
+      "mspId": "Org1MSP",
+      "endpoint": "localhost:7051",
+      "certificateSha256": "44:D9:EF:99:6D:55:E1:AA:6A:50:B3:93:72:04:EE:6F:A4:56:AB:2F:54:CC:2F:8A:D0:25:6A:BC:8C:4B:D3:D4"
+    },
+    {
+      "mspId": "Org2MSP",
+      "endpoint": "localhost:9051",
+      "certificateSha256": "C1:CE:E9:DB:B3:00:9A:42:4A:88:34:6E:4C:4A:75:CE:1D:94:C9:0B:3F:77:A1:BD:8D:17:96:71:9F:A0:23:75"
+    }
+  ],
+  "completedAt": "2026-11-15T11:11:10.152Z",
+  "result": "PASS"
+}

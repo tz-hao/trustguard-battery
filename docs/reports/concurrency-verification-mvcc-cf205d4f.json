@@ -1,0 +1,20 @@
+{
+  "network": "local",
+  "channel": "batterybusiness",
+  "name": "mvcc-cf205d4f",
+  "result": "PASS",
+  "first": {
+    "txId": "5f04e7fb87ed3254736e2d07a4bdd7fbe1c783eb3f966097f3d3492e00d2c538",
+    "stage": "ledger-verified",
+    "blockNumber": "66"
+  },
+  "second": {
+    "txId": "0f1bd765faded42b82ffad3b8de291ddfa13587a626e9920c920d52448dc4e4b",
+    "stage": "invalid",
+    "validationCode": 11,
+    "blockNumber": "67"
+  },
+  "singleEffectiveBinding": true,
+  "reconciliationDistinguishesInvalid": true,
+  "completedAt": "2026-11-15T12:56:33.470Z"
+}

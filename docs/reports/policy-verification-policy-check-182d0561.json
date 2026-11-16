@@ -1,0 +1,115 @@
+{
+  "network": "local",
+  "channel": "batterybusiness",
+  "id": "policy-check-182d0561",
+  "result": "PASS",
+  "baseVersion": 1,
+  "activeVersion": 2,
+  "preview": {
+    "report": {
+      "id": "policy-check-182d0561",
+      "policyHash": "f28c8df7cd19e39afbd50eeb49fd5cb18621edbaff84777689b2e5da5e4fbc34",
+      "baseVersion": 1,
+      "candidateVersion": 2,
+      "passed": true,
+      "tests": [
+        {
+          "name": "TestFullLifecycleAndImmutableScrap",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestQualityAndAuthorizationGates",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestApprovalReplayAndRiskBinding",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestRiskExpiryAndHighRiskReview",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestIdempotencyAndConflictingPayload",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestBindingAndHistoricalEdges",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestManufacturerAndCodeUniqueness",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestLifecycleCannotSkipOrRewriteEvents",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestPolicyCannotWeakenSecurityAndRequiresEveryOrganization",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestProvisionalParserNeverClaimsCompliance",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestTransferCanContinueAfterCompletedTransfer",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestParserFieldsPreserveOriginalCode",
+          "result": "pass",
+          "elapsedSeconds": 0
+        },
+        {
+          "name": "TestStrictJSONRejectsIdentityInjection",
+          "result": "pass",
+          "elapsedSeconds": 0
+        }
+      ],
+      "changedFields": [
+        "version"
+      ],
+      "authorizationDifference": {
+        "before": [
+          "CellOrgMSP",
+          "LabOrgMSP",
+          "PackOrgMSP"
+        ],
+        "after": [
+          "CellOrgMSP",
+          "LabOrgMSP",
+          "PackOrgMSP"
+        ]
+      },
+      "newUnauthorizedReleasePathsInPresetCases": 0,
+      "normalFlowPassed": true,
+      "scope": "isolated in-memory ledger executing the deployed Go domain rules; no Fabric transactions sent"
+    },
+    "testsHash": "9b598a61f23f4d77b877d66a4c3da74152460cd9495bab44a7d41e8f637d8052",
+    "signature": "7mqxdcCqA3R96Ozd4SCr7FJTOLb8F4mtlTPLUH4SBTFjY9PmwBe2xR6Whq783EyLuEL9yKuuVX6ubeWexu24AA=="
+  },
+  "proposalTx": "0200e44c4556abd5852147205e52e3fa19e1cc1b10a3cecf08ecdf0e061ec40c",
+  "approvalTxs": [
+    "e1a3899fe64c298bf2d893dfc8aece13c4ab3ac631a8384068158f64d8d640c1",
+    "eb7546379124342d6dcb565894389e0f9396243488a44e19d42bf3a21f3bb7e1",
+    "0afddf15f0a1a04aca5419a9f8fe66084173d4f9e5d6994dad62f6a3d3c1c027",
+    "8dfd7dfd8156e37d790d33a64e218cdf9b2b62992e0242314c06c382f0df0aa9"
+  ],
+  "activationTx": "532c75d9ea782b1d548305bdf55623256592f6f98dfb7200ffe4ddb13e6ddd06",
+  "insufficientApprovalsBlocked": true,
+  "signatureVerified": true,
+  "completedAt": "2026-11-15T12:36:14.857Z"
+}

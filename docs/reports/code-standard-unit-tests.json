@@ -1,0 +1,121 @@
+{
+  "result": "PASS",
+  "network": "offline",
+  "goTests": [
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestStandardCodeExamplesAndScope"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestAmendedMaterialDictionary"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestStandardDateTableAndCycle"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestCodeAmendmentEffectiveDate"
+    },
+    {
+      "package": "trustguard/battery",
+      "test": "TestEnrollmentCertificateValidityIsEnforced"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestRegistrationRejectsDateMismatchWithoutWrites"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestParserFieldsPreserveOriginalCode"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestLifecycleCorrectionRequiresIndependentReviewAndPreservesHistory"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestCorrectionCannotCreateScrapOrBreakChronology"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestCorrectionExpiresAndAssetChangesInvalidateVotes"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestAncestryKeepsChildUsageUnknownAndExposesParentContext"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestCompleteDisassemblyClosesEdgesWithoutDeletingHistory"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestFullLifecycleAndImmutableScrap"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestQualityAndAuthorizationGates"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestApprovalReplayAndRiskBinding"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestRiskExpiryAndHighRiskReview"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestIdempotencyAndConflictingPayload"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestBindingAndHistoricalEdges"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestManufacturerAndCodeUniqueness"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestLifecycleCannotSkipOrRewriteEvents"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestPolicyCannotWeakenSecurityAndRequiresEveryOrganization"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestTransferCanContinueAfterCompletedTransfer"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestReassemblyRequiresNewParentInspection"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestInstallationRejectsQualityChangedAfterRelease"
+    },
+    {
+      "package": "trustguard/battery/domain",
+      "test": "TestStrictJSONRejectsIdentityInjection"
+    }
+  ],
+  "goPackages": [
+    "trustguard/battery",
+    "trustguard/battery/domain"
+  ],
+  "goVet": "PASS",
+  "apiBuild": "PASS",
+  "nodeSubtests": 7,
+  "nodeResult": "PASS",
+  "propertyCases": 1000,
+  "commands": [
+    "GOFLAGS=-buildvcs=false go test ./... -count=1 -json",
+    "GOFLAGS=-buildvcs=false go vet ./...",
+    "npm test --workspace @trustguard/api"
+  ],
+  "checkedAt": "2026-11-16T10:06:10.337555+08:00"
+}

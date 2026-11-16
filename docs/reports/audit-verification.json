@@ -1,0 +1,12 @@
+{
+  "network": "local",
+  "channel": "batterybusiness",
+  "result": "PASS",
+  "batches": 3,
+  "records": 552,
+  "timestampBoundV2Records": 326,
+  "signaturesVerified": true,
+  "tamperingRejected": true,
+  "ledgerDigestsVerifiedOnFourPeers": true,
+  "completedAt": "2026-11-16T01:20:10.378Z"
+}
