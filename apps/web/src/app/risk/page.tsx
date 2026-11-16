@@ -4,8 +4,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   Activity,
-  AlertTriangle,
-  CheckCircle2,
   Cpu,
   Network,
   Play,
@@ -64,6 +62,58 @@ interface RiskPayload {
     latencyP95Ms: number;
     limitations: string;
   } | null;
+  ablation?: {
+    summary: {
+      totalScenariosTested: number;
+      baselineA_blocked: number;
+      baselineB_blocked: number;
+      experimentC_blocked: number;
+      baselineA_protectionRate: number;
+      baselineB_protectionRate: number;
+      experimentC_protectionRate: number;
+      avgQueryLatencyBaselineB_Ms: number;
+      avgQueryLatencyWithRiskReadiness_Ms: number;
+      addedRiskOverheadMs: number;
+      aiQualityTestSetFPR: number;
+      aiQualityTestSetRecall: number;
+      ruleBaselineRecall: number;
+    };
+    cases: {
+      id: string;
+      name: string;
+      category: string;
+      baselineA_SingleDb: { blocked: boolean; note?: string };
+      baselineB_FabricNoAi: { blocked: boolean; mechanism?: string; note?: string };
+      experimentC_FullTrustGuard: { blocked: boolean; mechanism?: string };
+    }[];
+  } | null;
+  concurrency?: {
+    rateLimitThresholdPerActorMinute: number;
+    rateLimitBurstProof: { totalRequests: number; ok: number; rateLimited429: number };
+    targets: {
+      name: string;
+      path: string;
+      desc: string;
+      stages: { concurrency: number; rps: number; p50Ms: number; p95Ms: number; ok: number; totalRequests: number }[];
+    }[];
+  } | null;
+}
+
+interface OperationGraphResult {
+  scenario: 'normal' | 'collusion';
+  asOf: string;
+  operations: {
+    actor_msp: string;
+    target_msp: string | null;
+    action: string;
+    approval_latency_seconds?: number | null;
+  }[];
+  analysis: {
+    reviewRequired: boolean;
+    triggeredRules: { rule: string; [key: string]: unknown }[];
+    modelVersion: string;
+    conclusion: string;
+  };
 }
 
 interface AttackResult {
@@ -82,9 +132,10 @@ export default function RiskPage() {
   const [loading, setLoading] = useState(true);
   const [demoRunning, setDemoRunning] = useState(false);
   const [demoResult, setDemoResult] = useState<AttackResult | null>(null);
+  const [opLoading, setOpLoading] = useState(false);
+  const [opResult, setOpResult] = useState<OperationGraphResult | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await fetch('/api/bff/risk', { cache: 'no-store' });
       if (res.ok) setData((await res.json()) as RiskPayload);
@@ -111,6 +162,22 @@ export default function RiskPage() {
       }
     } finally {
       setDemoRunning(false);
+    }
+  }
+
+  async function runOperationGraphDemo(scenario: 'normal' | 'collusion') {
+    setOpLoading(true);
+    try {
+      const res = await fetch('/api/bff/risk/operations', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ scenario }),
+      });
+      if (res.ok) {
+        setOpResult((await res.json()) as OperationGraphResult);
+      }
+    } finally {
+      setOpLoading(false);
     }
   }
 
@@ -318,6 +385,258 @@ export default function RiskPage() {
           </div>
         )}
       </div>
+
+      {/* NetworkX 多组织协作关系图实时检测演示 */}
+      <div className="card-surface p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-[#edf2f7] pb-3">
+          <div>
+            <h2 className="flex items-center gap-2 text-sm font-bold text-[#172B3A]">
+              <Network className="h-4 w-4 text-[#2563EB]" />
+              NetworkX 跨组织审批关系图风险分析演示（直连 FastAPI :18000）
+            </h2>
+            <p className="mt-0.5 text-[11px] text-[#64748B]">
+              对比正常多方协同审批与「极速互批强连通闭环」在 NetworkX 有向图上的实时告警输出
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={opLoading}
+              onClick={() => void runOperationGraphDemo('normal')}
+              className="rounded-lg border border-[#159B76]/40 bg-[#159B76]/10 px-3 py-1.5 text-xs font-semibold text-[#159B76] hover:bg-[#159B76]/15 disabled:opacity-50"
+            >
+              模拟正常协同审批
+            </button>
+            <button
+              type="button"
+              disabled={opLoading}
+              onClick={() => void runOperationGraphDemo('collusion')}
+              className="rounded-lg bg-[#D99A2B] px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-600 disabled:opacity-50"
+            >
+              {opLoading ? 'NetworkX 图分析中...' : '注入跨机构极速互批闭环'}
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+          <div className="trace-dark-grid rounded-xl border border-[#1c3554] p-3 lg:col-span-6">
+            <svg viewBox="0 0 420 220" className="h-52 w-full">
+              <defs>
+                <marker id="risk-arr-ok" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                  <path d="M0,0 L7,3.5 L0,7 z" fill="#0F9D8A" />
+                </marker>
+                <marker id="risk-arr-bad" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                  <path d="M0,0 L7,3.5 L0,7 z" fill="#DC5353" />
+                </marker>
+              </defs>
+              {(() => {
+                const coords: Record<string, { x: number; y: number; short: string }> = {
+                  CellOrgMSP: { x: 95, y: 60, short: 'CellOrg' },
+                  PackOrgMSP: { x: 325, y: 60, short: 'PackOrg' },
+                  LabOrgMSP: { x: 95, y: 165, short: 'LabOrg' },
+                  RecycleOrgMSP: { x: 325, y: 165, short: 'RecycleOrg' },
+                };
+                const ops = (opResult?.operations ?? []).filter(o => o.target_msp && coords[o.actor_msp] && coords[o.target_msp]);
+                const uniqueEdges = new Map<string, { from: string; to: string; count: number; fast: boolean }>();
+                for (const o of ops) {
+                  const key = `${o.actor_msp}->${o.target_msp}`;
+                  const prev = uniqueEdges.get(key) ?? {
+                    from: o.actor_msp,
+                    to: o.target_msp!,
+                    count: 0,
+                    fast: false,
+                  };
+                  prev.count += 1;
+                  if ((o.approval_latency_seconds ?? 99) < 5) prev.fast = true;
+                  uniqueEdges.set(key, prev);
+                }
+                const isCycle = opResult?.scenario === 'collusion';
+                return (
+                  <>
+                    {[...uniqueEdges.values()].map(edge => {
+                      const p1 = coords[edge.from];
+                      const p2 = coords[edge.to];
+                      const reverseExists = uniqueEdges.has(`${edge.to}->${edge.from}`);
+                      const dy = reverseExists && edge.from > edge.to ? 14 : reverseExists ? -14 : 0;
+                      const stroke = isCycle && edge.fast ? '#DC5353' : '#0F9D8A';
+                      return (
+                        <g key={`${edge.from}-${edge.to}`}>
+                          <path
+                            d={`M ${p1.x} ${p1.y + dy * 0.5} Q ${(p1.x + p2.x) / 2} ${(p1.y + p2.y) / 2 + dy * 2} ${p2.x} ${p2.y + dy * 0.5}`}
+                            fill="none"
+                            stroke={stroke}
+                            strokeWidth={edge.fast ? 2.4 : 1.6}
+                            strokeDasharray={edge.fast ? '5 3' : undefined}
+                            markerEnd={edge.fast ? 'url(#risk-arr-bad)' : 'url(#risk-arr-ok)'}
+                          />
+                          <text
+                            x={(p1.x + p2.x) / 2}
+                            y={(p1.y + p2.y) / 2 + dy * 1.4 - 4}
+                            fontSize="9"
+                            fontWeight="700"
+                            fill={stroke}
+                            textAnchor="middle"
+                          >
+                            ×{edge.count} {edge.fast ? '(<5s)' : ''}
+                          </text>
+                        </g>
+                      );
+                    })}
+                    {Object.entries(coords).map(([msp, pos]) => (
+                      <g key={msp}>
+                        <rect
+                          x={pos.x - 54}
+                          y={pos.y - 20}
+                          width="108"
+                          height="40"
+                          rx="8"
+                          fill="#10243A"
+                          stroke={isCycle && (msp === 'CellOrgMSP' || msp === 'PackOrgMSP') ? '#DC5353' : '#3185D8'}
+                          strokeWidth="1.6"
+                        />
+                        <text x={pos.x} y={pos.y + 4} textAnchor="middle" fontSize="11" fontWeight="700" fill="#fff">
+                          {pos.short}
+                        </text>
+                      </g>
+                    ))}
+                  </>
+                );
+              })()}
+            </svg>
+          </div>
+
+          <div className="space-y-3 text-xs lg:col-span-6">
+            {!opResult ? (
+              <EmptyState title="尚未执行 NetworkX 协作图推演" subtitle="点击上方按钮，实时向 FastAPI :18000 提交审批序列并绘制关系图" />
+            ) : (
+              <>
+                <div
+                  className={`rounded-xl border p-3.5 ${
+                    opResult.analysis.reviewRequired
+                      ? 'border-[#DC5353]/35 bg-[#DC5353]/8 text-[#8f2323]'
+                      : 'border-[#159B76]/35 bg-[#159B76]/8 text-[#0c5e47]'
+                  }`}
+                >
+                  <div className="font-bold">
+                    NetworkX 判定：{opResult.analysis.conclusion}（{opResult.analysis.modelVersion}）
+                  </div>
+                  <div className="mt-1 text-[11px]">
+                    {opResult.analysis.reviewRequired
+                      ? '检测到极速互批簇或强连通环，强制提升至独立机构复核（不降级链码权限）'
+                      : '审批方向正常分散且无强连通环路，未触发可疑协作规则'}
+                  </div>
+                </div>
+                <pre className="mono max-h-36 overflow-auto rounded-lg bg-[#0B192C] p-3 text-[11px] text-slate-200">
+                  {JSON.stringify(opResult.analysis, null, 2)}
+                </pre>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 对照实验（基线 A/B vs 实验 C）与并发压测实测报告 */}
+      {(data?.ablation || data?.concurrency) && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          {data?.ablation && (
+            <div className="card-surface p-5 lg:col-span-7">
+              <SectionHeader
+                title="对照实验：基线 A / 基线 B vs 智权链完整方案 C"
+                subtitle="来自 docs/reports/ablation-comparison.json 真实联机验证数据"
+                icon={<ShieldCheck className="h-4 w-4 text-[#159B76]" />}
+              />
+              <div className="mb-4 grid grid-cols-3 gap-3 text-xs">
+                <div className="subtle-surface p-3">
+                  <div className="text-[10px] text-[#64748B]">基线 A（单库无链无 AI）</div>
+                  <div className="mono mt-1 text-lg font-bold text-[#DC5353]">
+                    {data.ablation.summary.baselineA_blocked} / {data.ablation.summary.totalScenariosTested}
+                  </div>
+                  <div className="text-[10px] text-[#64748B]">易受伪造与 SQL 篡改</div>
+                </div>
+                <div className="subtle-surface p-3">
+                  <div className="text-[10px] text-[#64748B]">基线 B（有链无 AI）</div>
+                  <div className="mono mt-1 text-lg font-bold text-[#D99A2B]">
+                    {data.ablation.summary.baselineB_blocked} / {data.ablation.summary.totalScenariosTested}
+                  </div>
+                  <div className="text-[10px] text-[#64748B]">漏报漂移离群与图环路</div>
+                </div>
+                <div className="subtle-surface p-3">
+                  <div className="text-[10px] text-[#64748B]">实验 C（智权链全栈）</div>
+                  <div className="mono mt-1 text-lg font-bold text-[#159B76]">
+                    {data.ablation.summary.experimentC_blocked} / {data.ablation.summary.totalScenariosTested}
+                  </div>
+                  <div className="text-[10px] text-[#159B76]">
+                    附加风控均值 +{data.ablation.summary.addedRiskOverheadMs} ms
+                  </div>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-[11px]">
+                  <thead>
+                    <tr className="border-b border-[#dce4ee] bg-[#F4F7FA] text-[#64748B]">
+                      <th className="px-2.5 py-2 font-semibold">场景</th>
+                      <th className="px-2.5 py-2 font-semibold">基线 A</th>
+                      <th className="px-2.5 py-2 font-semibold">基线 B</th>
+                      <th className="px-2.5 py-2 font-semibold">实验 C 拦截结论</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#edf2f7]">
+                    {data.ablation.cases.map(c => (
+                      <tr key={c.id}>
+                        <td className="px-2.5 py-2 font-semibold text-[#172B3A]">
+                          <span className="mono mr-1">{c.id}</span>
+                          {c.name}
+                        </td>
+                        <td className="mono px-2.5 py-2 text-[#DC5353]">{c.baselineA_SingleDb.blocked ? '拦截' : '放过'}</td>
+                        <td className={`mono px-2.5 py-2 ${c.baselineB_FabricNoAi.blocked ? 'text-[#159B76]' : 'text-[#DC5353]'}`}>
+                          {c.baselineB_FabricNoAi.blocked ? '拦截' : '放过'}
+                        </td>
+                        <td className="px-2.5 py-2 text-[#159B76]">{c.experimentC_FullTrustGuard.mechanism}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {data?.concurrency && (
+            <div className="card-surface p-5 lg:col-span-5">
+              <SectionHeader
+                title="并发吞吐与限流实测基准"
+                subtitle="20 并发阶段实测 RPS/P95 及 120 req/min 限流护盾验证"
+                icon={<Activity className="h-4 w-4 text-[#2563EB]" />}
+              />
+              <div className="space-y-3 text-xs">
+                {data.concurrency.targets.map(t => {
+                  const last = t.stages[t.stages.length - 1];
+                  return (
+                    <div key={t.name} className="subtle-surface p-3">
+                      <div className="flex items-center justify-between font-bold text-[#172B3A]">
+                        <span className="mono">{t.name}</span>
+                        <span className="mono text-[#2563EB]">{last?.rps ?? 0} req/s (c=20)</span>
+                      </div>
+                      <div className="mt-1 text-[11px] text-[#64748B]">{t.desc}</div>
+                      <div className="mono mt-1.5 flex gap-3 text-[11px] text-[#172B3A]">
+                        <span>P50: {last?.p50Ms} ms</span>
+                        <span>P95: {last?.p95Ms} ms</span>
+                        <span className="text-[#159B76]">
+                          成功 {last?.ok}/{last?.totalRequests}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="rounded-lg border border-[#D99A2B]/35 bg-[#D99A2B]/10 p-3 text-[11px] text-[#8f5e0c]">
+                  <strong>限流防暴验证（135 并发突发）：</strong>前 {data.concurrency.rateLimitBurstProof.ok} 次正常放行，超出{' '}
+                  {data.concurrency.rateLimitThresholdPerActorMinute} 次/分钟配额后立即拦截{' '}
+                  <strong className="mono">{data.concurrency.rateLimitBurstProof.rateLimited429}</strong> 次（HTTP 429 RATE_LIMITED）。
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 测量指标列表 & 已签发风险凭证 */}
       {data && (

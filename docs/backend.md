@@ -4,7 +4,7 @@
 
 本地四组织：CellOrgMSP、PackOrgMSP、LabOrgMSP、RecycleOrgMSP；每组织一个 Peer，单 Raft Orderer。
 通道 `batterybusiness`，链码 `battery` 版本 `1.3`、sequence `4`。业务策略版本独立于链码版本。
-审计使用组织内独立客户端角色，没有第五个独立 AuditOrg。前端未实现。
+审计使用组织内独立客户端角色，没有第五个独立 AuditOrg。前端工作台位于 `apps/web`（11 页面、18 个服务端 mTLS BFF 路由）。
 
 已依据补充 PDF（含第 1 号修改单）核验 24 位新产品字段、10 类材料和日期字典。
 `GET codes/{code}` 默认返回修改单规则下的 `CODE_FIELDS_VERIFIED`，携带标准版本、来源摘要、
@@ -16,12 +16,21 @@
 
 ## 使用当前环境
 
+全新克隆仓库请先在项目根目录执行：
+
 ```bash
-cd /home/milli/projects/trustguard-battery
+./infrastructure/scripts/setup.sh
+.venv/bin/python infrastructure/scripts/bootstrap.py
+```
+
+若本机已初始化 `infrastructure/runtime/business/`，可通过以下方式恢复与查看状态：
+
+```bash
 source infrastructure/scripts/env.sh
 source .venv/bin/activate
 npm run check:env
 npm run build --workspace @trustguard/api
+npm run build --workspace @trustguard/web
 
 # 恢复已有容器，保留卷、证书及账本
 .venv/bin/python infrastructure/scripts/business_network.py resume
@@ -30,11 +39,11 @@ npm run build --workspace @trustguard/api
 .venv/bin/python infrastructure/scripts/business_services.py status
 ```
 
-当前 Docker 通过 Windows Docker CLI `desktop-linux` Context 访问；平台可能要求受审查权限。
-脚本不更改默认 Docker Context，不重启 Docker Desktop/WSL/Hermes，不包含清库或批量清理命令。
+`infrastructure/scripts/docker-local.sh` 默认优先使用系统 `docker`，在仅 Windows Docker Desktop 可达的 WSL2 环境下自动回退至 `docker.exe --context desktop-linux`（也可用 `TRUSTGUARD_DOCKER_BIN` 显式指定）。
+脚本不更改默认 Docker Context，不包含清库或批量清理命令。
 沙箱进程命名空间不一定能看到外部启动的 PID，`status` 会明确提示不可见；这不等于服务已停止。
 
-启动需要已有私有运行目录 `infrastructure/runtime/business/`，不自动生成替代身份或 Mock。
+`business_services.py start` 需要已初始化的本地运行目录 `infrastructure/runtime/business/`（由 `bootstrap.py` 或 `business_network.py prepare` 生成），不自动生成替代 Mock。
 该目录中的环境文件、密钥、测试身份和 vault 不应上传、粘贴到聊天或提交。
 API 必须使用映射的客户端证书；直接浏览器访问会被拒绝。OpenAPI JSON 位于 `/api/docs-json`，Swagger UI 未启用。
 

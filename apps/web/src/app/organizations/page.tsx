@@ -163,7 +163,6 @@ export default function OrganizationsPage() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       const [dRes, aRes] = await Promise.all([
         fetch('/api/bff/dashboard', { cache: 'no-store' }),

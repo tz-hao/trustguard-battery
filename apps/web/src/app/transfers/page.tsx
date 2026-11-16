@@ -55,19 +55,18 @@ export default function TransfersPage() {
   const [banner, setBanner] = useState<CommandResultState | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await fetch('/api/bff/transfers', { cache: 'no-store' });
       if (res.ok) {
         const json = (await res.json()) as { transfers: TransferRecord[]; packs: BatteryAssetView[] };
         setTransfers(json.transfers);
         setPacks(json.packs);
-        if (!selectedPackId && json.packs.length > 0) setSelectedPackId(json.packs[0].id);
+        if (json.packs.length > 0) setSelectedPackId(prev => prev || json.packs[0].id);
       }
     } finally {
       setLoading(false);
     }
-  }, [selectedPackId]);
+  }, []);
 
   useEffect(() => {
     void load();

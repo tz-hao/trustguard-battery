@@ -11,10 +11,15 @@ from pathlib import Path
 import subprocess
 import tarfile
 
-ROOT = Path(__file__).resolve().parents[2]
-SAMPLES = Path('/home/milli/projects/fabric-samples')
+from toolchain import DOCKER, ROOT, resolve_fabric_root
+
+SAMPLES = resolve_fabric_root(require_test_network=True)
+if not SAMPLES:
+    raise SystemExit(
+        'Missing fabric-samples/test-network. Clone hyperledger/fabric-samples and set FABRIC_SAMPLES '
+        '(or place it alongside this repo). Note: the main TrustGuard 4-org business network does not need test-network.'
+    )
 NET = SAMPLES / 'test-network'
-DOCKER = str(ROOT / 'infrastructure/scripts/docker-local.sh')
 PROJECT = 'trustguard-battery-fabric'
 NETWORK = 'trustguard_battery_fabric'
 VERSION = '2.5.16'
@@ -45,7 +50,7 @@ def main():
              f'--config=./organizations/cryptogen/crypto-config-{org}.yaml',
              '--output=organizations'], cwd=NET)
     run(['bash', 'organizations/ccp-generate.sh'], cwd=NET)
-    config = json.loads(capture(['docker', 'compose', '-p', PROJECT,
+    config = json.loads(capture([DOCKER, 'compose', '-p', PROJECT,
         '-f', 'compose/compose-test-net.yaml',
         '-f', 'compose/docker/docker-compose-test-net.yaml',
         'config', '--format', 'json'], cwd=NET, env=env))

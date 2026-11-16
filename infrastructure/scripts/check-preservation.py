@@ -1,23 +1,28 @@
 #!/usr/bin/env python3
-"""Read-only comparison against the pre-setup Docker and service baseline."""
-import datetime
+"""Read-only comparison against the pre-setup Docker and service baseline (original dev host only)."""
 import argparse
+import datetime
 import json
 from pathlib import Path
 import subprocess
 
 root = Path(__file__).resolve().parents[2]
 docker = str(root / 'infrastructure/scripts/docker-local.sh')
-parser=argparse.ArgumentParser()
-parser.add_argument('--report',default='docs/reports/final-preservation-check.json')
-args=parser.parse_args()
+parser = argparse.ArgumentParser()
+parser.add_argument('--report', default='docs/reports/final-preservation-check.json')
+args = parser.parse_args()
+
+baseline_file = root / 'docs/reports/docker-baseline.json'
+if not baseline_file.exists():
+    print('SKIP: docs/reports/docker-baseline.json not present (baseline check only applies to original dev host).')
+    raise SystemExit(0)
 
 
-def output(args):
-    return subprocess.check_output([docker, *args], timeout=25).decode().strip()
+def output(cmd_args):
+    return subprocess.check_output([docker, *cmd_args], timeout=25).decode().strip()
 
 
-baseline = json.loads((root / 'docs/reports/docker-baseline.json').read_text())
+baseline = json.loads(baseline_file.read_text())
 containers = []
 for previous in baseline['containers']:
     template = '{"id":{{json .Id}},"name":{{json .Name}},"image":{{json .Image}},"state":{{json .State}},"mounts":{{json .Mounts}},"restartPolicy":{{json .HostConfig.RestartPolicy}}}'

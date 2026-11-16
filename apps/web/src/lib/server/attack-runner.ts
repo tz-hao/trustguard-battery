@@ -114,6 +114,118 @@ function gen24Code(kind: 'CELL' | 'MODULE' | 'PACK', chemistry: 'B' | 'E'): stri
   return `${prefix}${typeCh}${chemistry}010000001E11${serial}`;
 }
 
+async function ensureMaker(who: string, code: string, msp: string): Promise<void> {
+  const existing = await callBackendApi('cell-viewer', 'GET', `/makers/${code}`);
+  if (existing.status === 200) return;
+  const r = await cmd(who, 'makers', {
+    code,
+    name: `模拟制造企业 ${code}`,
+    msp,
+    simulation: true,
+    sourceHash: sha256Hex(`simulation manufacturer profile ${code}`),
+  });
+  if (!r.res.data.completed) throw new Error(`Lab setup maker ${code} failed: ${JSON.stringify(r.res.data)}`);
+}
+
+async function ensureMakers(): Promise<void> {
+  await ensureMaker('cell-admin', 'SMA', 'CellOrgMSP');
+  await ensureMaker('pack-admin', 'DMA', 'PackOrgMSP');
+}
+
+async function provisionStandaloneCell(): Promise<BatteryAssetView> {
+  await ensureMakers();
+  const tag = uid('lab-cell');
+  const matId = `${tag}-mat`;
+  const batchId = `${tag}-batch`;
+  const cellId = `${tag}-cell`;
+  await cmd('cell-manufacturer', 'material-lots', { id: matId, ownerMSP: 'CellOrgMSP', sourceHash: sha256Hex('lab mat'), simulation: true });
+  await cmd('cell-manufacturer', 'batches', { id: batchId, makerMSP: 'CellOrgMSP', materialLotIds: [matId], simulation: true });
+  const code = gen24Code('CELL', 'B');
+  const r = await cmd('cell-manufacturer', 'assets', {
+    id: cellId,
+    code,
+    batchId,
+    model: 'sim-3000',
+    manufacturedAt: '2024-01-01',
+    manufactureSourceHash: sha256Hex('lab mfg'),
+    designLifeMonths: 96,
+    specSourceHash: sha256Hex('lab spec'),
+  });
+  if (!r.res.data.completed) throw new Error(`Lab setup cell failed: ${JSON.stringify(r.res.data)}`);
+  return (await fetchAssetSnapshot('cell-viewer', cellId)) as unknown as BatteryAssetView;
+}
+
+async function provisionReleasedPack(mode: 'RETIRED' | 'IN_USE' | 'SCRAPPED'): Promise<BatteryAssetView> {
+  await ensureMakers();
+  const tag = uid('lab-pk');
+  const matId = `${tag}-mat`;
+  const batchId = `${tag}-batch`;
+  const cellId = `${tag}-cell`;
+  const modId = `${tag}-mod`;
+  const packId = `${tag}-pack`;
+  await cmd('cell-manufacturer', 'material-lots', { id: matId, ownerMSP: 'CellOrgMSP', sourceHash: sha256Hex('lab mat'), simulation: true });
+  await cmd('cell-manufacturer', 'batches', { id: batchId, makerMSP: 'CellOrgMSP', materialLotIds: [matId], simulation: true });
+  const mHash = sha256Hex('lab mfg');
+  const sHash = sha256Hex('lab spec');
+  await cmd('cell-manufacturer', 'assets', { id: cellId, code: gen24Code('CELL', 'B'), batchId, model: 'sim-3000', manufacturedAt: '2024-01-01', manufactureSourceHash: mHash, designLifeMonths: 96, specSourceHash: sHash });
+  await cmd('pack-manufacturer', 'assets', { id: modId, code: gen24Code('MODULE', 'B'), batchId: '', model: 'sim-3000', manufacturedAt: '2024-01-01', manufactureSourceHash: mHash, designLifeMonths: 96, specSourceHash: sHash });
+  await cmd('pack-manufacturer', 'assets', { id: packId, code: gen24Code('PACK', 'B'), batchId: '', model: 'sim-3000', manufacturedAt: '2024-01-01', manufactureSourceHash: mHash, designLifeMonths: 96, specSourceHash: sHash });
+  await cmd('cell-manufacturer', 'assembly-authorizations', { childId: cellId, parentId: modId, evidenceHash: sha256Hex('lab supply') });
+  await cmd('pack-assembler', 'assembly', { parentId: modId, children: [cellId], revision: 1, evidenceHash: sha256Hex('lab bind1') });
+  await cmd('pack-assembler', 'assembly', { parentId: packId, children: [modId], revision: 1, evidenceHash: sha256Hex('lab bind2') });
+
+  const labKey = createPrivateKey(getActorPrivateKeyPem('lab-inspector'));
+  for (const id of [cellId, modId, packId]) {
+    const reportId = uid('lab-rep');
+    const plaintext = Buffer.from(JSON.stringify({ simulation: true, assetId: id, result: 'QC_PASSED', version: 1 }));
+    const plaintextHash = sha256Hex(plaintext);
+    const binding = { id: reportId, assetId: id, version: 1, plaintextHash };
+    const sourceSignature = sign('sha256', Buffer.from(canonicalJson(binding)), labKey).toString('base64');
+    const up = await callBackendApi<{ sourceHash: string }>('lab-inspector', 'POST', '/reports', {
+      requestId: reportId,
+      ...binding,
+      sourceSignature,
+      contentBase64: plaintext.toString('base64'),
+    });
+    await cmd('lab-inspector', 'inspections', { id: reportId, assetId: id, version: 1, result: 'QC_PASSED', reportHash: plaintextHash, sourceHash: up.data.sourceHash });
+  }
+  const csv = `asset_id,batch_id,chemistry,model,condition,capacity_mah,resistance_uohm,voltage_mv,temperature_c,simulation\n${cellId},${batchId},LFP,sim-3000,25C-1C,3000,1500,3300,25,true\n`;
+  const contentBuf = Buffer.from(csv, 'utf8');
+  const issuedAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const sourceKey = createPrivateKey(getDemoSourceSigningKeyPem());
+  const signature = sign(null, Buffer.from(JSON.stringify({ sourceId: 'lab-source', batchId, payloadHash: sha256Hex(contentBuf), issuedAt })), sourceKey).toString('base64');
+  await callBackendApi('lab-inspector', 'POST', '/imports/measurements', {
+    requestId: uid('lab-csv'), sourceId: 'lab-source', batchId, issuedAt, signature, contentBase64: contentBuf.toString('base64'),
+  });
+  const relId = uid('lab-rel');
+  await callBackendApi('pack-release', 'POST', '/release/requests', { requestId: uid('lab-relreq'), id: relId, packId });
+  for (const approver of ['cell-approver', 'lab-approver', 'pack-approver']) {
+    await cmd(approver, 'release-approvals', { id: relId });
+  }
+  const relState = await callBackendApi<{ releases: { id: string; requiredOrgs: string[] }[] }>('pack-release', 'GET', '/overview/releases');
+  const relObj = relState.data.releases.find(r => r.id === relId);
+  if (relObj?.requiredOrgs.includes('RecycleOrgMSP')) {
+    await cmd('recycle-approver', 'release-approvals', { id: relId });
+  }
+  await cmd('pack-release', 'release-finalizations', { id: relId });
+  if (mode === 'IN_USE') {
+    await cmd('pack-operator', 'installations', { assetId: packId, at: '2024-06-30T00:00:00Z', evidenceHash: sha256Hex('lab install') });
+    await cmd('pack-operator', 'first-use', { assetId: packId, at: '2024-07-01T00:00:00Z', evidenceHash: sha256Hex('lab first use') });
+  } else {
+    await cmd('pack-operator', 'retirements', { assetId: packId, at: '2026-11-01T00:00:00Z', evidenceHash: sha256Hex('lab retire') });
+    if (mode === 'SCRAPPED') {
+      const trId = uid('lab-scrap-tr');
+      const receiptHash = sha256Hex('lab scrap transfer');
+      const exp = new Date(Date.now() + 3_600_000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+      await cmd('pack-custodian', 'transfers', { id: trId, packId, toMSP: 'RecycleOrgMSP', receiptHash, expiresAt: exp });
+      await cmd('recycle-custodian', 'transfer-confirmations', { id: trId, receiptHash });
+      await cmd('recycle-recycler', 'recycling-receipts', { assetId: packId, at: '2026-11-02T00:00:00Z', evidenceHash: sha256Hex('lab recycle') });
+      await cmd('recycle-recycler', 'scrap-confirmations', { assetId: packId, at: '2026-11-03T00:00:00Z', evidenceHash: sha256Hex('lab scrap') });
+    }
+  }
+  return (await fetchAssetSnapshot('cell-viewer', packId)) as unknown as BatteryAssetView;
+}
+
 async function ensureDemoAssets(assets: BatteryAssetView[]) {
   const anyCell = assets.find(a => a.type === 'CELL');
   const livePack = assets.find(a => a.type === 'PACK' && a.state === 'IN_USE') ?? assets.find(a => a.type === 'PACK');
@@ -122,6 +234,7 @@ async function ensureDemoAssets(assets: BatteryAssetView[]) {
 }
 
 async function ensureA2RejectedPack(assets: BatteryAssetView[]): Promise<string> {
+  await ensureMakers();
   // Check if there's already an ASSEMBLED pack containing a QC_REJECTED or NOT_TESTED cell
   const existing = assets.find(a => a.type === 'PACK' && a.state === 'ASSEMBLED' && a.id.startsWith('lab-a2-'));
   if (existing) {
@@ -254,60 +367,7 @@ async function ensureA4SentTransfer(): Promise<{ transferId: string; packId: str
     a => a.type === 'PACK' && a.holderMSP === 'PackOrgMSP' && a.state === 'RETIRED',
   );
   if (!targetPack) {
-    // Provision an isolated retired pack for A4
-    const tag = uid('lab-a4');
-    const matId = `${tag}-mat`;
-    const batchId = `${tag}-batch`;
-    const cellId = `${tag}-cell`;
-    const modId = `${tag}-mod`;
-    const packId = `${tag}-pack`;
-    await cmd('cell-manufacturer', 'material-lots', { id: matId, ownerMSP: 'CellOrgMSP', sourceHash: sha256Hex('a4 mat'), simulation: true });
-    await cmd('cell-manufacturer', 'batches', { id: batchId, makerMSP: 'CellOrgMSP', materialLotIds: [matId], simulation: true });
-    const mHash = sha256Hex('a4 mfg');
-    const sHash = sha256Hex('a4 spec');
-    await cmd('cell-manufacturer', 'assets', { id: cellId, code: gen24Code('CELL', 'B'), batchId, model: 'sim-3000', manufacturedAt: '2024-01-01', manufactureSourceHash: mHash, designLifeMonths: 96, specSourceHash: sHash });
-    await cmd('pack-manufacturer', 'assets', { id: modId, code: gen24Code('MODULE', 'B'), batchId: '', model: 'sim-3000', manufacturedAt: '2024-01-01', manufactureSourceHash: mHash, designLifeMonths: 96, specSourceHash: sHash });
-    await cmd('pack-manufacturer', 'assets', { id: packId, code: gen24Code('PACK', 'B'), batchId: '', model: 'sim-3000', manufacturedAt: '2024-01-01', manufactureSourceHash: mHash, designLifeMonths: 96, specSourceHash: sHash });
-    await cmd('cell-manufacturer', 'assembly-authorizations', { childId: cellId, parentId: modId, evidenceHash: sha256Hex('a4 supply') });
-    await cmd('pack-assembler', 'assembly', { parentId: modId, children: [cellId], revision: 1, evidenceHash: sha256Hex('a4 bind1') });
-    await cmd('pack-assembler', 'assembly', { parentId: packId, children: [modId], revision: 1, evidenceHash: sha256Hex('a4 bind2') });
-
-    const labKey = createPrivateKey(getActorPrivateKeyPem('lab-inspector'));
-    for (const id of [cellId, modId, packId]) {
-      const reportId = uid('a4-rep');
-      const plaintext = Buffer.from(JSON.stringify({ simulation: true, assetId: id, result: 'QC_PASSED', version: 1 }));
-      const plaintextHash = sha256Hex(plaintext);
-      const binding = { id: reportId, assetId: id, version: 1, plaintextHash };
-      const sourceSignature = sign('sha256', Buffer.from(canonicalJson(binding)), labKey).toString('base64');
-      const up = await callBackendApi<{ sourceHash: string }>('lab-inspector', 'POST', '/reports', {
-        requestId: reportId,
-        ...binding,
-        sourceSignature,
-        contentBase64: plaintext.toString('base64'),
-      });
-      await cmd('lab-inspector', 'inspections', { id: reportId, assetId: id, version: 1, result: 'QC_PASSED', reportHash: plaintextHash, sourceHash: up.data.sourceHash });
-    }
-    const csv = `asset_id,batch_id,chemistry,model,condition,capacity_mah,resistance_uohm,voltage_mv,temperature_c,simulation\n${cellId},${batchId},LFP,sim-3000,25C-1C,3000,1500,3300,25,true\n`;
-    const contentBuf = Buffer.from(csv, 'utf8');
-    const issuedAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
-    const sourceKey = createPrivateKey(getDemoSourceSigningKeyPem());
-    const signature = sign(null, Buffer.from(JSON.stringify({ sourceId: 'lab-source', batchId, payloadHash: sha256Hex(contentBuf), issuedAt })), sourceKey).toString('base64');
-    await callBackendApi('lab-inspector', 'POST', '/imports/measurements', {
-      requestId: uid('a4-csv'), sourceId: 'lab-source', batchId, issuedAt, signature, contentBase64: contentBuf.toString('base64'),
-    });
-    const relId = uid('a4-rel');
-    await callBackendApi('pack-release', 'POST', '/release/requests', { requestId: uid('a4-relreq'), id: relId, packId });
-    for (const approver of ['cell-approver', 'lab-approver', 'pack-approver']) {
-      await cmd(approver, 'release-approvals', { id: relId });
-    }
-    const relState = await callBackendApi<{ releases: { id: string; requiredOrgs: string[] }[] }>('pack-release', 'GET', '/overview/releases');
-    const relObj = relState.data.releases.find(r => r.id === relId);
-    if (relObj?.requiredOrgs.includes('RecycleOrgMSP')) {
-      await cmd('recycle-approver', 'release-approvals', { id: relId });
-    }
-    await cmd('pack-release', 'release-finalizations', { id: relId });
-    await cmd('pack-operator', 'retirements', { assetId: packId, at: '2026-11-01T00:00:00Z', evidenceHash: sha256Hex('a4 retire') });
-    targetPack = { id: packId } as BatteryAssetView;
+    targetPack = await provisionReleasedPack('RETIRED');
   }
 
   const transferId = uid('a4-tr');
@@ -324,22 +384,32 @@ async function ensureA4SentTransfer(): Promise<{ transferId: string; packId: str
   return { transferId, packId: targetPack.id, receiptHash };
 }
 
+async function queryLabOverviewAssets(): Promise<BatteryAssetView[]> {
+  let lastStatus = 0;
+  for (const viewer of ['lab-viewer', 'pack-viewer', 'recycle-viewer', 'cell-viewer']) {
+    const res = await callBackendApi<{ assets: BatteryAssetView[] }>(viewer, 'GET', '/overview/assets');
+    if (res.status === 200) return res.data.assets;
+    lastStatus = res.status;
+    if (res.status !== 429) break;
+  }
+  throw new Error(`Unable to query assets from backend (HTTP ${lastStatus})`);
+}
+
 export async function runAttackScenario(attackId: AttackId): Promise<AttackExecutionResult> {
-  const overview = await callBackendApi<{ assets: BatteryAssetView[] }>('cell-viewer', 'GET', '/overview/assets');
-  if (overview.status !== 200) throw new Error('Unable to query assets from backend');
-  const { anyCell, livePack, scrappedPack } = await ensureDemoAssets(overview.data.assets);
+  const assets = await queryLabOverviewAssets();
+  const { anyCell, livePack, scrappedPack } = await ensureDemoAssets(assets);
   const meta = ATTACK_CATALOG[attackId];
   const now = new Date().toISOString();
 
   if (attackId === 'A1') {
-    if (!anyCell) throw new Error('No cell asset found for A1');
-    const before = await fetchAssetSnapshot('cell-viewer', anyCell.id);
+    const cellTarget = anyCell ?? (await provisionStandaloneCell());
+    const before = await fetchAssetSnapshot('lab-viewer', cellTarget.id);
     const reqId = uid('a1');
     const payload = {
       requestId: reqId,
       data: {
         id: uid('spoof-ins'),
-        assetId: anyCell.id,
+        assetId: cellTarget.id,
         version: Number(before.inspectionVersion ?? 0) + 1,
         result: 'QC_PASSED',
         reportHash: sha256Hex('spoofed report'),
@@ -352,7 +422,7 @@ export async function runAttackScenario(attackId: AttackId): Promise<AttackExecu
       '/lab/endorse-probe',
       payload,
     );
-    const after = await fetchAssetSnapshot('cell-viewer', anyCell.id);
+    const after = await fetchAssetSnapshot('lab-viewer', cellTarget.id);
     const bHash = sha256Hex(canonicalJson(before));
     const aHash = sha256Hex(canonicalJson(after));
     return {
@@ -371,7 +441,7 @@ export async function runAttackScenario(attackId: AttackId): Promise<AttackExecu
       beforeDigest: bHash,
       afterDigest: aHash,
       checkedAt: now,
-      notes: `目标电芯 ${anyCell.id} 未被签发，链码在 Peer 背书阶段直接拒绝 PackOrgMSP 冒充 LabOrgMSP。`,
+      notes: `目标电芯 ${cellTarget.id} 未被签发，链码在 Peer 背书阶段直接拒绝 PackOrgMSP 冒充 LabOrgMSP。`,
       telemetry: {
         interceptionLayer: 'PEER_ENDORSEMENT_REJECTED',
         interceptionLabel: 'Fabric Peer 背书拒绝（未调用 submit）',
@@ -392,7 +462,7 @@ export async function runAttackScenario(attackId: AttackId): Promise<AttackExecu
   }
 
   if (attackId === 'A2') {
-    const packId = await ensureA2RejectedPack(overview.data.assets);
+    const packId = await ensureA2RejectedPack(assets);
     const before = await fetchAssetSnapshot('pack-viewer', packId);
     const reqId = uid('a2');
     const relId = uid('a2-rel');
@@ -443,13 +513,13 @@ export async function runAttackScenario(attackId: AttackId): Promise<AttackExecu
   }
 
   if (attackId === 'A3') {
-    if (!anyCell) throw new Error('No cell asset found for A3');
-    const before = await fetchAssetSnapshot('lab-inspector', anyCell.id);
+    const cellTarget = anyCell ?? (await provisionStandaloneCell());
+    const before = await fetchAssetSnapshot('lab-inspector', cellTarget.id);
     const reportId = uid('a3-tamper');
-    const originalPlaintext = Buffer.from(JSON.stringify({ simulation: true, assetId: anyCell.id, result: 'QC_PASSED', version: Number(before.inspectionVersion ?? 0) + 1 }));
+    const originalPlaintext = Buffer.from(JSON.stringify({ simulation: true, assetId: cellTarget.id, result: 'QC_PASSED', version: Number(before.inspectionVersion ?? 0) + 1 }));
     const binding = {
       id: reportId,
-      assetId: anyCell.id,
+      assetId: cellTarget.id,
       version: Number(before.inspectionVersion ?? 0) + 1,
       plaintextHash: sha256Hex(originalPlaintext),
     };
@@ -462,7 +532,7 @@ export async function runAttackScenario(attackId: AttackId): Promise<AttackExecu
       contentBase64: Buffer.from('tampered simulation report payload').toString('base64'),
     };
     const res = await callBackendApi<{ code?: string }>('lab-inspector', 'POST', '/reports', payload);
-    const after = await fetchAssetSnapshot('lab-inspector', anyCell.id);
+    const after = await fetchAssetSnapshot('lab-inspector', cellTarget.id);
     const bHash = sha256Hex(canonicalJson(before));
     const aHash = sha256Hex(canonicalJson(after));
     return {
@@ -556,14 +626,14 @@ export async function runAttackScenario(attackId: AttackId): Promise<AttackExecu
   }
 
   if (attackId === 'A5') {
-    if (!scrappedPack) throw new Error('No PROCESSED/scrapped pack found for A5');
-    const before = await fetchAssetSnapshot('recycle-viewer', scrappedPack.id);
+    const scrappedTarget = scrappedPack ?? (await provisionReleasedPack('SCRAPPED'));
+    const before = await fetchAssetSnapshot('recycle-viewer', scrappedTarget.id);
     const reqId = uid('a5');
     const payload = {
       requestId: reqId,
       data: {
         id: uid('a5-invalid-return'),
-        packId: scrappedPack.id,
+        packId: scrappedTarget.id,
         toMSP: 'PackOrgMSP',
         receiptHash: sha256Hex('illegal return transfer'),
         expiresAt: new Date(Date.now() + 3_600_000).toISOString().replace(/\.\d{3}Z$/, 'Z'),
@@ -575,7 +645,7 @@ export async function runAttackScenario(attackId: AttackId): Promise<AttackExecu
       '/commands/transfers',
       payload,
     );
-    const after = await fetchAssetSnapshot('recycle-viewer', scrappedPack.id);
+    const after = await fetchAssetSnapshot('recycle-viewer', scrappedTarget.id);
     const bHash = sha256Hex(canonicalJson(before));
     const aHash = sha256Hex(canonicalJson(after));
     return {
@@ -594,7 +664,7 @@ export async function runAttackScenario(attackId: AttackId): Promise<AttackExecu
       beforeDigest: bHash,
       afterDigest: aHash,
       checkedAt: now,
-      notes: `已报废电池包 ${scrappedPack.id} 不允许通过普通交接通道回流至 PackOrgMSP。`,
+      notes: `已报废电池包 ${scrappedTarget.id} 不允许通过普通交接通道回流至 PackOrgMSP。`,
       telemetry: {
         interceptionLayer: 'CHAINCODE_REJECTED',
         interceptionLabel: 'Go 链码生命周期终态防回流拒绝',
@@ -605,7 +675,7 @@ export async function runAttackScenario(attackId: AttackId): Promise<AttackExecu
         writtenToBlock: false,
         timeline: [
           { step: '1. 回收方 mTLS 认证', status: 'pass', detail: 'recycle-custodian 对已报废 PACK 发起交接' },
-          { step: '2. 交易提案构建', status: 'pass', detail: `InitiateTransfer(packId=${scrappedPack.id} -> PackOrgMSP)` },
+          { step: '2. 交易提案构建', status: 'pass', detail: `InitiateTransfer(packId=${scrappedTarget.id} -> PackOrgMSP)` },
           { step: '3. Go 链码终态状态机检查', status: 'blocked', detail: 'PACK 处于 PROCESSED 终态，拒绝回流普通流转' },
           { step: '4. Orderer 排序提交', status: 'skipped', detail: '背书失败，未提交排序' },
           { step: '5. 区块落账写入', status: 'skipped', detail: '资产维持 PROCESSED 报废态' },
@@ -668,8 +738,7 @@ export async function runAttackScenario(attackId: AttackId): Promise<AttackExecu
   }
 
   if (attackId === 'A7') {
-    const refPack = livePack ?? scrappedPack ?? anyCell;
-    if (!refPack) throw new Error('No reference asset for A7');
+    const refPack = livePack ?? scrappedPack ?? anyCell ?? (await provisionStandaloneCell());
     const before = await fetchAssetSnapshot('cell-viewer', refPack.id);
     const badCodes = [refPack.code.slice(1), `${refPack.code}0`, `${refPack.code.slice(0, 4)}I${refPack.code.slice(5)}`];
     const results: { code: string; status: number; body: unknown }[] = [];
@@ -718,8 +787,7 @@ export async function runAttackScenario(attackId: AttackId): Promise<AttackExecu
   }
 
   // A8
-  const targetLive = livePack ?? scrappedPack;
-  if (!targetLive) throw new Error('No pack asset found for A8');
+  const targetLive = livePack ?? scrappedPack ?? (await provisionReleasedPack('IN_USE'));
   const before = await fetchAssetSnapshot('cell-viewer', targetLive.id);
   const reqId = uid('a8');
   const payload = {

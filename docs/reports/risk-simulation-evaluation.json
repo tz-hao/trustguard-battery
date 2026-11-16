@@ -5,26 +5,78 @@
   "trainingSamples": 600,
   "testSamples": 200,
   "batchOverlap": 0,
+  "chemistries": [
+    "LFP",
+    "TERNARY"
+  ],
   "model": {
-    "precision": 0.7352941176470589,
+    "precision": 0.7142857142857143,
     "recall": 1.0,
-    "f1": 0.847457627118644,
-    "falsePositiveRate": 0.05142857142857143,
+    "f1": 0.8333333333333334,
+    "falsePositiveRate": 0.05714285714285714,
     "tp": 25,
-    "fp": 9,
-    "tn": 166,
+    "fp": 10,
+    "tn": 165,
     "fn": 0
   },
   "ruleBaseline": {
     "precision": 1.0,
-    "recall": 1.0,
-    "f1": 1.0,
+    "recall": 0.64,
+    "f1": 0.7804878048780488,
     "falsePositiveRate": 0.0,
-    "tp": 25,
+    "tp": 16,
     "fp": 0,
     "tn": 175,
-    "fn": 0
+    "fn": 9
   },
-  "latencyP95Ms": 4.869259895349386,
-  "limitations": "Synthetic held-out batches only; not evidence of industrial accuracy or safety certification."
+  "byChemistry": {
+    "LFP": {
+      "samples": 120,
+      "model": {
+        "precision": 0.625,
+        "recall": 1.0,
+        "f1": 0.7692307692307693,
+        "falsePositiveRate": 0.08571428571428572,
+        "tp": 15,
+        "fp": 9,
+        "tn": 96,
+        "fn": 0
+      },
+      "ruleBaseline": {
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8,
+        "falsePositiveRate": 0.0,
+        "tp": 10,
+        "fp": 0,
+        "tn": 105,
+        "fn": 5
+      }
+    },
+    "TERNARY": {
+      "samples": 80,
+      "model": {
+        "precision": 0.9090909090909091,
+        "recall": 1.0,
+        "f1": 0.9523809523809523,
+        "falsePositiveRate": 0.014285714285714285,
+        "tp": 10,
+        "fp": 1,
+        "tn": 69,
+        "fn": 0
+      },
+      "ruleBaseline": {
+        "precision": 1.0,
+        "recall": 0.6,
+        "f1": 0.75,
+        "falsePositiveRate": 0.0,
+        "tp": 6,
+        "fp": 0,
+        "tn": 70,
+        "fn": 4
+      }
+    }
+  },
+  "latencyP95Ms": 5.0210511428304,
+  "limitations": "Synthetic held-out batches (LFP & TERNARY step faults + correlated drift) only; not evidence of industrial accuracy or safety certification."
 }

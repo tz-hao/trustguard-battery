@@ -4,10 +4,10 @@ import { NextResponse } from 'next/server';
 import { callBackendApi } from '@/lib/server/api-client';
 import { getSessionActor } from '@/lib/server/session';
 
-function loadSimulationEvaluation() {
+function loadReportJson(relPath: string) {
   const candidates = [
-    path.resolve(process.cwd(), 'docs/reports/risk-simulation-evaluation.json'),
-    path.resolve(process.cwd(), '../../docs/reports/risk-simulation-evaluation.json'),
+    path.resolve(/*turbopackIgnore: true*/ process.cwd(), relPath),
+    path.resolve(/*turbopackIgnore: true*/ process.cwd(), '../..', relPath),
   ];
   for (const file of candidates) {
     try {
@@ -33,7 +33,6 @@ export async function GET() {
     return NextResponse.json({ code: 'RISK_OVERVIEW_UNAVAILABLE' }, { status: 502 });
   }
 
-  const evaluation = loadSimulationEvaluation();
   return NextResponse.json({
     riskReady: Boolean(insRes.data.riskReady),
     measurements: insRes.data.measurements ?? [],
@@ -42,7 +41,9 @@ export async function GET() {
     currentPolicy: relRes.data.currentPolicy ?? null,
     batches: batchRes.status === 200 ? (batchRes.data.batches ?? []) : [],
     assets: assetRes.status === 200 ? (assetRes.data.assets ?? []) : [],
-    evaluation,
+    evaluation: loadReportJson('docs/reports/risk-simulation-evaluation.json'),
+    ablation: loadReportJson('docs/reports/ablation-comparison.json'),
+    concurrency: loadReportJson('docs/reports/concurrency-benchmark.json'),
     simulation: true,
   });
 }

@@ -1,21 +1,19 @@
 # 本地 Fabric 环境
 
 业务网络现已独立实现，当前使用 `batterybusiness` / `battery` 1.3、四个业务 MSP。
-恢复、启动与验证见 [后端说明](../docs/backend.md)。以下保留原双组织示例环境的说明，不应把 basic 示例当作业务链码。
+恢复、启动与验证见 [后端说明](../docs/backend.md)。以下保留可选双组织官方 `test-network` 示例环境的说明，不应把 basic 示例当作业务链码。
 
-官方示例：`/home/milli/projects/fabric-samples`。
-Go 与 jq 安装在业务项目 `.tools`，不修改全局 PATH、Node、Python、代理。
+Fabric CLI 与配置由 `./infrastructure/scripts/setup.sh` 自动安装至 `.tools/fabric`（或通过环境变量 `FABRIC_SAMPLES` 指向外部 `fabric-samples` 目录）。
+Go 与本地工具默认安装在业务项目 `.tools`，不修改全局 PATH、Node、Python、代理。
 
 ```bash
-cd /home/milli/projects/trustguard-battery
 source infrastructure/scripts/env.sh
 go version
 peer version
 infrastructure/scripts/docker-local.sh ps
 ```
 
-原生 WSL 集成代理当前报 `Wsl/Service/0x8007274c`，没有可用的 `/var/run/docker.sock`。
-本项目显式使用 Windows Docker CLI 的 `desktop-linux` Context；未更改默认 Context。
+`docker-local.sh` 会优先调用本机 `docker`，并在 WSL2 原生集成不可用时自动回退至 Windows Docker CLI 的 `desktop-linux` Context（可通过 `TRUSTGUARD_DOCKER_BIN` 覆盖）。
 Docker 镜像来自官方 `ghcr.io/hyperledger`，固定 2.5.16。
 
 `start-fabric.py` 已执行，仅供全新环境一次初始化。它使用官方 Compose 定义，

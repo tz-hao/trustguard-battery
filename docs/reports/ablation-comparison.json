@@ -1,0 +1,158 @@
+{
+  "generatedAt": "2026-11-16T08:35:02.323Z",
+  "network": "local (4 org peers, 1 raft orderer, channel batterybusiness)",
+  "pendingTransferPresent": false,
+  "methodology": {
+    "baselineA_SingleDb": "Architecture control model representing centralized single-DB RBAC without Fabric MSP consensus or AI detection",
+    "baselineB_FabricNoAi": "Live Fabric 2.5.16 + Go chaincode v1.3 enforcement measured without FastAPI AI quality/operation review gates",
+    "experimentC_FullTrustGuard": "Live TrustGuard platform combining Fabric chaincode + FastAPI IsolationForest + NetworkX graph rules + policy sandbox"
+  },
+  "summary": {
+    "totalScenariosTested": 7,
+    "baselineA_blocked": 0,
+    "baselineB_blocked": 5,
+    "experimentC_blocked": 7,
+    "baselineA_protectionRate": 0,
+    "baselineB_protectionRate": 0.7143,
+    "experimentC_protectionRate": 1,
+    "avgQueryLatencyBaselineB_Ms": 26.17,
+    "avgQueryLatencyWithRiskReadiness_Ms": 26.15,
+    "addedRiskOverheadMs": 0,
+    "aiQualityTestSetFPR": 0.05714285714285714,
+    "aiQualityTestSetRecall": 1,
+    "ruleBaselineRecall": 0.64
+  },
+  "cases": [
+    {
+      "id": "A1",
+      "name": "非授权组织/角色越权签发质检",
+      "category": "Peer 身份背书边界",
+      "baselineA_SingleDb": {
+        "blocked": false,
+        "note": "单库若仅校验前端角色参数可被篡改绕过"
+      },
+      "baselineB_FabricNoAi": {
+        "blocked": true,
+        "mechanism": "Fabric Peer 背书拒签 FORBIDDEN",
+        "latencyMs": 2666.6744660000004
+      },
+      "experimentC_FullTrustGuard": {
+        "blocked": true,
+        "mechanism": "mTLS 白名单 + Peer 背书拒签 + 审计落盘",
+        "latencyMs": 2666.6744660000004
+      }
+    },
+    {
+      "id": "A2",
+      "name": "含不合格/未检电芯申请放行",
+      "category": "链码质量门禁",
+      "baselineA_SingleDb": {
+        "blocked": false,
+        "note": "单表应用缺少跨企业谱系强约束，易绕过子电芯复检状态"
+      },
+      "baselineB_FabricNoAi": {
+        "blocked": true,
+        "mechanism": "链码拒绝 (QUALITY_GATE)",
+        "latencyMs": 1127.0080289999996
+      },
+      "experimentC_FullTrustGuard": {
+        "blocked": true,
+        "mechanism": "RiskAttestation + 链码门禁拒绝 (QUALITY_GATE)",
+        "latencyMs": 1127.0080289999996
+      }
+    },
+    {
+      "id": "A3",
+      "name": "篡改报告正文伪造历史哈希",
+      "category": "密码学完整性防线",
+      "baselineA_SingleDb": {
+        "blocked": false,
+        "note": "普通文件存储无 SHA-256 原像绑定的多方核验"
+      },
+      "baselineB_FabricNoAi": {
+        "blocked": true,
+        "mechanism": "网关 SHA-256 拒绝 (REPORT_HASH_MISMATCH)",
+        "latencyMs": 31.697375000000648
+      },
+      "experimentC_FullTrustGuard": {
+        "blocked": true,
+        "mechanism": "网关 SHA-256 + Ed25519 签验 + 撤权机制 (REPORT_HASH_MISMATCH)",
+        "latencyMs": 31.697375000000648
+      }
+    },
+    {
+      "id": "A5",
+      "name": "已报废终态电池违规回流交接",
+      "category": "不可逆生命周期状态机",
+      "baselineA_SingleDb": {
+        "blocked": false,
+        "note": "单中心管理员可直接 UPDATE SQL 回退状态字段"
+      },
+      "baselineB_FabricNoAi": {
+        "blocked": true,
+        "mechanism": "链码状态机拒绝 (FORBIDDEN)",
+        "latencyMs": 68.17843599999924
+      },
+      "experimentC_FullTrustGuard": {
+        "blocked": true,
+        "mechanism": "四组织共识状态机拒绝 (FORBIDDEN)",
+        "latencyMs": 68.17843599999924
+      }
+    },
+    {
+      "id": "A6",
+      "name": "绕过预演直接下调多组织审批门槛",
+      "category": "策略变更安全门控",
+      "baselineA_SingleDb": {
+        "blocked": false,
+        "note": "单后台配置修改即可立刻放宽审批名单"
+      },
+      "baselineB_FabricNoAi": {
+        "blocked": true,
+        "mechanism": "链码基线与预览强校验拦截 (POLICY_PREVIEW_REQUIRED)",
+        "latencyMs": 22.20505299999968
+      },
+      "experimentC_FullTrustGuard": {
+        "blocked": true,
+        "mechanism": "Go 隔离沙箱回归 + 四方审计签名审批 (POLICY_PREVIEW_REQUIRED)",
+        "latencyMs": 22.20505299999968
+      }
+    },
+    {
+      "id": "AI-Q",
+      "name": "未触及单维红线的耦合质检参数漂移离群样本",
+      "category": "AI 质量异常筛查",
+      "baselineA_SingleDb": {
+        "blocked": false,
+        "note": "无单维/多维异常检测，直接作为正常样本通过"
+      },
+      "baselineB_FabricNoAi": {
+        "blocked": false,
+        "note": "仅靠硬阈值 (>1800 uOhm / <2800 mAh) 未触发拦截"
+      },
+      "experimentC_FullTrustGuard": {
+        "blocked": true,
+        "mechanism": "IsolationForest 多维异常得分 -0.2100 -> REVIEW_REQUIRED",
+        "latencyMs": 38.662671000000046
+      }
+    },
+    {
+      "id": "AI-O",
+      "name": "跨组织高频极速互批强连通闭环（疑似串通审批）",
+      "category": "NetworkX 图操作风控",
+      "baselineA_SingleDb": {
+        "blocked": false,
+        "note": "合法账号静态权限全放行，无图结构异常监测"
+      },
+      "baselineB_FabricNoAi": {
+        "blocked": false,
+        "note": "合规证书合法签名无法识别时间极速互批环结构"
+      },
+      "experimentC_FullTrustGuard": {
+        "blocked": true,
+        "mechanism": "NetworkX 捕获 FAST_APPROVAL_CLUSTER + CYCLIC_APPROVAL_RELATIONSHIP -> 附加独立复核",
+        "latencyMs": 4.0445950000002995
+      }
+    }
+  ]
+}

@@ -39,3 +39,23 @@
   2. 在 `AppShell.tsx` 移动端顶栏（`<640px`）自动隐藏外层 `OrgBadge` 并为身份选择器设置 `max-w-[165px] truncate`；
   3. 在 `/identity` 输入框窄屏样式中减小字距与右侧留白，使 24 位编码在 390px 屏幕上完整清晰显示。
 - 修复后经重新构建与浏览器复检（`final_step_69.png`），顶部单行展示与 24 位编码可视化均正常。
+
+---
+
+## 3. 第二阶段全栈完善（全业务交互闭环、多体系 AI/对照/压测与自动化 E2E）
+
+在 11 页面视觉重构基础上，进一步补全了全部交互闭环、竞赛对照实验与工程化质量保障：
+
+1. **BFF 与业务交互闭环补全（18 -> 21 路由）**：
+   - 新增 `/api/bff/imports/measurements`（Ed25519 演示源签名 CSV 量测导入与 AI 实时筛查）、`/api/bff/imports/health`（受控 BMS 健康快照导入）、`/api/bff/risk/operations`（mTLS 直连 FastAPI NetworkX 图异常检测）；在 `/api/bff/commands/[resource]` 增补 `autoHashes` SHA-256 摘要计算，在 `/api/bff/risk` 聚合加载消融对照与并发压测报告。
+   - `/identity`：新增「新建批次 / 24 位码建档」抽屉（原料批次→生产批次→24 位编码电芯/模组/PACK 链上建档）、BMS 健康快照导入表单、以及「日期更正」提案/批准/应用全流程交互。
+   - `/inspections`：新增「签名 CSV 导入 & AI 筛查」标签页，与 AEAD 加密报告抽屉协同工作。
+   - `/trace`：新增「装配授权与绑定管理」抽屉（`assembly-authorizations` 供货授权与 `assembly` 边绑定），并在图谱与路径台账中支持历史版本切换。
+   - `/policies`：打通 `policy-candidates` 候选提交、四组织逐一 `policy-approvals` 会签与 `policy-activations` 一键激活闭环。
+   - `/risk`：新增可交互 NetworkX 有向企业协作环路 SVG 图示（「注入跨机构极速互批闭环」实时触发 `REQUIRES_REVIEW` 判定）、基线 A / 基线 B vs 智权链完整方案 C 消融对照面板与高并发限流基准展示。
+2. **多体系 AI 数据升级、对照实验与性能压测**：
+   - 升级 `services/risk/trustguard_risk/datasets.py` 固定种子数据集（`seed=20261115`）为 `LFP` + `TERNARY` 双体系跨批次数据集（600 训练集 + 200 测试集，`batchOverlap: 0`），同时覆盖单步故障与联合漂移异常。
+   - 新增 `services/api/scripts/verify-ablation.mjs`（基线 A/B vs 完整方案 C 7 场景对照实验）、`tests/perf/concurrent-load.mjs` 与 `tests/perf/k6-battery-load.js` 并发压测与 `429 RATE_LIMITED` 突刺验证，以及 `infrastructure/scripts/contest_ready.py` 赛前只读一键巡检脚本。
+3. **工程质量、安全核验与端到端稳定性修复**：
+   - 配置 ESLint 9（`eslint-config-next`）与 Playwright 无头 Chromium E2E 回归（`apps/web/tests/e2e.spec.ts`），并在根 `package.json` 为 `@typescript-eslint/typescript-estree` 配置 `minimatch` 覆盖以保持 `npm audit` 0 漏洞。
+   - 排查端到端高频导航触发 `cell-viewer` 每分钟 120 次只读限流的问题：修复 `AppShell.tsx`、`/`、`/identity` 与 `/audit` 首屏加载时 `actor` 未解析前后的重复拉取，并将 `/lab` 攻防总览查询切换为独立只读身份通道与限流容错。

@@ -64,26 +64,28 @@ interface PoliciesPayload {
 }
 
 export default function PoliciesPage() {
-  const { actor } = useIdentity();
+  const { actor, switchActor } = useIdentity();
   const [data, setData] = useState<PoliciesPayload | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [candidateDrafts, setCandidateDrafts] = useState<
+    Record<string, { id: string; policy: PolicyData; testsHash: string }>
+  >({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [banner, setBanner] = useState<CommandResultState | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await fetch('/api/bff/releases', { cache: 'no-store' });
       if (res.ok) {
         const json = (await res.json()) as PoliciesPayload;
         setData(json);
-        if (!expandedId && json.previews.length > 0) setExpandedId(json.previews[0].id);
+        if (json.previews.length > 0) setExpandedId(prev => prev ?? json.previews[0].id);
       }
     } finally {
       setLoading(false);
     }
-  }, [expandedId]);
+  }, []);
 
   useEffect(() => {
     void load();
@@ -118,6 +120,12 @@ export default function PoliciesPage() {
         });
       } else {
         const passed = Boolean(json.report?.passed);
+        if (passed && json.testsHash) {
+          setCandidateDrafts(prev => ({
+            ...prev,
+            [id]: { id, policy: candidatePolicy, testsHash: String(json.testsHash) },
+          }));
+        }
         setBanner({
           ok: passed,
           title: passed
@@ -127,6 +135,45 @@ export default function PoliciesPage() {
         });
         setExpandedId(id);
         await load();
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function executePolicyCmd(
+    resource: 'policy-candidates' | 'policy-approvals' | 'policy-activations',
+    payload: Record<string, unknown>,
+    label: string,
+  ) {
+    setBusy(true);
+    setBanner(null);
+    try {
+      const res = await fetch(`/api/bff/commands/${resource}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ data: payload }),
+      });
+      const json = await res.json();
+      if (json.completed) {
+        setBanner({
+          ok: true,
+          title: `${label} 已上链确认`,
+          requestId: json.requestId,
+          txId: json.txId,
+          stage: json.stage,
+          blockNumber: json.blockNumber,
+        });
+        await load();
+      } else {
+        setBanner({
+          ok: false,
+          title: `${label} 被拦截`,
+          requestId: json.requestId,
+          txId: json.txId,
+          stage: json.stage ?? 'rejected',
+          errorCode: json.errorCode ?? json.code ?? `HTTP_${res.status}`,
+        });
       }
     } finally {
       setBusy(false);
@@ -238,17 +285,37 @@ export default function PoliciesPage() {
 
             {/* 候选与激活历史 */}
             <div className="card-surface p-5">
-              <SectionHeader title="策略候选与激活历史" subtitle="链上记录的候选提案及四组织批准情况" />
+              <SectionHeader
+                title="策略候选提案、四组织审批与激活"
+                subtitle="完整闭环：admin 提案 → 四组织 auditor 会签 → admin 激活（缺一不可）"
+              />
+              <div className="mb-3 flex flex-wrap items-center gap-1.5 text-[11px]">
+                <span className="text-[#64748B]">快速切审计员：</span>
+                {['cell-auditor', 'pack-auditor', 'lab-auditor', 'recycle-auditor'].map(aud => (
+                  <button
+                    key={aud}
+                    type="button"
+                    onClick={() => void switchActor(aud)}
+                    className={`mono rounded border px-2 py-0.5 font-medium ${
+                      actor?.name === aud
+                        ? 'border-[#2563EB] bg-[#2563EB]/12 text-[#2563EB]'
+                        : 'border-[#dce4ee] bg-[#F4F7FA] text-[#172B3A] hover:border-[#2563EB]'
+                    }`}
+                  >
+                    {aud}
+                  </button>
+                ))}
+              </div>
               {data.candidates.length === 0 ? (
                 <EmptyState title="暂无候选策略记录" />
               ) : (
                 <div className="space-y-2.5 text-xs">
                   {data.candidates.map(c => (
                     <div key={c.id} className="subtle-surface p-3">
-                      <div className="flex items-center justify-between">
-                        <span className="mono font-bold text-[#172B3A]">{c.id}</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="mono truncate font-bold text-[#172B3A]">{c.id}</span>
                         <span
-                          className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+                          className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-bold ${
                             c.state === 'ACTIVE' ? 'bg-[#159B76]/15 text-[#159B76]' : 'bg-[#D99A2B]/15 text-[#b07612]'
                           }`}
                         >
@@ -260,6 +327,26 @@ export default function PoliciesPage() {
                           <OrgBadge key={a.msp} mspId={a.msp} />
                         ))}
                       </div>
+                      {c.state !== 'ACTIVE' && (
+                        <div className="mt-2.5 flex flex-wrap gap-2 border-t border-[#dce4ee] pt-2">
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void executePolicyCmd('policy-approvals', { id: c.id }, `批准候选 ${c.id}`)}
+                            className="rounded-md bg-[#10243A] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#17324f] disabled:opacity-50"
+                          >
+                            审计员批准 ({actor?.role === 'auditor' ? actor.mspId : '需 auditor'})
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void executePolicyCmd('policy-activations', { id: c.id }, `激活策略 ${c.id}`)}
+                            className="rounded-md bg-[#159B76] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                          >
+                            正式激活 (需四方全签)
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -324,6 +411,22 @@ export default function PoliciesPage() {
                         <HashChip value={prev.testsHash} label="回归证据哈希" />
                         {prev.report.ruleProof && (
                           <HashChip value={prev.report.ruleProof.ruleSourceHash} label="部署源码核验" />
+                        )}
+                        {prev.passed && candidateDrafts[prev.id] && !data.candidates.some(c => c.id === prev.id) && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() =>
+                              void executePolicyCmd(
+                                'policy-candidates',
+                                candidateDrafts[prev.id],
+                                `提交候选策略 ${prev.id}`,
+                              )
+                            }
+                            className="rounded-md bg-[#2563EB] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                          >
+                            提交为链上候选提案 (需 admin)
+                          </button>
                         )}
                         <span className="mono ml-auto text-[10px] text-[#64748B]">{formatDateTime(prev.createdAt)}</span>
                       </div>

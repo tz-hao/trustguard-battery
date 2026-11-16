@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { promisify } from 'node:util';
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { createPrivateKey, sign } from 'node:crypto';
@@ -13,12 +14,27 @@ import type { AuthenticatedActor } from './types.js';
 
 const execute=promisify(execFile);
 const schema=z.object({id:z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,95}$/),policy:z.record(z.string(),z.unknown())}).strict();
+
+function resolvePython(root:string):string{
+  for(const candidate of [process.env.TRUSTGUARD_PYTHON_BIN,path.join(root,'.venv/bin/python')]){
+    if(candidate&&existsSync(candidate))return candidate;
+  }
+  return 'python3';
+}
+
+function resolveGo(root:string):string{
+  for(const candidate of [process.env.TRUSTGUARD_GO_BIN,path.join(root,'.tools/go1.26.4/bin/go'),path.join(root,'.tools/go/bin/go')]){
+    if(candidate&&existsSync(candidate))return candidate;
+  }
+  return 'go';
+}
+
 export class PolicyService {
   private running=false;
   constructor(private readonly db:Database,private readonly fabric:FabricService){}
   private async ruleProof(actor:AuthenticatedActor){
     const root=path.resolve(import.meta.dirname,'../../..'),definition=await this.fabric.definition(actor.identity);
-    const checked=await execute(path.join(root,'.venv/bin/python'),[path.join(root,'infrastructure/scripts/verify_rule_source.py'),'--version',definition.version,'--sequence',definition.sequence],{timeout:10000,maxBuffer:65536});
+    const checked=await execute(resolvePython(root),[path.join(root,'infrastructure/scripts/verify_rule_source.py'),'--version',definition.version,'--sequence',definition.sequence],{timeout:10000,maxBuffer:65536});
     return JSON.parse(checked.stdout) as {verified:boolean;version:string;sequence:string;packageId:string;ruleSourceHash:string;testSourceHash:string};
   }
   async preview(actor:AuthenticatedActor,body:unknown){
@@ -40,11 +56,13 @@ export class PolicyService {
       const temp=await mkdtemp(path.join(tmpdir(),'trustguard-policy-'));
       const candidateFile=path.join(temp,'candidate.json');
       await writeFile(candidateFile,JSON.stringify(input.policy),{mode:0o600});
-      const env={TRUSTGUARD_POLICY_CANDIDATE_FILE:candidateFile,GOTOOLCHAIN:'local',GOFLAGS:'-buildvcs=false',
-        GOPATH:path.join(root,'.tools/gopath'),GOCACHE:path.join(root,'.tools/go-build'),GOPROXY:'off',
-        PATH:path.join(root,'.tools/go1.26.4/bin')+path.delimiter+(process.env.PATH??'')};
+      const goBin=resolveGo(root);
+      const goPathPrefix=goBin==='go'?'':path.dirname(goBin)+path.delimiter;
+      const env={TRUSTGUARD_POLICY_CANDIDATE_FILE:candidateFile,GOTOOLCHAIN:process.env.GOTOOLCHAIN??'local',GOFLAGS:'-buildvcs=false',
+        GOPATH:process.env.GOPATH??path.join(root,'.tools/gopath'),GOCACHE:process.env.GOCACHE??path.join(root,'.tools/go-build'),GOPROXY:'off',
+        PATH:goPathPrefix+(process.env.PATH??'')};
       let stdout='',passed=true;
-      try{const result=await execute(path.join(root,'.tools/go1.26.4/bin/go'),['test','./...','-count=1','-json'],{cwd:path.join(root,'chaincode'),env,timeout:30000,maxBuffer:2*1024*1024});stdout=result.stdout;}
+      try{const result=await execute(goBin,['test','./...','-count=1','-json'],{cwd:path.join(root,'chaincode'),env,timeout:30000,maxBuffer:2*1024*1024});stdout=result.stdout;}
       catch(error){const result=error as {stdout?:string};stdout=result.stdout??'';passed=false;}
       const cases:{name:string;result:string;elapsedSeconds:number}[]=[];
       for(const line of stdout.split('\n')){

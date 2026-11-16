@@ -116,8 +116,6 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
     try {
       const [dashRes, assetsRes, auditRes] = await Promise.all([
         fetch('/api/bff/dashboard', { cache: 'no-store' }),
@@ -126,6 +124,7 @@ export default function DashboardPage() {
       ]);
       const dashJson = await dashRes.json();
       if (!dashRes.ok) throw new Error(dashJson.code ?? `HTTP ${dashRes.status}`);
+      setError(null);
       setData(dashJson as DashboardPayload);
       if (assetsRes.ok) {
         const assetsJson = (await assetsRes.json()) as { assets: BatteryAssetView[] };
@@ -143,7 +142,14 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    void load();
+    if (!actor?.name) return;
+    let active = true;
+    void Promise.resolve().then(() => {
+      if (active) void load();
+    });
+    return () => {
+      active = false;
+    };
   }, [load, actor?.name]);
 
   const assetSource = allAssets.length > 0 ? allAssets : (data?.recentAssets ?? []);
@@ -252,6 +258,18 @@ export default function DashboardPage() {
         {error && (
           <div className="mt-4 rounded-xl border border-[#DC5353]/50 bg-[#DC5353]/15 px-4 py-3 text-sm text-red-200">
             读取驾驶舱失败：{error}
+          </div>
+        )}
+
+        {loading && !data && !error && (
+          <div className="mt-5 grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <div key={idx} className="navy-subcard animate-pulse p-4">
+                <div className="h-3 w-20 rounded bg-slate-700/70" />
+                <div className="mt-3 h-7 w-14 rounded bg-slate-700/70" />
+                <div className="mt-2 h-2.5 w-24 rounded bg-slate-800" />
+              </div>
+            ))}
           </div>
         )}
 

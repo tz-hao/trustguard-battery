@@ -8,16 +8,23 @@ import json
 import os
 import secrets
 import shutil
+import socket
 import subprocess
 import tarfile
+import time
 from pathlib import Path
 
 from business_certificates import ORGANIZATIONS, prepare, write
+from toolchain import (
+    DOCKER,
+    ROOT,
+    RUNTIME,
+    fabric_bin,
+    fabric_config_dir,
+    resolve_fabric_root,
+    resolve_go,
+)
 
-ROOT = Path(__file__).resolve().parents[2]
-RUNTIME = ROOT / "infrastructure/runtime/business"
-SAMPLES = Path("/home/milli/projects/fabric-samples")
-DOCKER = str(ROOT / "infrastructure/scripts/docker-local.sh")
 PROJECT = "trustguard-battery-business"
 NETWORK = "trustguard_battery_business"
 PORTS = {"cell": 17051, "pack": 19051, "lab": 21051, "recycle": 23051}
@@ -34,6 +41,17 @@ def run(args, *, env=None, data=None, capture=False, cwd=None):
 
 def dump(path, data, private=False):
     write(path, (json.dumps(data, indent=2) + "\n").encode(), private)
+
+
+def wait_tcp(port: int, timeout_seconds: int = 45):
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=1.0):
+                return
+        except OSError:
+            time.sleep(0.5)
+    raise RuntimeError(f"Timed out waiting for 127.0.0.1:{port} to become ready")
 
 
 def signature(rule):
@@ -74,11 +92,12 @@ def configtx():
 
 
 def generate():
+    core_yaml = fabric_config_dir() / "core.yaml"
     prepare(RUNTIME, PORTS)
     for slug in [*ORGANIZATIONS, "orderer"]:
         node = RUNTIME / "organizations" / slug / "node"
         if slug != "orderer":
-            shutil.copyfile(SAMPLES / "config/core.yaml", node / "core.yaml")
+            shutil.copyfile(core_yaml, node / "core.yaml")
     dump(RUNTIME / "configtx.yaml", configtx())
     database_admin = secrets.token_hex(24)
     database_api = secrets.token_hex(24)
@@ -92,7 +111,7 @@ def generate():
     write(RUNTIME / "minio-secrets/rootpassword", s3_password.encode(), True)
     dump(RUNTIME / "services/s3-credentials.json", {"accessKeyId": s3_user, "secretAccessKey": s3_password}, True)
     env = {
-        "TRUSTGUARD_CHANNEL":CHANNEL,
+        "TRUSTGUARD_CHANNEL": CHANNEL,
         "TRUSTGUARD_DATABASE_URL": f"postgresql://trustguard_api:{database_api}@127.0.0.1:15432/trustguard",
         "TRUSTGUARD_BROKER_DATABASE_URL": f"postgresql://trustguard_broker:{database_broker}@127.0.0.1:15432/trustguard",
         "TRUSTGUARD_IDENTITIES_FILE": str(RUNTIME / "identities.json"),
@@ -152,9 +171,13 @@ def compose():
         "environment":{"POSTGRES_USER":"trustguard_admin","POSTGRES_DB":"trustguard","POSTGRES_PASSWORD_FILE":"/run/secrets/password"},
         "volumes":[mount("postgres-data","/var/lib/postgresql/data"),mount("cfg-postgres-secrets","/run/secrets",True),mount("cfg-postgres-init","/docker-entrypoint-initdb.d",True)],
         "healthcheck":{"test":["CMD-SHELL","pg_isready -U trustguard_admin -d trustguard"],"interval":"3s","timeout":"3s","retries":20}}
-    services["minio"] = {"container_name":"tg-battery-minio", "image":"trustguard/minio:2025-10-15", "networks":["business"], "ports":[ports(19000,9000)],
-        "entrypoint":["/minio"],"command":["server","/data","--address",":9000"], "environment":{"MINIO_ROOT_USER_FILE":"/run/secrets/rootuser","MINIO_ROOT_PASSWORD_FILE":"/run/secrets/rootpassword","MINIO_BROWSER":"off"},
+    minio_image = os.environ.get("TRUSTGUARD_MINIO_IMAGE", "trustguard/minio:2025-10-15")
+    minio_service = {"container_name":"tg-battery-minio", "image":minio_image, "networks":["business"], "ports":[ports(19000,9000)],
+        "command":["server","/data","--address",":9000"], "environment":{"MINIO_ROOT_USER_FILE":"/run/secrets/rootuser","MINIO_ROOT_PASSWORD_FILE":"/run/secrets/rootpassword","MINIO_BROWSER":"off"},
         "volumes":[mount("minio-data","/data"),mount("cfg-minio-secrets","/run/secrets",True)]}
+    if minio_image.startswith("trustguard/minio"):
+        minio_service["entrypoint"] = ["/minio"]
+    services["minio"] = minio_service
     return {"name":PROJECT,"services":services,"networks":{"business":{"name":NETWORK}},"volumes":volumes}
 
 
@@ -185,7 +208,16 @@ def up(include_storage=True):
     if names & {service["container_name"] for service in config["services"].values()}:
         raise RuntimeError("Business containers already exist; use resume, never regenerate")
     if include_storage:
-        run([DOCKER,"image","inspect","trustguard/minio:2025-10-15","--format","{{.Id}}"],capture=True)
+        minio_image = config["services"]["minio"]["image"]
+        existing = run([DOCKER,"images","-q",minio_image],capture=True)
+        if not existing:
+            if minio_image.startswith("trustguard/minio"):
+                raise RuntimeError(
+                    f"Missing local MinIO image '{minio_image}'. "
+                    "Run '.venv/bin/python infrastructure/scripts/import_minio.py' first, "
+                    "or set TRUSTGUARD_MINIO_IMAGE."
+                )
+            run([DOCKER,"pull",minio_image])
     for slug in [*ORGANIZATIONS,"orderer"]:
         seed_volume("cfg-"+slug,RUNTIME / "organizations" / slug / "node")
     for name in ["postgres-secrets","postgres-init","minio-secrets"]:
@@ -196,11 +228,30 @@ def up(include_storage=True):
 
 def peer_environment(slug):
     env = dict(os.environ)
-    env.update({"PATH":str(ROOT / ".tools/go1.26.4/bin")+os.pathsep+str(SAMPLES / "bin")+os.pathsep+env.get("PATH",""),
-                "GOPATH":str(ROOT / ".tools/gopath"),"GOCACHE":str(ROOT / ".tools/go-build"),"GOTOOLCHAIN":"local","GOFLAGS":"-buildvcs=false"})
-    env.update({"FABRIC_CFG_PATH": str(SAMPLES / "config"), "CORE_PEER_TLS_ENABLED":"true", "CORE_PEER_LOCALMSPID":ORGANIZATIONS[slug],
-                "CORE_PEER_MSPCONFIGPATH":str(RUNTIME / "organizations" / slug / "users/admin/msp"), "CORE_PEER_ADDRESS":f"localhost:{PORTS[slug]}",
-                "CORE_PEER_TLS_ROOTCERT_FILE":str(RUNTIME / "organizations" / slug / "node/tls/ca.crt"), "CORE_PEER_TLS_SERVERHOSTOVERRIDE":f"peer0.{slug}.battery.local"})
+    path_parts = []
+    go_bin = Path(resolve_go())
+    path_parts.append(str(go_bin.parent))
+    fabric_root = resolve_fabric_root()
+    if fabric_root and (fabric_root / "bin").is_dir():
+        path_parts.append(str(fabric_root / "bin"))
+    path_parts.append(env.get("PATH", ""))
+    env.update({
+        "PATH": os.pathsep.join(p for p in path_parts if p),
+        "GOPATH": str(ROOT / ".tools/gopath"),
+        "GOCACHE": str(ROOT / ".tools/go-build"),
+        "GOFLAGS": "-buildvcs=false",
+    })
+    if "GOTOOLCHAIN" not in env and go_bin == ROOT / ".tools/go1.26.4/bin/go":
+        env["GOTOOLCHAIN"] = "local"
+    env.update({
+        "FABRIC_CFG_PATH": str(fabric_config_dir()),
+        "CORE_PEER_TLS_ENABLED": "true",
+        "CORE_PEER_LOCALMSPID": ORGANIZATIONS[slug],
+        "CORE_PEER_MSPCONFIGPATH": str(RUNTIME / "organizations" / slug / "users/admin/msp"),
+        "CORE_PEER_ADDRESS": f"localhost:{PORTS[slug]}",
+        "CORE_PEER_TLS_ROOTCERT_FILE": str(RUNTIME / "organizations" / slug / "node/tls/ca.crt"),
+        "CORE_PEER_TLS_SERVERHOSTOVERRIDE": f"peer0.{slug}.battery.local",
+    })
     return env
 
 
@@ -208,14 +259,16 @@ def channel():
     block = RUNTIME / f"{CHANNEL}.block"
     if block.exists():
         raise RuntimeError("Channel block exists; inspect partial state before retrying")
+    for port in (17050, 17053, *PORTS.values()):
+        wait_tcp(port)
     # Configuration is public and regenerated from retained MSPs; keys and existing ledgers stay intact.
     (RUNTIME / "configtx.yaml").write_text(json.dumps(configtx(),indent=2)+"\n")
     env = dict(os.environ,FABRIC_CFG_PATH=str(RUNTIME))
-    run([SAMPLES / "bin/configtxgen","-profile","BatteryChannel","-channelID",CHANNEL,"-outputBlock",block],env=env)
+    run([fabric_bin("configtxgen"),"-profile","BatteryChannel","-channelID",CHANNEL,"-outputBlock",block],env=env)
     tls = RUNTIME / "organizations/orderer/node/tls"
-    run([SAMPLES / "bin/osnadmin","channel","join","--channelID",CHANNEL,"--config-block",block,"-o","localhost:17053","--ca-file",tls / "ca.crt","--client-cert",tls / "server.crt","--client-key",tls / "server.key"])
+    run([fabric_bin("osnadmin"),"channel","join","--channelID",CHANNEL,"--config-block",block,"-o","localhost:17053","--ca-file",tls / "ca.crt","--client-cert",tls / "server.crt","--client-key",tls / "server.key"])
     for slug in ORGANIZATIONS:
-        run([SAMPLES / "bin/peer","channel","join","-b",block],env=peer_environment(slug))
+        run([fabric_bin("peer"),"channel","join","-b",block],env=peer_environment(slug))
 
 
 def deploy(version="1.0",sequence=1):
@@ -223,7 +276,7 @@ def deploy(version="1.0",sequence=1):
     if not re.fullmatch(r"[0-9]+\.[0-9]+",version) or sequence<1:raise RuntimeError("Invalid deployment version or sequence")
     package = RUNTIME / f"battery_{version}.tar.gz"
     env = peer_environment("cell")
-    peer = SAMPLES / "bin/peer"
+    peer = fabric_bin("peer")
     if package.exists():
         with tarfile.open(package) as outer:
             with tarfile.open(fileobj=io.BytesIO(outer.extractfile("code.tar.gz").read())) as inner:
@@ -263,7 +316,9 @@ def deploy(version="1.0",sequence=1):
         if committed.get("sequence") != sequence or committed.get("version") != version:
             raise RuntimeError("Committed chaincode definition mismatch")
         evidence["organizations"][ORGANIZATIONS[slug]] = committed
-    dump(ROOT / f"docs/reports/business-chaincode-deployment-{version}.json",evidence)
+    evidence_text = json.dumps(evidence, indent=2) + "\n"
+    (RUNTIME / f"deployment-{version}.json").write_text(evidence_text)
+    (ROOT / f"docs/reports/business-chaincode-deployment-{version}.json").write_text(evidence_text)
     print("Business chaincode definition verified on all four local peers")
 
 

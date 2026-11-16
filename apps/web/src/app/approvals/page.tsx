@@ -72,21 +72,20 @@ export default function ApprovalsPage() {
   const [banner, setBanner] = useState<CommandResultState | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await fetch('/api/bff/releases', { cache: 'no-store' });
       if (res.ok) {
         const json = (await res.json()) as ApprovalsPayload;
         setData(json);
-        if (!selectedPackId && json.packs.length > 0) {
+        if (json.packs.length > 0) {
           const assembled = json.packs.find(p => p.state === 'ASSEMBLED') ?? json.packs[0];
-          setSelectedPackId(assembled.id);
+          setSelectedPackId(prev => prev || assembled.id);
         }
       }
     } finally {
       setLoading(false);
     }
-  }, [selectedPackId]);
+  }, []);
 
   useEffect(() => {
     void load();

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { createHash, createPrivateKey, randomUUID, X509Certificate } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -9,7 +11,18 @@ import { connect, hash, signers } from '@hyperledger/fabric-gateway';
 import { common, gateway as gatewayProto, msp, peer } from '@hyperledger/fabric-protos';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const networkDir = '/home/milli/projects/fabric-samples/test-network';
+const samplesCandidates = [
+  process.env.FABRIC_SAMPLES,
+  path.join(root, '.tools/fabric-samples'),
+  path.resolve(root, '../fabric-samples'),
+  path.join(homedir(), 'fabric-samples'),
+].filter(Boolean);
+const samplesDir = samplesCandidates.find(dir => existsSync(path.join(dir, 'test-network')));
+assert(
+  samplesDir,
+  'Missing optional fabric-samples/test-network. Set FABRIC_SAMPLES or clone hyperledger/fabric-samples alongside this repository.',
+);
+const networkDir = path.join(samplesDir, 'test-network');
 const channel = 'trustguardchannel';
 const chaincode = 'basic';
 const assetId = `trustguard-${randomUUID()}`;

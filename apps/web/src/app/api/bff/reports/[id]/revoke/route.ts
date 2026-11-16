@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { NextResponse } from 'next/server';
 import { callBackendApi } from '@/lib/server/api-client';
 import { getSessionActor, jsonRelay, verifyCsrf } from '@/lib/server/session';
 

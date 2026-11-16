@@ -85,7 +85,6 @@ export default function AuditPage() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await fetch('/api/bff/audit', { cache: 'no-store' });
       if (res.ok) {
@@ -99,6 +98,7 @@ export default function AuditPage() {
   }, []);
 
   useEffect(() => {
+    if (!actor?.name) return;
     void load();
   }, [load, actor?.name]);
 

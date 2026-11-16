@@ -4,6 +4,7 @@ import React, { Suspense, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
+  Activity,
   AlertTriangle,
   CheckCircle2,
   Clock,
@@ -11,6 +12,7 @@ import {
   History,
   Info,
   Lock,
+  Plus,
   QrCode,
   Search,
   ShieldCheck,
@@ -32,7 +34,7 @@ import {
   TxResultBanner,
   type CommandResultState,
 } from '@/components/Badges';
-import { BatteryStructureSvg, PaginationBar } from '@/components/Visuals';
+import { BatteryStructureSvg, PaginationBar, SlideDrawer } from '@/components/Visuals';
 import {
   CHEMISTRY_LABELS,
   ERROR_DESCRIPTIONS,
@@ -57,7 +59,16 @@ interface BatteryQueryResult {
   history?: { txId: string; timestamp: string; value: BatteryAssetView }[];
   inspections?: { id: string; version: number; result: string; signerMSP: string; at: string; reportHash: string; txId: string }[];
   edges?: { id: string; parentId: string; childId: string; revision: number; activeFrom: string; activeTo: string | null; txId: string }[];
-  corrections?: { id: string; field: string; from: string; to: string; state: string; approvals: { msp: string }[] }[];
+  corrections?: {
+    id: string;
+    field: string;
+    from?: string;
+    to?: string;
+    oldValue?: string;
+    newValue?: string;
+    state: string;
+    approvals?: { msp: string }[];
+  }[];
 }
 
 const CODE_SEGMENTS = [
@@ -138,6 +149,28 @@ function IdentityContent() {
   const [eventAt, setEventAt] = useState('2026-11-16T08:00:00Z');
   const [submittingEvent, setSubmittingEvent] = useState(false);
 
+  // Registration Drawer (Batch & 24-char Battery)
+  const [regOpen, setRegOpen] = useState(false);
+  const [regBusy, setRegBusy] = useState(false);
+  const [regBanner, setRegBanner] = useState<CommandResultState | null>(null);
+  const [regBatchId, setRegBatchId] = useState('ui-batch-demo');
+  const [regKind, setRegKind] = useState<'CELL' | 'MODULE' | 'PACK'>('CELL');
+  const [regChem, setRegChem] = useState<'B' | 'E' | 'J'>('B');
+  const [regCode, setRegCode] = useState('SMACB010000001E119000101');
+  const [regMfgDate, setRegMfgDate] = useState('2024-01-01');
+  const [regLifeMonths, setRegLifeMonths] = useState('96');
+
+  // Health Snapshot Import
+  const [healthOpen, setHealthOpen] = useState(false);
+  const [healthSohBp, setHealthSohBp] = useState('9650');
+  const [healthCycles, setHealthCycles] = useState('142');
+  const [healthBusy, setHealthBusy] = useState(false);
+
+  // Lifecycle Date Correction Flow
+  const [corrField, setCorrField] = useState<'installedAt' | 'firstUseAt' | 'retiredAt' | 'scrappedAt'>('firstUseAt');
+  const [corrNewVal, setCorrNewVal] = useState('2024-07-02T00:00:00Z');
+  const [corrBusy, setCorrBusy] = useState(false);
+
   // Asset Ledger Filter & Pagination
   const [filterType, setFilterType] = useState('');
   const [filterState, setFilterState] = useState('');
@@ -146,20 +179,30 @@ function IdentityContent() {
   const [ledgerPage, setLedgerPage] = useState(1);
   const pageSize = 6;
 
-  const queryCode = useCallback(async (target: string) => {
+  const fetchBattery = useCallback(async (target: string) => {
     const cleaned = target.trim().toUpperCase();
     if (!cleaned) return;
-    setCodeInput(cleaned);
-    setLoading(true);
-    setCmdBanner(null);
     try {
       const res = await fetch(`/api/bff/battery?code=${encodeURIComponent(cleaned)}`, { cache: 'no-store' });
       const data = (await res.json()) as BatteryQueryResult;
+      setCodeInput(cleaned);
       setResult(data);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const queryCode = useCallback(
+    async (target: string) => {
+      const cleaned = target.trim().toUpperCase();
+      if (!cleaned) return;
+      setCodeInput(cleaned);
+      setLoading(true);
+      setCmdBanner(null);
+      await fetchBattery(cleaned);
+    },
+    [fetchBattery],
+  );
 
   useEffect(() => {
     void (async () => {
@@ -169,17 +212,17 @@ function IdentityContent() {
         setSamples(json.assets);
         if (!initialCode && json.assets.length > 0) {
           const live = json.assets.find(a => a.type === 'PACK' && a.state === 'IN_USE') ?? json.assets[0];
-          void queryCode(live.code);
+          void fetchBattery(live.code);
         }
       }
     })();
-  }, [initialCode, queryCode]);
+  }, [initialCode, fetchBattery]);
 
   useEffect(() => {
-    if (initialCode) {
-      void queryCode(initialCode);
+    if (initialCode && actor?.name) {
+      void fetchBattery(initialCode);
     }
-  }, [initialCode, queryCode, actor?.name]);
+  }, [initialCode, fetchBattery, actor?.name]);
 
   const standaloneSample =
     samples.find(a => a.state === 'REGISTERED' && !a.parentId && a.chemistry === 'LFP') ??
@@ -229,6 +272,183 @@ function IdentityContent() {
       }
     } finally {
       setSubmittingEvent(false);
+    }
+  }
+
+  async function refreshAssetsList() {
+    const res = await fetch('/api/bff/assets', { cache: 'no-store' });
+    if (res.ok) {
+      const json = (await res.json()) as { assets: BatteryAssetView[] };
+      setSamples(json.assets);
+    }
+  }
+
+  async function createBatchFlow(e: React.FormEvent) {
+    e.preventDefault();
+    if (!regBatchId.trim()) return;
+    setRegBusy(true);
+    setRegBanner(null);
+    try {
+      const lotId = `${regBatchId.trim()}-lot`;
+      await fetch('/api/bff/commands/material-lots', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          data: { id: lotId, ownerMSP: 'CellOrgMSP', simulation: true },
+          autoHashes: { sourceHash: `lot:${lotId}` },
+        }),
+      });
+      const res = await fetch('/api/bff/commands/batches', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          data: { id: regBatchId.trim(), makerMSP: 'CellOrgMSP', materialLotIds: [lotId], simulation: true },
+        }),
+      });
+      const json = await res.json();
+      setRegBanner(
+        json.completed
+          ? { ok: true, title: `已创建电芯批次 ${regBatchId.trim()}`, requestId: json.requestId, txId: json.txId, stage: json.stage, blockNumber: json.blockNumber }
+          : { ok: false, title: `创建批次被拒绝（需 CellOrgMSP manufacturer，当前 ${actor?.name ?? '—'}）`, errorCode: json.errorCode ?? json.code ?? 'FORBIDDEN' },
+      );
+    } finally {
+      setRegBusy(false);
+    }
+  }
+
+  async function registerBatteryFlow(e: React.FormEvent) {
+    e.preventDefault();
+    const code = regCode.trim().toUpperCase();
+    const assetId = `ui-${regKind.toLowerCase()}-${Date.now().toString(36)}`;
+    setRegBusy(true);
+    setRegBanner(null);
+    try {
+      const res = await fetch('/api/bff/commands/assets', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          data: {
+            id: assetId,
+            code,
+            batchId: regKind === 'CELL' ? regBatchId.trim() : '',
+            model: 'sim-3000',
+            manufacturedAt: regMfgDate,
+            designLifeMonths: Number(regLifeMonths) || 96,
+          },
+          autoHashes: {
+            manufactureSourceHash: `mfg:${assetId}:${code}`,
+            specSourceHash: `spec:${assetId}:sim-3000`,
+          },
+        }),
+      });
+      const json = await res.json();
+      if (json.completed) {
+        setRegBanner({
+          ok: true,
+          title: `24 位编码建档成功：${assetId}`,
+          requestId: json.requestId,
+          txId: json.txId,
+          stage: json.stage,
+          blockNumber: json.blockNumber,
+        });
+        await refreshAssetsList();
+        await queryCode(code);
+      } else {
+        setRegBanner({
+          ok: false,
+          title: `编码建档被拒绝（当前 ${actor?.name ?? '—'}）`,
+          errorCode: json.errorCode ?? json.code ?? 'REJECTED',
+        });
+      }
+    } finally {
+      setRegBusy(false);
+    }
+  }
+
+  async function submitHealthImport(e: React.FormEvent) {
+    e.preventDefault();
+    if (!result?.battery) return;
+    setHealthBusy(true);
+    setCmdBanner(null);
+    try {
+      const res = await fetch('/api/bff/imports/health', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          assetId: result.battery.id,
+          sohBasisPoints: Number(healthSohBp),
+          cycleCount: Number(healthCycles),
+          measuredAt: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
+        }),
+      });
+      const json = await res.json();
+      if (res.ok && json.stored) {
+        setCmdBanner({ ok: true, title: `已签名导入 BMS 健康快照（SOH ${(Number(healthSohBp) / 100).toFixed(2)}%）`, requestId: json.requestId });
+        setHealthOpen(false);
+        await queryCode(result.battery.code);
+      } else {
+        setCmdBanner({ ok: false, title: `BMS 健康快照导入被拒绝（需 lab-inspector，当前 ${actor?.name ?? '—'}）`, errorCode: json.code ?? `HTTP_${res.status}` });
+      }
+    } finally {
+      setHealthBusy(false);
+    }
+  }
+
+  async function proposeCorrection(e: React.FormEvent) {
+    e.preventDefault();
+    if (!result?.battery) return;
+    setCorrBusy(true);
+    setCmdBanner(null);
+    const corrId = `ui-corr-${Date.now().toString(36)}`;
+    try {
+      const res = await fetch('/api/bff/commands/lifecycle-corrections', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          data: {
+            id: corrId,
+            assetId: result.battery.id,
+            field: corrField,
+            newValue: corrNewVal,
+            assetVersion: result.battery.version,
+          },
+          autoHashes: {
+            evidenceHash: `corr-ev:${corrId}:${corrNewVal}`,
+            reasonHash: `corr-rs:${corrId}:${corrField}`,
+          },
+        }),
+      });
+      const json = await res.json();
+      if (json.completed) {
+        setCmdBanner({ ok: true, title: `已提交受控日期更正提案 ${corrId}`, requestId: json.requestId, txId: json.txId, stage: json.stage, blockNumber: json.blockNumber });
+        await queryCode(result.battery.code);
+      } else {
+        setCmdBanner({ ok: false, title: `发起日期更正被拒绝`, errorCode: json.errorCode ?? json.code ?? 'REJECTED' });
+      }
+    } finally {
+      setCorrBusy(false);
+    }
+  }
+
+  async function actCorrection(resource: 'lifecycle-correction-approvals' | 'lifecycle-correction-applications', corrId: string, label: string) {
+    if (!result?.battery) return;
+    setCorrBusy(true);
+    setCmdBanner(null);
+    try {
+      const res = await fetch(`/api/bff/commands/${resource}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ data: { id: corrId } }),
+      });
+      const json = await res.json();
+      if (json.completed) {
+        setCmdBanner({ ok: true, title: `${label} 已上链确认`, requestId: json.requestId, txId: json.txId, stage: json.stage, blockNumber: json.blockNumber });
+        await queryCode(result.battery.code);
+      } else {
+        setCmdBanner({ ok: false, title: `${label} 被拒绝`, errorCode: json.errorCode ?? json.code ?? 'REJECTED' });
+      }
+    } finally {
+      setCorrBusy(false);
     }
   }
 
@@ -304,13 +524,26 @@ function IdentityContent() {
         title="动力电池数字身份证与按码查询工作台"
         subtitle="严格依据 GB/T 34014—2017 及第 1 号修改单解析 24 位编码，关联链上多组织签名生命周期与受控健康档案"
         right={
-          actor && (
-            <div className="flex items-center gap-2 rounded-lg border border-[#1e3a5c] bg-[#0B192C] px-3 py-1.5 text-xs">
-              <span className="text-slate-400">当前查询证书:</span>
-              <OrgBadge mspId={actor.mspId} dark />
-              <span className="font-semibold text-white">{actor.roleLabel}</span>
-            </div>
-          )
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setRegBatchId(`ui-batch-${Math.floor(Date.now() / 1000).toString(36)}`);
+                setRegOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              新建批次 / 24 位码建档
+            </button>
+            {actor && (
+              <div className="flex items-center gap-2 rounded-lg border border-[#1e3a5c] bg-[#0B192C] px-3 py-1.5 text-xs">
+                <span className="text-slate-400">当前查询证书:</span>
+                <OrgBadge mspId={actor.mspId} dark />
+                <span className="font-semibold text-white">{actor.roleLabel}</span>
+              </div>
+            )}
+          </div>
         }
       />
 
@@ -860,24 +1093,84 @@ function IdentityContent() {
                     ))
                   ))}
 
-                {evidenceTab === 'corrections' &&
-                  ((result.corrections ?? []).length === 0 ? (
-                    <div className="py-8 text-center text-[#64748B]">暂无受控日期更正记录</div>
-                  ) : (
-                    (result.corrections ?? []).map(c => (
-                      <div key={c.id} className="subtle-surface p-3">
-                        <div className="flex items-center justify-between">
-                          <span className="mono font-bold">
-                            {c.id} · {c.field}
-                          </span>
-                          <span className="rounded bg-[#2563EB]/10 px-2 py-0.5 text-[10px] font-bold text-[#2563EB]">{c.state}</span>
+                {evidenceTab === 'corrections' && (
+                  <div className="space-y-3">
+                    {(result.corrections ?? []).length === 0 ? (
+                      <div className="py-4 text-center text-[#64748B]">暂无受控日期更正记录</div>
+                    ) : (
+                      (result.corrections ?? []).map(c => (
+                        <div key={c.id} className="subtle-surface p-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="mono font-bold text-[#172B3A]">
+                              {c.id} · {c.field}
+                            </span>
+                            <span className="rounded bg-[#2563EB]/10 px-2 py-0.5 text-[10px] font-bold text-[#2563EB]">
+                              {c.state}
+                            </span>
+                          </div>
+                          <div className="mono mt-1 text-[11px] text-[#64748B]">
+                            {c.oldValue ?? c.from ?? '空'} → {c.newValue ?? c.to ?? '—'}
+                          </div>
+                          {c.state !== 'APPLIED' && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                disabled={corrBusy}
+                                onClick={() =>
+                                  void actCorrection('lifecycle-correction-approvals', c.id, `批准日期更正 ${c.id}`)
+                                }
+                                className="rounded bg-[#10243A] px-2 py-1 text-[10px] font-semibold text-white hover:bg-[#17324f] disabled:opacity-50"
+                              >
+                                独立批准 (auditor)
+                              </button>
+                              <button
+                                type="button"
+                                disabled={corrBusy}
+                                onClick={() =>
+                                  void actCorrection('lifecycle-correction-applications', c.id, `应用日期更正 ${c.id}`)
+                                }
+                                className="rounded bg-[#159B76] px-2 py-1 text-[10px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                              >
+                                应用生效
+                              </button>
+                            </div>
+                          )}
                         </div>
-                        <div className="mono mt-1 text-[11px] text-[#64748B]">
-                          {c.from} → {c.to}
+                      ))
+                    )}
+
+                    {result.battery.type === 'PACK' && (
+                      <form onSubmit={proposeCorrection} className="rounded-lg border border-[#dce4ee] bg-white p-3 space-y-2">
+                        <div className="font-bold text-[#172B3A]">发起受控日期更正提案（仅支持 PACK · 需多方批准）</div>
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                          <select
+                            value={corrField}
+                            onChange={e => setCorrField(e.target.value as typeof corrField)}
+                            className="rounded border border-[#dce4ee] px-2 py-1 text-[11px]"
+                          >
+                            <option value="installedAt">installedAt (装车日期)</option>
+                            <option value="firstUseAt">firstUseAt (首次投用)</option>
+                            <option value="retiredAt">retiredAt (退役日期)</option>
+                            <option value="scrappedAt">scrappedAt (报废确认)</option>
+                          </select>
+                          <input
+                            type="text"
+                            value={corrNewVal}
+                            onChange={e => setCorrNewVal(e.target.value)}
+                            className="mono rounded border border-[#dce4ee] px-2 py-1 text-[11px] sm:col-span-2"
+                          />
                         </div>
-                      </div>
-                    ))
-                  ))}
+                        <button
+                          type="submit"
+                          disabled={corrBusy}
+                          className="rounded bg-[#2563EB] px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          {corrBusy ? '提交中...' : '发起更正提案 (保留历史账本)'}
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -888,7 +1181,49 @@ function IdentityContent() {
                   title="分级 BMS 健康数据授权状态"
                   subtitle="最小披露保护：敏感 SOH 数据仅向持有方与 LabOrg 开放"
                   icon={<Cpu className="h-4 w-4 text-[#0F9D8A]" />}
+                  action={
+                    <button
+                      type="button"
+                      onClick={() => setHealthOpen(v => !v)}
+                      className="inline-flex items-center gap-1 rounded-md border border-[#dce4ee] bg-[#F4F7FA] px-2 py-1 text-[11px] font-semibold text-[#2563EB] hover:border-[#2563EB]"
+                    >
+                      <Activity className="h-3 w-3" />
+                      {healthOpen ? '收起导入' : '导入健康快照'}
+                    </button>
+                  }
                 />
+                {healthOpen && (
+                  <form onSubmit={submitHealthImport} className="mb-3 space-y-2 rounded-xl border border-[#dce4ee] bg-[#F4F7FA] p-3 text-xs">
+                    <div className="font-semibold text-[#172B3A]">签名导入模拟 BMS 快照（需 lab-inspector）</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="mb-0.5 block text-[10px] text-[#64748B]">SOH 基点 (9650=96.5%)</label>
+                        <input
+                          type="number"
+                          value={healthSohBp}
+                          onChange={e => setHealthSohBp(e.target.value)}
+                          className="mono w-full rounded border border-[#dce4ee] bg-white px-2 py-1 text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-0.5 block text-[10px] text-[#64748B]">循环次数 (cycleCount)</label>
+                        <input
+                          type="number"
+                          value={healthCycles}
+                          onChange={e => setHealthCycles(e.target.value)}
+                          className="mono w-full rounded border border-[#dce4ee] bg-white px-2 py-1 text-xs"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={healthBusy}
+                      className="w-full rounded bg-[#0F9D8A] py-1.5 text-[11px] font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+                    >
+                      {healthBusy ? '签名导入中...' : '写入已签名健康快照'}
+                    </button>
+                  </form>
+                )}
                 {result.health?.allowed && result.health.data ? (
                   <div className="subtle-surface p-3.5 text-xs">
                     <div className="font-bold text-[#159B76]">已授权读取最新 BMS/检测快照</div>
@@ -1075,6 +1410,136 @@ function IdentityContent() {
           onPageChange={setLedgerPage}
         />
       </div>
+
+      {/* 新增批次与 24 位编码建档抽屉 */}
+      <SlideDrawer
+        open={regOpen}
+        onClose={() => setRegOpen(false)}
+        title="新增模拟电芯批次与 24 位标准编码建档"
+        subtitle={`当前操作证书：${actor?.name ?? '—'} · 严格执行 GB/T 34014 编码与生产日期一致性校验`}
+      >
+        <div className="space-y-5 text-xs">
+          {regBanner && <TxResultBanner result={regBanner} onClose={() => setRegBanner(null)} />}
+
+          <div className="flex flex-wrap gap-1.5">
+            <span className="text-[#64748B]">快捷切身份：</span>
+            <button
+              type="button"
+              onClick={() => void switchActor('cell-manufacturer')}
+              className="mono rounded border border-[#dce4ee] bg-[#F4F7FA] px-2 py-0.5 font-medium hover:border-[#2563EB]"
+            >
+              cell-manufacturer (建电芯/批次)
+            </button>
+            <button
+              type="button"
+              onClick={() => void switchActor('pack-manufacturer')}
+              className="mono rounded border border-[#dce4ee] bg-[#F4F7FA] px-2 py-0.5 font-medium hover:border-[#2563EB]"
+            >
+              pack-manufacturer (建模组/PACK)
+            </button>
+          </div>
+
+          <form onSubmit={createBatchFlow} className="subtle-surface space-y-3 p-4">
+            <div className="font-bold text-[#172B3A]">步骤 1：创建原料批次 &amp; 电芯生产批次 (cell-manufacturer)</div>
+            <div>
+              <label className="mb-1 block text-[#64748B]">批次号 (batchId)</label>
+              <input
+                type="text"
+                value={regBatchId}
+                onChange={e => setRegBatchId(e.target.value)}
+                className="mono w-full rounded-lg border border-[#dce4ee] bg-white px-3 py-1.5"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={regBusy}
+              className="w-full rounded-lg bg-[#10243A] py-2 font-semibold text-white hover:bg-[#17324f] disabled:opacity-50"
+            >
+              提交并创建生产批次
+            </button>
+          </form>
+
+          <form onSubmit={registerBatteryFlow} className="subtle-surface space-y-3 p-4">
+            <div className="font-bold text-[#172B3A]">步骤 2：按 GB/T 34014 24 位编码登记新电池资产</div>
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="mb-1 block text-[#64748B]">层级类型</label>
+                <select
+                  value={regKind}
+                  onChange={e => {
+                    const k = e.target.value as 'CELL' | 'MODULE' | 'PACK';
+                    setRegKind(k);
+                    const prefix = k === 'CELL' ? 'SMA' : 'DMA';
+                    const tc = k === 'CELL' ? 'C' : k === 'MODULE' ? 'M' : 'P';
+                    const serial = String(Math.floor(1000000 + Math.random() * 8000000));
+                    setRegCode(`${prefix}${tc}${regChem}010000001E11${serial}`);
+                  }}
+                  className="w-full rounded-lg border border-[#dce4ee] bg-white px-2.5 py-1.5"
+                >
+                  <option value="CELL">电芯单体 (CELL · SMA)</option>
+                  <option value="MODULE">电池模组 (MODULE · DMA)</option>
+                  <option value="PACK">动力电池包 (PACK · DMA)</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-[#64748B]">材料体系 (X5)</label>
+                <select
+                  value={regChem}
+                  onChange={e => {
+                    const ch = e.target.value as 'B' | 'E' | 'J';
+                    setRegChem(ch);
+                    const prefix = regKind === 'CELL' ? 'SMA' : 'DMA';
+                    const tc = regKind === 'CELL' ? 'C' : regKind === 'MODULE' ? 'M' : 'P';
+                    const serial = String(Math.floor(1000000 + Math.random() * 8000000));
+                    setRegCode(`${prefix}${tc}${ch}010000001E11${serial}`);
+                  }}
+                  className="w-full rounded-lg border border-[#dce4ee] bg-white px-2.5 py-1.5"
+                >
+                  <option value="B">B · 磷酸铁锂 (LFP)</option>
+                  <option value="E">E · 三元材料 (TERNARY)</option>
+                  <option value="J">J · 钠离子 (修改单)</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-[#64748B]">24 位标准编码（X15–X17 须与制造日期一致）</label>
+              <input
+                type="text"
+                value={regCode}
+                onChange={e => setRegCode(e.target.value.toUpperCase())}
+                className="mono w-full rounded-lg border border-[#dce4ee] bg-white px-3 py-1.5 font-bold"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="mb-1 block text-[#64748B]">制造日期 (manufacturedAt)</label>
+                <input
+                  type="text"
+                  value={regMfgDate}
+                  onChange={e => setRegMfgDate(e.target.value)}
+                  className="mono w-full rounded-lg border border-[#dce4ee] bg-white px-2.5 py-1.5"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[#64748B]">设计寿命 (月)</label>
+                <input
+                  type="number"
+                  value={regLifeMonths}
+                  onChange={e => setRegLifeMonths(e.target.value)}
+                  className="mono w-full rounded-lg border border-[#dce4ee] bg-white px-2.5 py-1.5"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={regBusy}
+              className="w-full rounded-lg bg-[#2563EB] py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {regBusy ? '链码建档提交中...' : '写入 24 位标准电池数字身份'}
+            </button>
+          </form>
+        </div>
+      </SlideDrawer>
     </div>
   );
 }

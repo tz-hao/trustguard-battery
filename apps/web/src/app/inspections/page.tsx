@@ -96,9 +96,18 @@ export default function InspectionsPage() {
   } | null>(null);
 
   const [banner, setBanner] = useState<CommandResultState | null>(null);
+  const [rightTab, setRightTab] = useState<'sign' | 'csv'>('sign');
   const [targetAssetId, setTargetAssetId] = useState('');
   const [inspectResult, setInspectResult] = useState<'QC_PASSED' | 'QC_REJECTED' | 'REVIEW_REQUIRED'>('QC_PASSED');
   const [submitting, setSubmitting] = useState(false);
+
+  // Signed CSV Measurement Import State
+  const [csvCellId, setCsvCellId] = useState('');
+  const [csvCap, setCsvCap] = useState('3000');
+  const [csvRes, setCsvRes] = useState('1500');
+  const [csvVolt, setCsvVolt] = useState('3300');
+  const [csvTemp, setCsvTemp] = useState('25');
+  const [csvBusy, setCsvBusy] = useState(false);
 
   // Filters & pagination for reports/inspections table
   const [filterResult, setFilterResult] = useState('');
@@ -107,7 +116,6 @@ export default function InspectionsPage() {
   const pageSize = 6;
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       const [insRes, astRes] = await Promise.all([
         fetch('/api/bff/inspections', { cache: 'no-store' }),
@@ -116,20 +124,22 @@ export default function InspectionsPage() {
       if (insRes.ok) {
         const json = (await insRes.json()) as InspectionsPayload;
         setData(json);
-        if (json.measurements.length > 0) setSelectedM(json.measurements[0]);
+        if (json.measurements.length > 0) setSelectedM(prev => prev ?? json.measurements[0]);
       }
       if (astRes.ok) {
         const aJson = (await astRes.json()) as { assets: BatteryAssetView[] };
         setAssets(aJson.assets);
-        if (!targetAssetId && aJson.assets.length > 0) {
+        if (aJson.assets.length > 0) {
           const cell = aJson.assets.find(a => a.type === 'CELL') ?? aJson.assets[0];
-          setTargetAssetId(cell.id);
+          setTargetAssetId(prev => prev || cell.id);
+          const cellWithBatch = aJson.assets.find(a => a.type === 'CELL' && a.batchId) ?? aJson.assets.find(a => a.type === 'CELL');
+          if (cellWithBatch) setCsvCellId(prev => prev || cellWithBatch.id);
         }
       }
     } finally {
       setLoading(false);
     }
-  }, [targetAssetId]);
+  }, []);
 
   useEffect(() => {
     void load();
@@ -197,6 +207,56 @@ export default function InspectionsPage() {
       }
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function submitCsvMeasurement(e: React.FormEvent) {
+    e.preventDefault();
+    const cell = assets.find(a => a.id === csvCellId && a.type === 'CELL');
+    if (!cell || !cell.batchId) {
+      setBanner({ ok: false, title: '请选择带有有效批次号 (batchId) 的电芯资产' });
+      return;
+    }
+    setCsvBusy(true);
+    setBanner(null);
+    try {
+      const res = await fetch('/api/bff/imports/measurements', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          batchId: cell.batchId,
+          rows: [
+            {
+              asset_id: cell.id,
+              batch_id: cell.batchId,
+              chemistry: cell.chemistry === 'TERNARY' ? 'TERNARY' : 'LFP',
+              model: cell.model || 'sim-3000',
+              condition: '25C-1C',
+              capacity_mah: Number(csvCap),
+              resistance_uohm: Number(csvRes),
+              voltage_mv: Number(csvVolt),
+              temperature_c: Number(csvTemp),
+            },
+          ],
+        }),
+      });
+      const json = await res.json();
+      if (res.ok && json.imported) {
+        setBanner({
+          ok: true,
+          title: `已签发源签名并导入 ${json.records} 条电芯 CSV 量测至 PG（IsolationForest 实时评分已更新）`,
+          requestId: json.requestId,
+        });
+        await load();
+      } else {
+        setBanner({
+          ok: false,
+          title: `CSV 导入被拒绝（需 LabOrgMSP inspector 身份，当前: ${actor?.name ?? '—'}）`,
+          errorCode: json.code ?? `HTTP_${res.status}`,
+        });
+      }
+    } finally {
+      setCsvBusy(false);
     }
   }
 
@@ -403,62 +463,188 @@ export default function InspectionsPage() {
             )}
           </div>
 
-          {/* 右：签发新版本质检报告 */}
+          {/* 右：签发新版本质检报告 / 签名导入 CSV 量测 */}
           <div className="card-surface p-5 lg:col-span-5">
-            <SectionHeader
-              title="签发版本化检测报告（AES-GCM + 上链）"
-              subtitle="仅 LabOrgMSP inspector 可签发；复检自动递增版本号，绝不覆盖旧报告"
-              icon={<ShieldCheck className="h-4 w-4 text-[#0F9D8A]" />}
-            />
-
-            <form onSubmit={submitInspection} className="space-y-3.5 text-xs">
-              <div>
-                <label className="mb-1 block font-semibold text-[#64748B]">选择电池资产</label>
-                <select
-                  value={targetAssetId}
-                  onChange={e => setTargetAssetId(e.target.value)}
-                  className="mono w-full rounded-lg border border-[#dce4ee] bg-white px-3 py-2 text-xs"
-                >
-                  {assets.map(a => (
-                    <option key={a.id} value={a.id}>
-                      {a.id} ({a.type} · 质检 v{a.inspectionVersion} · {a.quality})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1 block font-semibold text-[#64748B]">检测结论</label>
-                <select
-                  value={inspectResult}
-                  onChange={e => setInspectResult(e.target.value as typeof inspectResult)}
-                  className="w-full rounded-lg border border-[#dce4ee] bg-white px-3 py-2 text-xs"
-                >
-                  <option value="QC_PASSED">QC_PASSED · 质检合格</option>
-                  <option value="QC_REJECTED">QC_REJECTED · 质检不合格</option>
-                  <option value="REVIEW_REQUIRED">REVIEW_REQUIRED · 需独立复核</option>
-                </select>
-              </div>
-
-              <div className="subtle-surface p-3 text-[11px] text-[#64748B]">
-                <div>
-                  当前执行身份：<strong className="mono text-[#172B3A]">{actor?.name ?? '—'}</strong>（{actor?.mspId} ·{' '}
-                  {actor?.roleLabel}）
-                </div>
-                <p className="mt-1">
-                  提交后后端使用私钥签名元数据、AEAD 加密存储至 MinIO，再向 Fabric 提交 SubmitInspection。非{' '}
-                  <code className="mono">LabOrgMSP inspector</code> 将被拒绝。
-                </p>
-              </div>
-
+            <div className="mb-4 flex gap-1 rounded-lg bg-[#EDF2F7] p-1 text-xs font-semibold">
               <button
-                type="submit"
-                disabled={submitting || !targetAssetId}
-                className="w-full rounded-lg bg-[#10243A] py-2.5 text-xs font-semibold text-white hover:bg-[#17324f] disabled:opacity-60"
+                type="button"
+                onClick={() => setRightTab('sign')}
+                className={`flex-1 rounded-md px-2.5 py-1.5 transition ${
+                  rightTab === 'sign' ? 'bg-white text-[#10243A] shadow-2xs' : 'text-[#64748B]'
+                }`}
               >
-                {submitting ? '加密上传与链码签发中...' : '加密存储并上链签发报告'}
+                签发版本化检测报告
               </button>
-            </form>
+              <button
+                type="button"
+                onClick={() => setRightTab('csv')}
+                className={`flex-1 rounded-md px-2.5 py-1.5 transition ${
+                  rightTab === 'csv' ? 'bg-white text-[#10243A] shadow-2xs' : 'text-[#64748B]'
+                }`}
+              >
+                签名 CSV 导入 &amp; AI 筛查
+              </button>
+            </div>
+
+            {rightTab === 'sign' ? (
+              <>
+                <SectionHeader
+                  title="签发版本化检测报告（AES-GCM + 上链）"
+                  subtitle="仅 LabOrgMSP inspector 可签发；复检自动递增版本号，绝不覆盖旧报告"
+                  icon={<ShieldCheck className="h-4 w-4 text-[#0F9D8A]" />}
+                />
+
+                <form onSubmit={submitInspection} className="space-y-3.5 text-xs">
+                  <div>
+                    <label className="mb-1 block font-semibold text-[#64748B]">选择电池资产</label>
+                    <select
+                      value={targetAssetId}
+                      onChange={e => setTargetAssetId(e.target.value)}
+                      className="mono w-full rounded-lg border border-[#dce4ee] bg-white px-3 py-2 text-xs"
+                    >
+                      {assets.map(a => (
+                        <option key={a.id} value={a.id}>
+                          {a.id} ({a.type} · 质检 v{a.inspectionVersion} · {a.quality})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block font-semibold text-[#64748B]">检测结论</label>
+                    <select
+                      value={inspectResult}
+                      onChange={e => setInspectResult(e.target.value as typeof inspectResult)}
+                      className="w-full rounded-lg border border-[#dce4ee] bg-white px-3 py-2 text-xs"
+                    >
+                      <option value="QC_PASSED">QC_PASSED · 质检合格</option>
+                      <option value="QC_REJECTED">QC_REJECTED · 质检不合格</option>
+                      <option value="REVIEW_REQUIRED">REVIEW_REQUIRED · 需独立复核</option>
+                    </select>
+                  </div>
+
+                  <div className="subtle-surface p-3 text-[11px] text-[#64748B]">
+                    <div>
+                      当前执行身份：<strong className="mono text-[#172B3A]">{actor?.name ?? '—'}</strong>（{actor?.mspId} ·{' '}
+                      {actor?.roleLabel}）
+                    </div>
+                    <p className="mt-1">
+                      提交后后端使用私钥签名元数据、AEAD 加密存储至 MinIO，再向 Fabric 提交 SubmitInspection。非{' '}
+                      <code className="mono">LabOrgMSP inspector</code> 将被拒绝。
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submitting || !targetAssetId}
+                    className="w-full rounded-lg bg-[#10243A] py-2.5 text-xs font-semibold text-white hover:bg-[#17324f] disabled:opacity-60"
+                  >
+                    {submitting ? '加密上传与链码签发中...' : '加密存储并上链签发报告'}
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                <SectionHeader
+                  title="LIMS 签名 CSV 量测数据导入"
+                  subtitle="服务端用 source-signing.key 签名，经 FastAPI 验签后实时触发 AI 异常评估"
+                  icon={<Activity className="h-4 w-4 text-[#2563EB]" />}
+                />
+                <form onSubmit={submitCsvMeasurement} className="space-y-3 text-xs">
+                  <div>
+                    <label className="mb-1 block font-semibold text-[#64748B]">选择待检测电芯（含批次）</label>
+                    <select
+                      value={csvCellId}
+                      onChange={e => setCsvCellId(e.target.value)}
+                      className="mono w-full rounded-lg border border-[#dce4ee] bg-white px-3 py-2 text-xs"
+                    >
+                      {assets
+                        .filter(a => a.type === 'CELL' && a.batchId)
+                        .map(c => (
+                          <option key={c.id} value={c.id}>
+                            {c.id} ({c.batchId} · {c.chemistry})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="mb-1 block font-semibold text-[#64748B]">容量 (mAh)</label>
+                      <input
+                        type="number"
+                        value={csvCap}
+                        onChange={e => setCsvCap(e.target.value)}
+                        className="mono w-full rounded-lg border border-[#dce4ee] bg-[#F4F7FA] px-2.5 py-1.5 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-semibold text-[#64748B]">内阻 (uOhm)</label>
+                      <input
+                        type="number"
+                        value={csvRes}
+                        onChange={e => setCsvRes(e.target.value)}
+                        className="mono w-full rounded-lg border border-[#dce4ee] bg-[#F4F7FA] px-2.5 py-1.5 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-semibold text-[#64748B]">电压 (mV)</label>
+                      <input
+                        type="number"
+                        value={csvVolt}
+                        onChange={e => setCsvVolt(e.target.value)}
+                        className="mono w-full rounded-lg border border-[#dce4ee] bg-[#F4F7FA] px-2.5 py-1.5 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-semibold text-[#64748B]">温度 (℃)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={csvTemp}
+                        onChange={e => setCsvTemp(e.target.value)}
+                        className="mono w-full rounded-lg border border-[#dce4ee] bg-[#F4F7FA] px-2.5 py-1.5 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCsvCap('3000');
+                        setCsvRes('1500');
+                        setCsvVolt('3300');
+                        setCsvTemp('25');
+                      }}
+                      className="flex-1 rounded-md border border-[#dce4ee] bg-[#F4F7FA] py-1.5 text-[11px] font-medium text-[#172B3A]"
+                    >
+                      填充正常参考值
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCsvCap('2520');
+                        setCsvRes('2150');
+                        setCsvVolt('3210');
+                        setCsvTemp('28.5');
+                      }}
+                      className="flex-1 rounded-md border border-[#D99A2B]/40 bg-[#D99A2B]/12 py-1.5 text-[11px] font-semibold text-[#b07612]"
+                    >
+                      注入离群异常值
+                    </button>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={csvBusy || !csvCellId}
+                    className="w-full rounded-lg bg-[#2563EB] py-2.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                  >
+                    {csvBusy ? '签名导入与 AI 分析中...' : '签名导入 CSV 量测（需 lab-inspector）'}
+                  </button>
+                </form>
+              </>
+            )}
 
             <div className="mt-5 border-t border-[#EDF2F7] pt-4">
               <div className="mb-2 text-xs font-bold text-[#172B3A]">独立加密报告存储状态</div>

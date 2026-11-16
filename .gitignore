@@ -36,3 +36,8 @@ docs/reports/docker-baseline.json
 docs/reports/docker-integration-change.json
 docs/reports/*preservation*.json
 docs/reports/environment-setup-*.md
+apps/web/playwright-report/
+apps/web/test-results/
+playwright-report/
+test-results/
+docs/reports/server-deployment-*.md

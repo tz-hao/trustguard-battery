@@ -1,0 +1,205 @@
+{
+  "generatedAt": "2026-11-16T08:19:52.193Z",
+  "environment": "local single-host WSL2 (4 Fabric peers + 1 Raft orderer + NestJS mTLS API + Next.js BFF)",
+  "limitations": "Local single-machine concurrency benchmark within API 120 reads/min/actor ceiling; not multi-host production capacity.",
+  "totalPerStage": 25,
+  "concurrencyLevels": [
+    1,
+    5,
+    10,
+    20
+  ],
+  "rateLimitThresholdPerActorMinute": 120,
+  "rateLimitBurstProof": {
+    "concurrency": 20,
+    "totalRequests": 135,
+    "ok": 120,
+    "rateLimited429": 15,
+    "failed": 0,
+    "errorRate": 0.1111,
+    "rps": 374,
+    "avgMs": 52.49,
+    "p50Ms": 40.78,
+    "p95Ms": 190.29,
+    "p99Ms": 254.49
+  },
+  "targets": [
+    {
+      "name": "bff_assets_index",
+      "path": "/api/bff/assets",
+      "desc": "PostgreSQL 资产台账读取 (via BFF, within 120 req/min/actor limit)",
+      "stages": [
+        {
+          "concurrency": 1,
+          "totalRequests": 25,
+          "ok": 25,
+          "rateLimited429": 0,
+          "failed": 0,
+          "errorRate": 0,
+          "rps": 86.35,
+          "avgMs": 11.57,
+          "p50Ms": 10.72,
+          "p95Ms": 14.83,
+          "p99Ms": 21.15
+        },
+        {
+          "concurrency": 5,
+          "totalRequests": 25,
+          "ok": 25,
+          "rateLimited429": 0,
+          "failed": 0,
+          "errorRate": 0,
+          "rps": 235.45,
+          "avgMs": 20.71,
+          "p50Ms": 16.02,
+          "p95Ms": 41.49,
+          "p99Ms": 54.09
+        },
+        {
+          "concurrency": 10,
+          "totalRequests": 25,
+          "ok": 25,
+          "rateLimited429": 0,
+          "failed": 0,
+          "errorRate": 0,
+          "rps": 286.87,
+          "avgMs": 30.35,
+          "p50Ms": 24.6,
+          "p95Ms": 53.34,
+          "p99Ms": 66.64
+        },
+        {
+          "concurrency": 20,
+          "totalRequests": 25,
+          "ok": 25,
+          "rateLimited429": 0,
+          "failed": 0,
+          "errorRate": 0,
+          "rps": 280.67,
+          "avgMs": 46.54,
+          "p50Ms": 41.28,
+          "p95Ms": 77.02,
+          "p99Ms": 88.28
+        }
+      ]
+    },
+    {
+      "name": "bff_battery_fabric_query",
+      "path": "/api/bff/battery?code=DMAPB010000001E114616111",
+      "desc": "24位码按码实时查询链码+健康+生命周期 (via BFF mTLS -> Fabric)",
+      "stages": [
+        {
+          "concurrency": 1,
+          "totalRequests": 25,
+          "ok": 25,
+          "rateLimited429": 0,
+          "failed": 0,
+          "errorRate": 0,
+          "rps": 29.98,
+          "avgMs": 33.35,
+          "p50Ms": 45,
+          "p95Ms": 59.83,
+          "p99Ms": 137.7
+        },
+        {
+          "concurrency": 5,
+          "totalRequests": 25,
+          "ok": 25,
+          "rateLimited429": 0,
+          "failed": 0,
+          "errorRate": 0,
+          "rps": 655.75,
+          "avgMs": 7.57,
+          "p50Ms": 7.34,
+          "p95Ms": 8.99,
+          "p99Ms": 9.14
+        },
+        {
+          "concurrency": 10,
+          "totalRequests": 25,
+          "ok": 25,
+          "rateLimited429": 0,
+          "failed": 0,
+          "errorRate": 0,
+          "rps": 592.96,
+          "avgMs": 15.92,
+          "p50Ms": 12.94,
+          "p95Ms": 38.11,
+          "p99Ms": 41.81
+        },
+        {
+          "concurrency": 20,
+          "totalRequests": 25,
+          "ok": 25,
+          "rateLimited429": 0,
+          "failed": 0,
+          "errorRate": 0,
+          "rps": 190.87,
+          "avgMs": 61.32,
+          "p50Ms": 58.74,
+          "p95Ms": 120.38,
+          "p99Ms": 130.42
+        }
+      ]
+    },
+    {
+      "name": "bff_dashboard_summary",
+      "path": "/api/bff/dashboard",
+      "desc": "安全驾驶舱综合统计与拓扑接口 (via BFF mTLS)",
+      "stages": [
+        {
+          "concurrency": 1,
+          "totalRequests": 25,
+          "ok": 25,
+          "rateLimited429": 0,
+          "failed": 0,
+          "errorRate": 0,
+          "rps": 46.06,
+          "avgMs": 21.71,
+          "p50Ms": 17.96,
+          "p95Ms": 24.98,
+          "p99Ms": 94.92
+        },
+        {
+          "concurrency": 5,
+          "totalRequests": 25,
+          "ok": 25,
+          "rateLimited429": 0,
+          "failed": 0,
+          "errorRate": 0,
+          "rps": 123.42,
+          "avgMs": 38.11,
+          "p50Ms": 34.87,
+          "p95Ms": 59.56,
+          "p99Ms": 71.7
+        },
+        {
+          "concurrency": 10,
+          "totalRequests": 25,
+          "ok": 25,
+          "rateLimited429": 0,
+          "failed": 0,
+          "errorRate": 0,
+          "rps": 140.19,
+          "avgMs": 63.15,
+          "p50Ms": 61.58,
+          "p95Ms": 129.47,
+          "p99Ms": 130.91
+        },
+        {
+          "concurrency": 20,
+          "totalRequests": 25,
+          "ok": 25,
+          "rateLimited429": 0,
+          "failed": 0,
+          "errorRate": 0,
+          "rps": 139.44,
+          "avgMs": 105.15,
+          "p50Ms": 94.06,
+          "p95Ms": 178.56,
+          "p99Ms": 178.57
+        }
+      ]
+    }
+  ]
+}

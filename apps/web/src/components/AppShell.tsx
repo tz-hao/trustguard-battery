@@ -83,6 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [telemetry, setTelemetry] = useState<HeaderTelemetry>({ apiOk: true, alertsCount: 0, recentRejections: [] });
 
   useEffect(() => {
+    if (!actor?.name) return;
     let active = true;
     void (async () => {
       try {

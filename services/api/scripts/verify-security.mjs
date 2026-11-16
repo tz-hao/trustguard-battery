@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import https from 'node:https';
+import {existsSync} from 'node:fs';
 import {readFile,writeFile} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import {execFile} from 'node:child_process';
@@ -15,7 +16,7 @@ const root=path.resolve(import.meta.dirname,'../../..'),runtime=path.dirname(pro
 const name='security-'+randomUUID().slice(0,8),execute=promisify(execFile),agents=[];
 const config=loadConfiguration(),fabric=new FabricService(config),db=new Database(config.databaseUrl),restores=new Set();
 const report={network:'local',channel:config.channel,name,checks:[]};
-const python=path.join(root,'.venv/bin/python');
+const python=process.env.TRUSTGUARD_PYTHON_BIN??(existsSync(path.join(root,'.venv/bin/python'))?path.join(root,'.venv/bin/python'):'python3');
 async function service(action,who){await execute(python,[path.join(root,'infrastructure/scripts/business_services.py'),action,'--service',who],{cwd:root,env:process.env});}
 async function request(port,route,certFile,keyFile,body){
   const agent=new https.Agent({ca:await readFile(path.join(runtime,'server-ca/ca.crt')),cert:certFile?await readFile(certFile):undefined,key:keyFile?await readFile(keyFile):undefined,rejectUnauthorized:true});agents.push(agent);
