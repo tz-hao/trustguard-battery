@@ -15,6 +15,14 @@ const ROUTES = [
 ];
 
 test.describe('TrustGuard Battery 11-Page E2E Suite', () => {
+  test.beforeEach(async ({ context }) => {
+    const baseUrl = process.env.TRUSTGUARD_WEB_URL ?? 'http://127.0.0.1:3100';
+    await context.addCookies([
+      { name: 'tg_actor', value: 'cell-admin', url: baseUrl },
+      { name: 'tg_login_gate', value: '1', url: baseUrl },
+    ]);
+  });
+
   test('all 11 pages render without console/page errors or horizontal overflow on desktop & mobile', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', err => errors.push(`pageerror: ${err.message}`));
@@ -75,12 +83,10 @@ test.describe('TrustGuard Battery 11-Page E2E Suite', () => {
     await page.getByRole('button', { name: '关闭抽屉' }).click();
   });
 
-  test('/risk runs NetworkX collusion cycle graph & renders ablation/concurrency panels', async ({ page }) => {
+  test('/risk runs NetworkX collusion cycle graph', async ({ page }) => {
     await page.goto('/risk', { waitUntil: 'networkidle' });
     await page.getByRole('button', { name: '注入跨机构极速互批闭环' }).click();
     await expect(page.getByText(/NetworkX 判定：REQUIRES_REVIEW/)).toBeVisible();
-    await expect(page.getByText(/对照实验：基线 A \/ 基线 B vs 智权链完整方案 C/)).toBeVisible();
-    await expect(page.getByText(/并发吞吐与限流实测基准/)).toBeVisible();
   });
 
   test('/lab executes A1 real attack & verifies Peer rejection with zero state change', async ({ page }) => {

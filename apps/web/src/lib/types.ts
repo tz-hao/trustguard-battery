@@ -127,7 +127,7 @@ export const ROLE_LABELS: Record<string, string> = {
   custodian: '资产交接保管员',
   operator: '运维/装车登记员',
   recycler: '退役回收确认员',
-  auditor: '独立审计员',
+  auditor: '组织审计员',
   viewer: '只读观察员',
 };
 
@@ -158,12 +158,18 @@ export const PRODUCT_TYPE_LABELS: Record<string, string> = {
 };
 
 export const ERROR_DESCRIPTIONS: Record<string, string> = {
-  FORBIDDEN: '权限拒绝：当前证书所属组织或角色无权执行此操作',
+  FORBIDDEN: '权限拒绝：当前证书所属组织、岗位角色或资产持有方无权执行此操作（电芯建档/供货需 cell-manufacturer，模组/PACK 建档需 pack-manufacturer，装配绑定需 pack-assembler）',
+  INVALID_SUPPLY: '供货授权校验失败：仅允许对「CellOrg 持有且未装配 (REGISTERED)」的单体电芯，授权给「未装配 (REGISTERED)」的目标模组',
+  INVALID_ASSEMBLY: '装配绑定校验失败：父级组件须由 PackOrg 持有且处于未放行/未投用状态（REGISTERED/ASSEMBLED），子组件须类型、材料体系匹配且已获供货授权、未被其他组件占用',
+  INVALID_ID: '业务单号或资产 ID 格式非法（仅允许字母、数字、连字符或下划线）',
+  INVALID_ARGUMENT: '请求参数不完整或格式不符合链码规则，请检查输入字段',
+  RETEST_REQUIRED: '当前报告必须先提出复检，再由独立检测员签发新版本。',
   QUALITY_GATE: '质量门禁阻断：电芯或组件未达到有效 QC_PASSED 合格状态',
   REPORT_HASH_MISMATCH: '完整性校验失败：上报文件 SHA-256 摘要与声明不一致',
   VERIFIED_REPORT_REQUIRED: '缺少经本机构核验的加密检测报告',
   REPORT_ACCESS_REVOKED: '报告访问权限已被撤权，API 与独立密钥服务拒绝解密',
   POLICY_PREVIEW_REQUIRED: '策略未通过隔离回归预演或基线版本不匹配，禁止发布',
+  POLICY_PREVIEW_EVIDENCE_INVALID: '策略预演报告签名或测试集摘要校验失败，拒绝审批激活',
   UNSAFE_POLICY: '链码安全底线拒绝：策略不能取消独立复核或低于最低安全门槛',
   CODE_FORMAT: '编码长度或字符集不符合 GB/T 34014—2017（24位大写字母/数字）',
   CODE_PRODUCT: '第 4 位产品类别代码非法（仅支持 C/M/P）',
@@ -172,12 +178,19 @@ export const ERROR_DESCRIPTIONS: Record<string, string> = {
   CODE_DATE_MISMATCH: '编码生产日期与来源声明的 manufacturedAt 不一致',
   TERMINAL_STATE: '资产已处于终态（已报废/已处理），不可逆转或普通流转',
   INVALID_STATE: '当前生命周期状态不允许该业务操作',
+  INVALID_TIME: '请使用 UTC 时间（YYYY-MM-DDTHH:mm:ssZ），并核对已有事件的时间顺序和当前时间',
+  INVALID_TRANSFER: '请核对目标组织及资产状态，退役电池仅可交给回收组织',
+  TRANSFER_PENDING: '该电池包已有待处理交接，请先签收或取消',
+  TRANSFER_EXPIRED: '该交接单已过期，请由转出方取消后重新发起',
+  STALE_TRANSFER: '电池包的持有方或版本已变化，请由转出方取消后重新发起',
   VERSION_CONFLICT: '资产或策略版本号冲突，禁止覆盖历史记录',
   ALREADY_EXISTS: '唯一性约束拒绝：资产编码或业务单号已存在',
   NOT_FOUND: '链上或索引中未找到对应记录',
   IDEMPOTENCY_CONFLICT: '幂等冲突：同一 requestId 被用于不同的请求载荷',
   RISK_UNAVAILABLE: '风控服务不可用：系统保守降级，暂停自动放行',
   RATE_LIMITED: '接口限流保护已触发，请稍后重试',
+  RELEASE_EXPIRED: '放行申请已过期，请重新发起申请',
+  RISK_EXPIRED: '风险凭证已过期或失效，请重新发起放行申请',
 };
 
 export function formatServiceAge(age: ServiceAge | null): string {

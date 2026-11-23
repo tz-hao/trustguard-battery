@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ArrowRight,
   CheckCircle2,
   Play,
   RefreshCw,
@@ -20,6 +19,7 @@ import {
   TxResultBanner,
   type CommandResultState,
 } from '@/components/Badges';
+import { PolicyImpactBars } from '@/components/DataCharts';
 import { formatDateTime } from '@/lib/types';
 
 interface PolicyData {
@@ -40,6 +40,7 @@ interface PolicyPreviewRecord {
   createdAt: string;
   report: {
     candidateVersion: number;
+    releaseWindow?: {before: number; after: number};
     changedFields: string[];
     authorizationDifference: { before: string[]; after: string[] };
     newUnauthorizedReleasePathsInPresetCases: number | null;
@@ -64,7 +65,7 @@ interface PoliciesPayload {
 }
 
 export default function PoliciesPage() {
-  const { actor, switchActor } = useIdentity();
+  const { actor } = useIdentity();
   const [data, setData] = useState<PoliciesPayload | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [candidateDrafts, setCandidateDrafts] = useState<
@@ -72,6 +73,10 @@ export default function PoliciesPage() {
   >({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [secondsInput, setSecondsInput] = useState<string | null>(null);
+  const secondsText = secondsInput ?? String(Math.max(60, (data?.currentPolicy.releaseSeconds ?? 600) - 60));
+  const seconds = Number(secondsText);
+  const validSeconds = /^\d+$/.test(secondsText) && Number.isSafeInteger(seconds) && seconds >= 60 && seconds <= 3600;
   const [banner, setBanner] = useState<CommandResultState | null>(null);
 
   const load = useCallback(async () => {
@@ -92,7 +97,7 @@ export default function PoliciesPage() {
   }, [load]);
 
   async function runPolicyPreview(mode: 'weak' | 'safe') {
-    if (!data?.currentPolicy) return;
+    if (!data?.currentPolicy || (mode === 'safe' && !validSeconds)) return;
     setBusy(true);
     setBanner(null);
     try {
@@ -103,7 +108,7 @@ export default function PoliciesPage() {
           : {
               ...data.currentPolicy,
               version: data.currentPolicy.version + 1,
-              releaseSeconds: Math.min(7200, data.currentPolicy.releaseSeconds + 60),
+              releaseSeconds: seconds,
             };
 
       const res = await fetch('/api/bff/policy-preview', {
@@ -129,8 +134,8 @@ export default function PoliciesPage() {
         setBanner({
           ok: passed,
           title: passed
-            ? `隔离 Go 回归通过：合规候选策略 v${candidatePolicy.version} 未引入越权放行路径`
-            : `隔离 Go 回归拦截：弱化策略（单方 PackOrgMSP 审批）导致安全回归失败，已阻止提交上链`,
+            ? `候选策略 v${candidatePolicy.version} 通过本次隔离回归`
+            : '本次隔离回归未通过，候选策略已停止提议。可在执行明细中查看结果。',
           errorCode: passed ? undefined : 'UNSAFE_POLICY_BLOCKED',
         });
         setExpandedId(id);
@@ -183,9 +188,7 @@ export default function PoliciesPage() {
   return (
     <div className="space-y-6">
       <PageBanner
-        code="08 · SECURITY POLICY GOVERNANCE"
         title="安全策略变更预演与多组织治理中心"
-        subtitle="管理员无法直接放宽放行底线；任何策略变更必须经过「候选版本 → 隔离 Go 链码回归 → 差异报告 → 多组织审批 → 激活」"
         right={
           <button
             onClick={() => void load()}
@@ -198,25 +201,17 @@ export default function PoliciesPage() {
         }
       />
 
-      {/* 5 步策略治理流程条 */}
-      <div className="card-surface p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          {[
-            '01. 提出候选策略',
-            '02. 隔离 Go 链码回归测试',
-            '03. 生成授权差异与证据哈希',
-            '04. 四组织独立批准',
-            '05. 受控激活新版本',
-          ].map((step, i) => (
-            <React.Fragment key={step}>
-              <div className="subtle-surface px-3 py-2 font-bold text-[#172B3A]">{step}</div>
-              {i < 4 && <ArrowRight className="hidden h-4 w-4 text-[#94A3B8] md:block" />}
-            </React.Fragment>
-          ))}
-        </div>
-      </div>
-
       {banner && <TxResultBanner result={banner} onClose={() => setBanner(null)} />}
+
+      {data && (
+        <PolicyImpactBars
+          currentRequired={data.currentPolicy.requiredOrgs.length}
+          currentHighRisk={data.currentPolicy.highRiskOrgs.length}
+          currentWindowSec={data.currentPolicy.releaseSeconds}
+          candidateWindowSec={validSeconds ? Number(secondsText) : data.currentPolicy.releaseSeconds}
+          candidateCount={data.candidates.length}
+        />
+      )}
 
       {data && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
@@ -262,6 +257,11 @@ export default function PoliciesPage() {
                 <div className="mb-2 text-xs font-bold text-[#172B3A]">
                   隔离安全回归推演对照（当前身份：{actor?.name ?? '—'}，需 admin）
                 </div>
+                <label className="mb-3 block text-xs font-semibold">候选放行窗口（秒）
+                  <input type="number" min={60} max={3600} step={1} className="mono ml-2 w-24 rounded border px-2 py-1"
+                    value={secondsText} onChange={e => setSecondsInput(e.target.value)} aria-invalid={!validSeconds} />
+                </label>
+                {!validSeconds && <p role="alert" className="mb-2 text-xs text-red-700">请输入 60 到 3600 之间的整数。</p>}
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <button
                     disabled={busy}
@@ -272,7 +272,7 @@ export default function PoliciesPage() {
                     推演弱化策略（单方）
                   </button>
                   <button
-                    disabled={busy}
+                    disabled={busy || !validSeconds || actor?.role !== 'admin'}
                     onClick={() => void runPolicyPreview('safe')}
                     className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#159B76]/40 bg-[#159B76]/10 px-3 py-2 text-xs font-bold text-[#159B76] hover:bg-[#159B76]/15 disabled:opacity-60"
                   >
@@ -286,26 +286,8 @@ export default function PoliciesPage() {
             {/* 候选与激活历史 */}
             <div className="card-surface p-5">
               <SectionHeader
-                title="策略候选提案、四组织审批与激活"
-                subtitle="完整闭环：admin 提案 → 四组织 auditor 会签 → admin 激活（缺一不可）"
+                title="策略候选提案与四方审批"
               />
-              <div className="mb-3 flex flex-wrap items-center gap-1.5 text-[11px]">
-                <span className="text-[#64748B]">快速切审计员：</span>
-                {['cell-auditor', 'pack-auditor', 'lab-auditor', 'recycle-auditor'].map(aud => (
-                  <button
-                    key={aud}
-                    type="button"
-                    onClick={() => void switchActor(aud)}
-                    className={`mono rounded border px-2 py-0.5 font-medium ${
-                      actor?.name === aud
-                        ? 'border-[#2563EB] bg-[#2563EB]/12 text-[#2563EB]'
-                        : 'border-[#dce4ee] bg-[#F4F7FA] text-[#172B3A] hover:border-[#2563EB]'
-                    }`}
-                  >
-                    {aud}
-                  </button>
-                ))}
-              </div>
               {data.candidates.length === 0 ? (
                 <EmptyState title="暂无候选策略记录" />
               ) : (
@@ -366,6 +348,12 @@ export default function PoliciesPage() {
               <div className="space-y-4">
                 {data.previews.map(prev => {
                   const open = expandedId === prev.id;
+                  const window = prev.report.releaseWindow;
+                  const reconstructable = window && window.before === data.currentPolicy.releaseSeconds &&
+                    prev.report.changedFields.every(k => k === 'version' || k === 'releaseSeconds');
+                  const draft = Number(prev.baseVersion) === data.currentPolicy.version
+                    ? candidateDrafts[prev.id] ?? (reconstructable ? {id:prev.id,testsHash:prev.testsHash,
+                        policy:{...data.currentPolicy,version:prev.report.candidateVersion,releaseSeconds:window.after}} : null) : null;
                   return (
                     <div key={prev.id} className="subtle-surface p-4 text-xs">
                       <div
@@ -384,7 +372,7 @@ export default function PoliciesPage() {
                               prev.passed ? 'bg-[#159B76]/15 text-[#159B76]' : 'bg-[#DC5353]/12 text-[#DC5353]'
                             }`}
                           >
-                            {prev.passed ? '回归通过 · 可提议' : '越权风险 · 阻止发布'}
+                            {prev.passed ? '回归通过' : '回归未通过 · 阻止发布'}
                           </span>
                         </div>
                         <span className="mono text-[11px] text-[#64748B]">
@@ -407,19 +395,20 @@ export default function PoliciesPage() {
                         </div>
                       </div>
 
+                      {window && <p className="mt-2 text-xs">放行窗口 {window.before} 秒 → {window.after} 秒</p>}
                       <div className="mt-2.5 flex flex-wrap items-center gap-2">
                         <HashChip value={prev.testsHash} label="回归证据哈希" />
                         {prev.report.ruleProof && (
                           <HashChip value={prev.report.ruleProof.ruleSourceHash} label="部署源码核验" />
                         )}
-                        {prev.passed && candidateDrafts[prev.id] && !data.candidates.some(c => c.id === prev.id) && (
+                        {prev.passed && draft && !data.candidates.some(c => c.id === prev.id) && (
                           <button
                             type="button"
-                            disabled={busy}
+                            disabled={busy || actor?.role !== 'admin'}
                             onClick={() =>
                               void executePolicyCmd(
                                 'policy-candidates',
-                                candidateDrafts[prev.id],
+                                draft,
                                 `提交候选策略 ${prev.id}`,
                               )
                             }

@@ -1,0 +1,113 @@
+{
+  "network": "server-private",
+  "origin": "http://<deployment-host>",
+  "channel": "batterybusiness",
+  "chaincode": "battery",
+  "previous": {
+    "version": "1.4",
+    "sequence": 2
+  },
+  "active": {
+    "version": "1.5",
+    "sequence": 3,
+    "packageId": "battery_1.5:8ba65cf4185efc168725db781133c6a3f78b241f29c654d1de0fc3d86e794f10",
+    "definitionTxId": "dde75def5267acf41b6c7619ee82f496774a30f07ad77d83f18b43d4ed6060b0",
+    "fourPeersConfirmed": true
+  },
+  "preservation": {
+    "baselineBlock": 582,
+    "blockHeaderSHA256": "f87999ccf0513389b278dd3ddedfb15ae109c62e28f103546f91dd7e4ede51ad",
+    "assetsCompared": 36,
+    "releasesCompared": 6,
+    "allMatchedBeforeTransfer": true,
+    "assetChangesAfterTransfer": [
+      "pub14-0666136b-pack-2"
+    ],
+    "unchangedReleasesAfterTransfer": 6
+  },
+  "servicesActive": 6,
+  "deepSeekDailyLimit": 10,
+  "simulation": true,
+  "pack": "pub14-0666136b-pack-2",
+  "code": "DMAPB010000001E115358956",
+  "steps": [
+    {
+      "txId": "1f5fb2693fcd6c116152e40b8209ae411232576c146252859858fdb3375b9230",
+      "requestId": "ui-tr-386239765b189d3239592237",
+      "block": "589",
+      "stage": "ledger-verified",
+      "state": "CREATED",
+      "action": "CreateTransfer",
+      "actor": "pack-custodian",
+      "holder": "PackOrgMSP",
+      "version": 2,
+      "peers": [
+        "CellOrgMSP",
+        "PackOrgMSP",
+        "LabOrgMSP",
+        "RecycleOrgMSP"
+      ],
+      "afterRefresh": true
+    },
+    {
+      "txId": "02500e12ce712a791fc36899d8198f1d107e23bc6fbf5c6e621995c0ec08b1ff",
+      "requestId": "ui-dd8d491d",
+      "block": "590",
+      "stage": "ledger-verified",
+      "state": "SENT",
+      "action": "SendTransfer",
+      "actor": "pack-custodian",
+      "holder": "PackOrgMSP",
+      "version": 2,
+      "peers": [
+        "CellOrgMSP",
+        "PackOrgMSP",
+        "LabOrgMSP",
+        "RecycleOrgMSP"
+      ],
+      "afterRefresh": true
+    },
+    {
+      "txId": "070b2416df57b6cad89cc09700d66f6906699c35e9b3de6f2234381175a5d2d7",
+      "requestId": "ui-5bd81c6f",
+      "block": "591",
+      "stage": "ledger-verified",
+      "state": "ACCEPTED",
+      "action": "AcceptTransfer",
+      "actor": "cell-custodian",
+      "holder": "PackOrgMSP",
+      "version": 2,
+      "peers": [
+        "CellOrgMSP",
+        "PackOrgMSP",
+        "LabOrgMSP",
+        "RecycleOrgMSP"
+      ],
+      "afterRefresh": true
+    },
+    {
+      "txId": "a2b99260803cd703793c1fe2630187304b004278d6fbc5e4f7ca4e5ac8dd187c",
+      "requestId": "ui-a9d9a0ee",
+      "block": "592",
+      "stage": "ledger-verified",
+      "state": "COMMITTED",
+      "action": "CommitTransfer",
+      "actor": "cell-custodian",
+      "holder": "CellOrgMSP",
+      "version": 3,
+      "peers": [
+        "CellOrgMSP",
+        "PackOrgMSP",
+        "LabOrgMSP",
+        "RecycleOrgMSP"
+      ],
+      "afterRefresh": true
+    }
+  ],
+  "transferId": "ui-tr-386239765b189d3239592237",
+  "publicPolicy": {
+    "version": 2,
+    "releaseSeconds": 540,
+    "sidebar": "battery v1.5"
+  }
+}

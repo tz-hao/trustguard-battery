@@ -3,10 +3,12 @@ package domain
 import "encoding/json"
 
 type HistoryRecord struct {
-	TxID    string          `json:"txId"`
-	At      string          `json:"at"`
-	Deleted bool            `json:"deleted"`
-	Value   json.RawMessage `json:"value"`
+	TxID     string          `json:"txId"`
+	At       string          `json:"at"`
+	ActorMSP string          `json:"actorMSP,omitempty"`
+	Action   string          `json:"action,omitempty"`
+	Deleted  bool            `json:"deleted"`
+	Value    json.RawMessage `json:"value"`
 }
 type HistoryStore interface {
 	History(string) ([]HistoryRecord, error)

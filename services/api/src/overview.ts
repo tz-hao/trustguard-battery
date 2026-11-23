@@ -4,7 +4,7 @@ import { FabricService } from './gateway.js';
 import { InternalClient } from './internal-client.js';
 import { projectBattery } from './projection.js';
 import { safeErrorCode } from './transactions.js';
-import type { Asset, AuthenticatedActor, ClientIdentity, Organization } from './types.js';
+import type { Asset, AuthenticatedActor, BusinessIdentity, Organization } from './types.js';
 
 const orgLabels: Record<Organization, string> = {
   CellOrgMSP: '电芯制造企业 (CellOrg)',
@@ -18,7 +18,7 @@ export class OverviewService {
     private readonly db: Database,
     private readonly fabric: FabricService,
     private readonly internal: InternalClient,
-    private readonly identities: ClientIdentity[],
+    private readonly identities: BusinessIdentity[],
     private readonly channel: string,
   ) {}
 
@@ -125,7 +125,7 @@ export class OverviewService {
     });
 
     const pendingReleases = releaseRows.rows.map(r => r.body).filter(r => r.state !== 'COMPLETED');
-    const pendingTransfers = transferRows.rows.map(r => r.body).filter(t => t.state === 'SENT');
+    const pendingTransfers = transferRows.rows.map(r => r.body).filter(t => ['CREATED', 'SENT', 'ACCEPTED'].includes(t.state));
     const nextBlock = BigInt(cursorRows.rows[0]?.next_block ?? '0');
 
     return {
@@ -250,7 +250,7 @@ export class OverviewService {
         'SELECT id, request_id, asset_id, policy_version::text, body, created_at FROM risk_results ORDER BY created_at DESC LIMIT 40',
       ),
       this.db.pool.query<{ body: Record<string, unknown>; block_number: string }>(
-        "SELECT body, block_number FROM state_index WHERE state_key LIKE 'inspection:%' ORDER BY block_number::numeric DESC LIMIT 80",
+        "SELECT body, block_number FROM state_index WHERE state_key LIKE 'inspection:%' OR state_key LIKE 'batch-report:%' ORDER BY block_number::numeric DESC LIMIT 80",
       ),
     ]);
 
@@ -328,8 +328,13 @@ export class OverviewService {
   async releases(actor: AuthenticatedActor) {
     const [policy, releaseRows, candidateRows, previewRows, riskRows, packRows] = await Promise.all([
       this.fabric.query<Record<string, unknown>>(actor.identity, 'policy'),
-      this.db.pool.query<{ body: Record<string, unknown>; block_number: string; tx_id: string }>(
-        "SELECT body, block_number, tx_id FROM state_index WHERE state_key LIKE 'release:%' ORDER BY block_number::numeric DESC",
+      this.db.pool.query<{ body: Record<string, unknown>; block_number: string; tx_id: string; risk_review: unknown }>(
+        `SELECT s.body, s.block_number, s.tx_id, r.body->'review' AS risk_review
+         FROM state_index s
+         LEFT JOIN risk_results r ON r.id = s.body->'risk'->>'id'
+           AND r.request_id = s.body->>'id' AND r.asset_id = s.body->>'packId'
+           AND r.body->>'evidenceHash' = s.body->'risk'->>'evidenceHash'
+         WHERE s.state_key LIKE 'release:%' ORDER BY s.block_number::numeric DESC`,
       ),
       this.db.pool.query<{ body: Record<string, unknown>; block_number: string; tx_id: string }>(
         "SELECT body, block_number, tx_id FROM state_index WHERE state_key LIKE 'policy-candidate:%' ORDER BY block_number::numeric DESC",
@@ -344,7 +349,7 @@ export class OverviewService {
     ]);
     return {
       currentPolicy: policy,
-      releases: releaseRows.rows.map(r => ({ ...r.body, blockNumber: r.block_number, txId: r.tx_id })),
+      releases: releaseRows.rows.map(r => ({ ...r.body, blockNumber: r.block_number, txId: r.tx_id, riskReview: r.risk_review })),
       candidates: candidateRows.rows.map(r => ({ ...r.body, blockNumber: r.block_number, txId: r.tx_id })),
       previews: previewRows.rows.map(r => ({
         id: r.id,
@@ -367,7 +372,7 @@ export class OverviewService {
     };
   }
 
-  async audit(actor: AuthenticatedActor) {
+  async audit(actor: AuthenticatedActor, batch?: string) {
     const [txRows, logRows, batchRows] = await Promise.all([
       this.db.pool.query<{
         request_id: string; stage: string; tx_id: string | null; block_number: string | null;
@@ -384,8 +389,15 @@ export class OverviewService {
         `SELECT id::text, actor_hash, request_id, action, outcome, evidence_hash, signature_version, audit_batch_id, anchored_tx_id, created_at
          FROM security_logs ORDER BY id DESC LIMIT 100`,
       ),
-      this.db.pool.query<{ id: string; first_log_id: string; last_log_id: string; count: number; digest: string; tx_id: string | null; created_at: Date }>(
-        'SELECT id, first_log_id::text, last_log_id::text, count, digest, tx_id, created_at FROM audit_batches ORDER BY created_at DESC LIMIT 30',
+      this.db.pool.query<{ id: string; first_log_id: string; last_log_id: string; count: number; digest: string; tx_id: string | null; created_at: Date;
+        signer_msp: string | null; block_number: string | null; stage: string | null }>(
+        `SELECT b.id, b.first_log_id::text, b.last_log_id::text, b.count, b.digest, b.tx_id, b.created_at,
+                e.body->>'actorMSP' AS signer_msp, a.block_number::text, t.stage
+         FROM audit_batches b
+         LEFT JOIN state_index a ON a.state_key='security-audit:' || b.id AND a.tx_id=b.tx_id AND a.body->>'digest'=b.digest
+         LEFT JOIN state_index e ON e.state_key='audit:' || a.tx_id AND e.tx_id=a.tx_id AND e.body->>'action'='AnchorAudit'
+         LEFT JOIN transaction_requests t ON t.request_id=b.id AND t.tx_id=a.tx_id AND t.block_number=a.block_number
+         WHERE ($1::text IS NULL OR b.id=$1) ORDER BY b.created_at DESC LIMIT 30`, [batch ?? null],
       ),
     ]);
 
@@ -421,6 +433,9 @@ export class OverviewService {
       auditBatches: batchRows.rows.map(r => ({
         id: r.id,
         firstLogId: r.first_log_id,
+          signerMSP: r.signer_msp,
+          blockNumber: r.block_number,
+          stage: r.stage,
         lastLogId: r.last_log_id,
         count: r.count,
         digest: r.digest,

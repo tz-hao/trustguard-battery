@@ -1,0 +1,38 @@
+{
+  "source": "MES_SIM",
+  "simulation": true,
+  "requestId": "mes-demo-production",
+  "records": [
+    {
+      "kind": "material",
+      "data": {
+        "id": "mes-demo-lot",
+        "ownerMSP": "CellOrgMSP",
+        "sourceHash": "ccc968fd2625a71218487494f85e6daccffb2e5bd5920681a3018759164fb67e",
+        "simulation": true
+      }
+    },
+    {
+      "kind": "batch",
+      "data": {
+        "id": "mes-demo-batch",
+        "makerMSP": "CellOrgMSP",
+        "materialLotIds": [
+          "mes-demo-lot"
+        ],
+        "simulation": true
+      }
+    },
+    {
+      "kind": "product",
+      "data": {
+        "id": "mes-demo-cell",
+        "code": "SMACB010000001E119876543",
+        "batchId": "mes-demo-batch",
+        "model": "mes-demo",
+        "manufacturedAt": "2024-01-01",
+        "manufactureSourceHash": "a0414100413f1203639b6fb315c84c14ce4f1eef89ef2e2a46ec70615caaa817"
+      }
+    }
+  ]
+}

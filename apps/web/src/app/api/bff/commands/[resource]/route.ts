@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { callBackendApi, sha256Hex } from '@/lib/server/api-client';
 import { getSessionActor, jsonRelay, verifyCsrf } from '@/lib/server/session';
 
+const lifecycleEvents = new Set(['installations', 'first-use', 'retirements', 'recycling-receipts', 'scrap-confirmations']);
+
 export async function POST(request: Request, context: { params: Promise<{ resource: string }> }) {
   const csrf = verifyCsrf(request);
   if (csrf) return csrf;
@@ -19,6 +21,14 @@ export async function POST(request: Request, context: { params: Promise<{ resour
       if (!data[field] && typeof note === 'string' && note.trim()) {
         data[field] = sha256Hex(note.trim());
       }
+    }
+  }
+
+  if (lifecycleEvents.has(resource) && typeof data.assetId === 'string' && data.evidenceHash === undefined) {
+    // Use the server clock when the operator leaves the event time blank.
+    data.at ??= new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+    if (typeof data.at === 'string') {
+      data.evidenceHash = sha256Hex(`${resource}:${data.assetId}:${data.at}`);
     }
   }
 

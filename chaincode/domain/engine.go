@@ -99,12 +99,15 @@ func (e *Engine) policy() (Policy, error) { return read[Policy](e, "policy:activ
 
 func (e *Engine) Execute(raw []byte) (Result, error) {
 	var zero Result
-	if !knownOrg(e.Actor.MSP) || e.Actor.ID == "" || e.TxID == "" || e.Now.IsZero() {
+	if (!knownOrg(e.Actor.MSP) && e.Actor.MSP != AuditOrg) || e.Actor.ID == "" || e.TxID == "" || e.Now.IsZero() {
 		return zero, fail("UNAUTHENTICATED", "trusted transaction context required")
 	}
 	c, err := decode[Command](raw)
 	if err != nil {
 		return zero, err
+	}
+	if e.Actor.MSP == AuditOrg && (e.Actor.Role != "auditor" || c.Action != "AnchorAudit") {
+		return zero, fail("FORBIDDEN", "audit organization may only attest audit evidence")
 	}
 	if err = validID(c.RequestID); err != nil {
 		return zero, err
@@ -176,7 +179,15 @@ func (e *Engine) dispatch(c Command) (string, uint64, error) {
 	case "RegisterAsset":
 		return e.registerAsset(c.Data)
 	case "SubmitInspection":
-		return e.inspection(c.Data)
+		return e.inspection(c.Data, false)
+	case "SubmitBatchInspection":
+		return e.batchInspection(c.Data, false)
+	case "ProposeRetest":
+		return e.proposeRetest(c.Data)
+	case "CompleteRetest":
+		return e.completeRetest(c.Data)
+	case "ImportMES":
+		return e.importMES(c.Data, c.RequestID)
 	case "ReplaceAssembly":
 		return e.assembly(c.Data, c.RequestID)
 	case "AuthorizeAssembly":
@@ -187,10 +198,10 @@ func (e *Engine) dispatch(c Command) (string, uint64, error) {
 		return e.approveRelease(c.Data)
 	case "FinalizeRelease":
 		return e.finalizeRelease(c.Data)
-	case "InitiateTransfer":
+	case "CreateTransfer":
 		return e.transfer(c.Data)
-	case "ConfirmTransfer":
-		return e.confirmTransfer(c.Data)
+	case "SendTransfer", "AcceptTransfer", "CommitTransfer", "InitiateTransfer", "ConfirmTransfer":
+		return e.advanceTransfer(c.Action, c.Data)
 	case "CancelTransfer":
 		return e.cancelTransfer(c.Data)
 	case "RecordInstallation", "RecordFirstUse", "RecordRetirement", "ConfirmRecycling", "RecordScrapConfirmation":
@@ -457,7 +468,7 @@ type InspectionInput struct {
 	SourceHash string `json:"sourceHash"`
 }
 
-func (e *Engine) inspection(raw []byte) (string, uint64, error) {
+func (e *Engine) inspection(raw []byte, retest bool) (string, uint64, error) {
 	if err := e.auth("inspector", LabOrg); err != nil {
 		return "", 0, err
 	}
@@ -477,6 +488,9 @@ func (e *Engine) inspection(raw []byte) (string, uint64, error) {
 	}
 	if a.State == "PROCESSED" {
 		return "", 0, fail("TERMINAL_STATE", "processed asset cannot be reinspected")
+	}
+	if err = e.checkRetest(in.AssetID, a.InspectionVersion, a.Quality, in.Result, retest); err != nil {
+		return "", 0, err
 	}
 	if in.Version != a.InspectionVersion+1 {
 		return "", 0, fail("VERSION_CONFLICT", "inspection must append next version")
@@ -669,13 +683,49 @@ func (e *Engine) Snapshot(packID string) (string, []Asset, error) {
 		return "", nil, err
 	}
 	sort.Slice(assets, func(i, j int) bool { return assets[i].ID < assets[j].ID })
+	batches := make(map[string]Inspection)
+	for _, a := range assets {
+		if a.BatchID == "" {
+			continue
+		}
+		report, err := e.latestBatch(a.BatchID)
+		if err != nil {
+			return "", nil, err
+		}
+		if report.Version > 0 {
+			batches[a.BatchID] = report
+		}
+	}
+	if len(batches) > 0 {
+		return Digest(struct {
+			Assets  []Asset
+			Batches map[string]Inspection
+		}{assets, batches}), assets, nil
+	}
 	return Digest(assets), assets, nil
 }
-func qualityGate(assets []Asset) error {
+func (e *Engine) qualityGate(assets []Asset) error {
 	cells := 0
 	for _, a := range assets {
+		if proposal, err := e.pendingRetest(a.ID, a.InspectionVersion); err != nil {
+			return err
+		} else if proposal != nil {
+			return fail("QUALITY_GATE", "asset retest pending")
+		}
 		if a.Type == "CELL" {
 			cells++
+			batch, err := e.latestBatch(a.BatchID)
+			if err != nil {
+				return err
+			}
+			if proposal, err := e.pendingRetest("batch:"+a.BatchID, batch.Version); err != nil {
+				return err
+			} else if proposal != nil {
+				return fail("QUALITY_GATE", "batch retest pending")
+			}
+			if batch.Version > 0 && batch.Result != "QC_PASSED" {
+				return fail("QUALITY_GATE", "batch requires independent retest")
+			}
 		}
 		if a.Quality != "QC_PASSED" || a.InspectionVersion == 0 {
 			return fail("QUALITY_GATE", "all components require latest independent passing inspection")
@@ -754,7 +804,7 @@ func (e *Engine) requestRelease(raw []byte) (string, uint64, error) {
 	if err != nil {
 		return "", 0, err
 	}
-	if err = qualityGate(assets); err != nil {
+	if err = e.qualityGate(assets); err != nil {
 		return "", 0, err
 	}
 	if err = e.verifyRisk(in.Risk, p, in.ID, a.ID, hash); err != nil {
@@ -817,7 +867,7 @@ func (e *Engine) loadRelease(id string) (Release, Policy, Asset, error) {
 	if hash != r.SnapshotHash {
 		return z, p, a, fail("STALE_APPROVAL", "assembly, quality or asset version changed")
 	}
-	if err = qualityGate(assets); err != nil {
+	if err = e.qualityGate(assets); err != nil {
 		return z, p, a, err
 	}
 	if err = e.verifyRisk(r.Risk, p, r.ID, a.ID, hash); err != nil {
@@ -944,7 +994,9 @@ func (e *Engine) transfer(raw []byte) (string, uint64, error) {
 			return "", 0, fail("TRANSFER_PENDING", "resolve the outstanding transfer first")
 		}
 	}
-	t := Transfer{in.ID, a.ID, e.Actor.MSP, in.ToMSP, in.ReceiptHash, "SENT", a.Version, in.ExpiresAt, Digest(e.Actor.ID), ""}
+	t := Transfer{ID: in.ID, PackID: a.ID, FromMSP: e.Actor.MSP, ToMSP: in.ToMSP,
+		ReceiptHash: in.ReceiptHash, State: "CREATED", AssetVersion: a.Version, ExpiresAt: in.ExpiresAt,
+		SenderID: Digest(e.Actor.ID), CreatedTx: e.TxID}
 	if err = e.put("transfer-pending:"+a.ID, in.ID); err != nil {
 		return "", 0, err
 	}
@@ -956,23 +1008,63 @@ type ConfirmTransferInput struct {
 	ReceiptHash string `json:"receiptHash"`
 }
 
-func (e *Engine) confirmTransfer(raw []byte) (string, uint64, error) {
+func (e *Engine) advanceTransfer(action string, raw []byte) (string, uint64, error) {
 	if err := e.auth("custodian", Organizations...); err != nil {
 		return "", 0, err
 	}
-	in, err := decode[ConfirmTransferInput](raw)
+	var id, receipt string
+	var legacy TransferInput
+	switch action {
+	case "InitiateTransfer": // Existing HTTP clients send the original draft fields.
+		var err error
+		legacy, err = decode[TransferInput](raw)
+		if err != nil {
+			return "", 0, err
+		}
+		id = legacy.ID
+	case "AcceptTransfer", "ConfirmTransfer":
+		in, err := decode[ConfirmTransferInput](raw)
+		if err != nil {
+			return "", 0, err
+		}
+		id, receipt = in.ID, in.ReceiptHash
+	default:
+		in, err := decode[IDInput](raw)
+		if err != nil {
+			return "", 0, err
+		}
+		id = in.ID
+	}
+	if err := validID(id); err != nil {
+		return "", 0, err
+	}
+	t, err := read[Transfer](e, "transfer:"+id)
 	if err != nil {
 		return "", 0, err
 	}
-	if err = validID(in.ID); err != nil {
-		return "", 0, err
-	}
-	t, err := read[Transfer](e, "transfer:"+in.ID)
-	if err != nil {
-		return "", 0, err
-	}
-	if t.State != "SENT" || t.ToMSP != e.Actor.MSP || t.FromMSP == e.Actor.MSP || t.ReceiptHash != in.ReceiptHash {
-		return "", 0, fail("FORBIDDEN", "independent receipt confirmation required")
+	sending := action == "SendTransfer" || action == "InitiateTransfer"
+	if sending {
+		if t.State != "CREATED" || e.Actor.MSP != t.FromMSP {
+			return "", 0, fail("FORBIDDEN", "only the sender may dispatch a draft")
+		}
+		if action == "InitiateTransfer" && (legacy.PackID != t.PackID || legacy.ToMSP != t.ToMSP || legacy.ReceiptHash != t.ReceiptHash || legacy.ExpiresAt != t.ExpiresAt) {
+			return "", 0, fail("INVALID_TRANSFER", "dispatch must match the recorded draft")
+		}
+	} else {
+		if t.ToMSP != e.Actor.MSP || t.FromMSP == e.Actor.MSP {
+			return "", 0, fail("FORBIDDEN", "receiving custodian required")
+		}
+		if action != "CommitTransfer" && t.ReceiptHash != receipt {
+			return "", 0, fail("FORBIDDEN", "receipt does not match")
+		}
+		legacySent := action == "ConfirmTransfer" && t.CreatedTx == "" && t.State == "SENT"
+		if action == "AcceptTransfer" {
+			if t.State != "SENT" {
+				return "", 0, fail("INVALID_TRANSFER_STATE", "only a dispatched transfer can be accepted")
+			}
+		} else if !legacySent && (t.State != "ACCEPTED" || t.AcceptedTx == "" || t.ReceiverID == "") {
+			return "", 0, fail("INVALID_TRANSFER_STATE", "receipt acceptance required before commit")
+		}
 	}
 	exp, err := parseTime(t.ExpiresAt)
 	if err != nil || !exp.After(e.Now) {
@@ -982,20 +1074,35 @@ func (e *Engine) confirmTransfer(raw []byte) (string, uint64, error) {
 	if err != nil {
 		return "", 0, err
 	}
-	if a.HolderMSP != t.FromMSP || a.Version != t.AssetVersion || a.State == "PROCESSED" {
+	if a.HolderMSP != t.FromMSP || a.Version != t.AssetVersion || a.State == "PROCESSED" || a.State == "RECEIVED_FOR_RECYCLING" ||
+		(a.State == "RETIRED") != (t.ToMSP == RecycleOrg) {
 		return "", 0, fail("STALE_TRANSFER", "custody or asset version changed")
+	}
+	if sending {
+		t.State, t.SentTx = "SENT", e.TxID
+		return t.ID, a.Version, e.put("transfer:"+t.ID, t)
+	}
+	if action == "AcceptTransfer" {
+		t.State, t.AcceptedTx, t.ReceiverID = "ACCEPTED", e.TxID, Digest(e.Actor.ID)
+		return t.ID, a.Version, e.put("transfer:"+t.ID, t)
 	}
 	a.HolderMSP = t.ToMSP
 	e.stamp(&a)
-	t.State = "COMMITTED"
-	t.ReceiverID = Digest(e.Actor.ID)
+	t.State, t.CommittedTx = "COMMITTED", e.TxID
+	if t.ReceiverID == "" { // Historical v1.4 SENT row.
+		t.ReceiverID = Digest(e.Actor.ID)
+	}
 	if err = e.put("transfer:"+t.ID, t); err != nil {
 		return "", 0, err
 	}
 	if err = e.put("transfer-pending:"+a.ID, ""); err != nil {
 		return "", 0, err
 	}
-	return a.ID, a.Version, e.put("asset:"+a.ID, a)
+	resourceID := t.ID
+	if action == "ConfirmTransfer" {
+		resourceID = a.ID
+	}
+	return resourceID, a.Version, e.put("asset:"+a.ID, a)
 }
 func (e *Engine) cancelTransfer(raw []byte) (string, uint64, error) {
 	if err := e.auth("custodian", Organizations...); err != nil {
@@ -1012,10 +1119,12 @@ func (e *Engine) cancelTransfer(raw []byte) (string, uint64, error) {
 	if err != nil {
 		return "", 0, err
 	}
-	if t.State != "SENT" || (e.Actor.MSP != t.FromMSP && e.Actor.MSP != t.ToMSP) {
+	pending := t.State == "CREATED" || t.State == "SENT" || t.State == "ACCEPTED"
+	participant := e.Actor.MSP == t.FromMSP || (t.State != "CREATED" && e.Actor.MSP == t.ToMSP)
+	if !pending || !participant {
 		return "", 0, fail("FORBIDDEN", "cannot cancel transfer")
 	}
-	t.State = "CANCELLED"
+	t.State, t.CancelledTx = "CANCELLED", e.TxID
 	if err = e.put("transfer-pending:"+t.PackID, ""); err != nil {
 		return "", 0, err
 	}
@@ -1069,7 +1178,7 @@ func (e *Engine) lifecycle(action string, raw []byte) (string, uint64, error) {
 		if er != nil {
 			return "", 0, er
 		}
-		if er = qualityGate(assets); er != nil {
+		if er = e.qualityGate(assets); er != nil {
 			return "", 0, er
 		}
 		a.State = "INSTALLED"
@@ -1085,7 +1194,7 @@ func (e *Engine) lifecycle(action string, raw []byte) (string, uint64, error) {
 		if er != nil {
 			return "", 0, er
 		}
-		if er = qualityGate(assets); er != nil {
+		if er = e.qualityGate(assets); er != nil {
 			return "", 0, er
 		}
 		installed, _ := parseTime(*a.InstalledAt)
@@ -1269,9 +1378,14 @@ type AuditInput struct {
 	Digest string `json:"digest"`
 	Count  uint32 `json:"count"`
 }
+type AuditAnchor struct {
+	AuditInput
+	ActorMSP string `json:"actorMSP,omitempty"`
+	TxID     string `json:"txId,omitempty"`
+}
 
 func (e *Engine) anchorAudit(raw []byte) (string, uint64, error) {
-	if err := e.auth("auditor", Organizations...); err != nil {
+	if err := e.auth("auditor", CellOrg, PackOrg, LabOrg, RecycleOrg, AuditOrg); err != nil {
 		return "", 0, err
 	}
 	in, err := decode[AuditInput](raw)
@@ -1284,7 +1398,7 @@ func (e *Engine) anchorAudit(raw []byte) (string, uint64, error) {
 	if err = e.fresh("security-audit:" + in.ID); err != nil {
 		return "", 0, err
 	}
-	return in.ID, 0, e.put("security-audit:"+in.ID, in)
+	return in.ID, 0, e.put("security-audit:"+in.ID, AuditAnchor{in, e.Actor.MSP, e.TxID})
 }
 
 type Query struct {
@@ -1293,18 +1407,44 @@ type Query struct {
 }
 
 func (e *Engine) Query(raw []byte) (any, error) {
-	if !knownOrg(e.Actor.MSP) || e.Actor.ID == "" {
+	if (!knownOrg(e.Actor.MSP) && e.Actor.MSP != AuditOrg) || e.Actor.ID == "" {
 		return nil, fail("UNAUTHENTICATED", "organization certificate required")
 	}
 	q, err := decode[Query](raw)
 	if err != nil {
 		return nil, err
 	}
+	if e.Actor.MSP == AuditOrg && e.Actor.Role != "auditor" {
+		return nil, fail("FORBIDDEN", "audit certificate required")
+	}
 	switch q.Kind {
 	case "code":
 		return ParseCode(q.ID)
 	case "policy":
 		return e.policy()
+	case "mesReceipt":
+		if validID(q.ID) != nil {
+			return nil, fail("INVALID_ID", "invalid transaction ID")
+		}
+		return read[MESImportReceipt](e, "mes-import:"+q.ID)
+	case "batchStatus":
+		return e.batchStatus(q.ID)
+	case "retest":
+		version, _, err := e.subjectVersion(q.ID)
+		if err != nil {
+			return nil, err
+		}
+		return e.pendingRetest(q.ID, version)
+	case "retests":
+		if _, _, err := e.subjectVersion(q.ID); err != nil {
+			return nil, err
+		}
+		return e.scanJSON("retest:" + q.ID + ":")
+	case "batchInspections":
+		if validID(q.ID) != nil {
+			return nil, fail("INVALID_ID", "invalid batch ID")
+		}
+		return e.scanJSON("batch-report:" + q.ID + ":")
 	case "maker":
 		if !regexpMaker(q.ID) {
 			return nil, fail("INVALID_INPUT", "invalid maker code")
@@ -1373,6 +1513,11 @@ func (e *Engine) Query(raw []byte) (any, error) {
 		}
 		prefix := map[string]string{"inspections": "inspection:", "edges": "edge:", "batchCells": "batchcell:", "corrections": "correction:"}[q.Kind]
 		return e.scanJSON(prefix + q.ID + ":")
+	case "auditAnchor":
+		if e.Actor.Role != "auditor" || validID(q.ID) != nil {
+			return nil, fail("FORBIDDEN", "auditor and anchor ID required")
+		}
+		return read[AuditAnchor](e, "security-audit:"+q.ID)
 	case "audit":
 		if e.Actor.Role != "auditor" {
 			return nil, fail("FORBIDDEN", "auditor required")

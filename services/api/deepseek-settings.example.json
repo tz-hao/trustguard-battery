@@ -1,0 +1,8 @@
+{
+  "TRUSTGUARD_AI_ENABLED": "true",
+  "DEEPSEEK_MODEL": "deepseek-flash",
+  "DEEPSEEK_API_KEY_FILE": "/absolute/path/to/private/deepseek.key",
+  "TRUSTGUARD_AI_TIMEOUT_MS": "30000",
+  "TRUSTGUARD_AI_MAX_TOKENS": "2500",
+  "TRUSTGUARD_AI_ALLOW_REAL_DATA": "false"
+}

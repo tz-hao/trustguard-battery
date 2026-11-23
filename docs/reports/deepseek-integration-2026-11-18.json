@@ -1,0 +1,56 @@
+{
+  "result": "OFFLINE_PASS",
+  "checkedDate": "2026-11-18",
+  "provider": "DeepSeek",
+  "defaultModel": "deepseek-flash",
+  "scope": "Backend risk explanation and current asset/component evidence questions",
+  "routes": [
+    "GET /api/v1/ai/status",
+    "POST /api/v1/ai/analyses",
+    "GET /api/v1/ai/analyses/{requestId}"
+  ],
+  "verification": {
+    "typescriptBuild": "PASS",
+    "nodeTests": 25,
+    "pythonConfigurationTests": 6,
+    "httpRoutesAndOpenApi": "PASS with explicit offline provider, ledger and database substitutes",
+    "supplierProtocol": "PASS with injected transport",
+    "databaseReservationLogic": "PASS with explicit client substitute",
+    "diffCheck": "PASS",
+    "launcherSyntax": "PASS"
+  },
+  "notVerified": [
+    "Real DeepSeek request: user has not configured a key",
+    "Live PostgreSQL migration and cross-process locking",
+    "Production mTLS/Fabric/DeepSeek end-to-end flow",
+    "Model semantic accuracy"
+  ],
+  "runtime": {
+    "localApiPort13000Reachable": false,
+    "localPostgresPort15432Reachable": false,
+    "localPeerPort17051Reachable": false,
+    "productionProcessesRestarted": false,
+    "realProviderRequests": 0,
+    "fabricTransactionsSent": 0
+  },
+  "controls": [
+    "Fixed official HTTPS destination; redirects disabled",
+    "Current-holder or Lab reviewer authorization; actor-bound result reads",
+    "Strict JSON and known-evidence ID validation",
+    "Durable request ID replay; no automatic provider retries",
+    "Global 2 in-flight / per-actor 5 per minute reservation",
+    "Default simulated data only",
+    "No raw reports or credentials in automatic evidence prompts",
+    "Advisory only; human review required"
+  ],
+  "files": [
+    "services/api/src/deepseek.ts",
+    "services/api/src/ai.ts",
+    "services/api/src/ai-store.ts",
+    "services/api/src/ai-controller.ts",
+    "services/api/migrations/004_ai_analyses.sql",
+    "services/api/scripts/verify-ai.mjs",
+    "services/api/deepseek-settings.example.json",
+    "docs/deepseek-api.md"
+  ]
+}

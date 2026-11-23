@@ -4,16 +4,17 @@ import { S3Client, PutObjectCommand, GetObjectCommand, HeadBucketCommand } from 
 import { HttpException } from '@nestjs/common';
 import { z } from 'zod';
 import { canonicalJson, requiredEnv, sha256 } from './config.js';
+import { reportSubject } from './report-subject.js';
 import { Database } from './database.js';
 import { FabricService } from './gateway.js';
 import { InternalClient } from './internal-client.js';
 import { encryptReport, decryptReport, signPermit } from './cryptography.js';
-import type { Asset, AuthenticatedActor } from './types.js';
+import type { AuthenticatedActor } from './types.js';
 
 const uploadSchema = z.object({
   requestId:z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,95}$/),
   id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,95}$/),
-  assetId: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,95}$/),
+  assetId: z.string().regex(/^(?:batch:)?[A-Za-z0-9][A-Za-z0-9_.-]{0,95}$/),
   version: z.number().int().min(1).max(1_000_000),
   contentBase64: z.string().min(4).max(6_000_000), plaintextHash: z.string().regex(/^[a-f0-9]{64}$/),
   sourceSignature: z.string().min(1).max(4096),
@@ -51,7 +52,7 @@ export class FileService {
       if(existing.rowCount!==1||row.id!==input.id||row.request_id!==input.requestId||row.signer_fingerprint!==certificate.fingerprint256||row.asset_id!==input.assetId||row.version!==input.version||row.plaintext_hash!==input.plaintextHash||row.source_hash!==sourceHash)throw new HttpException({code:'IDEMPOTENCY_CONFLICT'},409);
       return {requestId:row.request_id,id:row.id,assetId:row.asset_id,version:row.version,hash:row.plaintext_hash,sourceHash:row.source_hash,stored:true,ledgerAnchored:false};
     }
-    const asset = await this.fabric.query<Asset>(actor.identity, 'asset', input.assetId);
+    const asset = await reportSubject(this.fabric,actor.identity,input.assetId);
     if (input.version !== asset.inspectionVersion + 1) throw new HttpException({ code: 'VERSION_CONFLICT' }, 409);
     const created = await this.internal.post<{ key: string }>(process.env.TRUSTGUARD_KEY_URL ?? 'https://localhost:18001', '/keys/create', { reportId: input.id });
     const key = Buffer.from(created.key, 'base64');
@@ -69,7 +70,7 @@ export class FileService {
     const { rows } = await this.db.pool.query<ReportRow>('SELECT * FROM reports WHERE id=$1', [id]);
     const row = rows[0];
     if (!row) throw new HttpException({ code: 'NOT_FOUND' }, 404);
-    const asset = await this.fabric.query<Asset>(actor.identity, 'asset', row.asset_id);
+    const asset = await reportSubject(this.fabric,actor.identity,row.asset_id);
     const allowedRole = ['inspector', 'manufacturer', 'custodian', 'operator', 'auditor'].includes(actor.identity.role);
     if (!allowedRole || actor.identity.mspId !== row.owner_msp && actor.identity.mspId !== asset.holderMSP) throw new HttpException({ code: 'FORBIDDEN' }, 403);
     const revoked = await this.db.pool.query('SELECT 1 FROM report_grants WHERE report_id=$1 AND grantee_msp=$2 AND (revoked_at IS NOT NULL OR expires_at<=now())', [id, actor.identity.mspId]);
@@ -103,7 +104,7 @@ export class FileService {
     }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
   }
   async verifyInspection(actor: AuthenticatedActor, data: Record<string, unknown>) {
-    const { rows } = await this.db.pool.query('SELECT asset_id,version,plaintext_hash,source_hash FROM reports WHERE id=$1 AND owner_msp=$2', [data.id, actor.identity.mspId]);
+    const { rows } = await this.db.pool.query('SELECT asset_id,version,plaintext_hash,source_hash FROM reports WHERE id=$1 AND owner_msp=$2 AND signer_fingerprint=$3', [data.id, actor.identity.mspId,new X509Certificate(readFileSync(actor.identity.certificateFile)).fingerprint256]);
     const row = rows[0];
     if (!row || row.asset_id !== data.assetId || row.version !== data.version || row.plaintext_hash !== data.reportHash || row.source_hash !== data.sourceHash) throw new HttpException({ code: 'VERIFIED_REPORT_REQUIRED' }, 400);
   }

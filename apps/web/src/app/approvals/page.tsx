@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   CheckCircle2,
@@ -14,6 +14,7 @@ import {
   EmptyState,
   HashChip,
   OrgBadge,
+  OverviewLoadNotice,
   PageBanner,
   QualityBadge,
   SectionHeader,
@@ -21,7 +22,9 @@ import {
   type CommandResultState,
 } from '@/components/Badges';
 import { PaginationBar, SlideDrawer } from '@/components/Visuals';
+import { ApprovalRingProgress, WindowCountdownBar } from '@/components/DataCharts';
 import { formatDateTime, type BatteryAssetView } from '@/lib/types';
+import { useOverview } from '@/lib/use-overview';
 
 interface PolicyData {
   version: number;
@@ -48,10 +51,30 @@ interface ReleaseRecord {
     expiresAt: string;
     signerId: string;
   };
+  riskReview?: { missingMeasurements: number; qualityRules: string[]; operationRules: string[] } | null;
   state: string;
   expiresAt: string;
   txId: string;
 }
+
+function releaseState(release: ReleaseRecord, now: number) {
+  return release.state === 'PENDING' &&
+    (Date.parse(release.expiresAt) <= now || Date.parse(release.risk?.expiresAt) <= now)
+    ? 'EXPIRED' : release.state;
+}
+
+const RISK_RULE_LABELS: Record<string, string> = {
+  MISSING_MEASUREMENT: '量测记录缺少必要字段',
+  VOLTAGE_OUTSIDE_DEMO_RULE: '电压超出演示规则范围',
+  TEST_TEMPERATURE_OUTSIDE_REFERENCE: '测试温度超出参考范围',
+  NO_MATCHING_REFERENCE_MODEL: '没有匹配该材料、型号和工况的参考模型',
+  STATISTICAL_OUTLIER: '量测值偏离参考样本',
+  HIGH_FREQUENCY: '近期操作频率过高',
+  HIGH_REJECTION_RATIO: '近期操作拒绝比例过高',
+  REPEATED_REPORT_REVERSAL: '近期质检结论反复变更',
+  FAST_APPROVAL_CLUSTER: '近期多次极速审批',
+  CYCLIC_APPROVAL_RELATIONSHIP: '近期跨组织审批形成闭环',
+};
 
 interface ApprovalsPayload {
   currentPolicy: PolicyData;
@@ -60,40 +83,29 @@ interface ApprovalsPayload {
 }
 
 export default function ApprovalsPage() {
-  const { actor } = useIdentity();
-  const [data, setData] = useState<ApprovalsPayload | null>(null);
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'COMPLETED'>('ALL');
+  const { actor, switching } = useIdentity();
+  const { data, loading, error, load } = useOverview<ApprovalsPayload>('/api/bff/releases', switching ? undefined : actor?.name);
+  const [now, setNow] = useState(() => Date.now());
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'COMPLETED' | 'EXPIRED'>('ALL');
   const [page, setPage] = useState(1);
   const pageSize = 5;
-  const [selectedPackId, setSelectedPackId] = useState('');
-  const [drawerRelease, setDrawerRelease] = useState<ReleaseRecord | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [preferredPackId, setPreferredPackId] = useState('');
+  const selectedPackId = data?.packs.find(pack => pack.id === preferredPackId)?.id
+    ?? data?.packs.find(pack => pack.state === 'ASSEMBLED')?.id ?? data?.packs[0]?.id ?? '';
+  const [drawerReleaseId, setDrawerReleaseId] = useState<string | null>(null);
+  const drawerRelease = data?.releases.find(release => release.id === drawerReleaseId);
   const [busy, setBusy] = useState(false);
   const [banner, setBanner] = useState<CommandResultState | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch('/api/bff/releases', { cache: 'no-store' });
-      if (res.ok) {
-        const json = (await res.json()) as ApprovalsPayload;
-        setData(json);
-        if (json.packs.length > 0) {
-          const assembled = json.packs.find(p => p.state === 'ASSEMBLED') ?? json.packs[0];
-          setSelectedPackId(prev => prev || assembled.id);
-        }
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!data?.releases.some(release => release.state === 'PENDING')) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [data]);
 
   async function requestRelease(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedPackId) return;
+    if (!selectedPackId || busy || loading || error !== null) return;
     setBusy(true);
     setBanner(null);
     try {
@@ -128,14 +140,15 @@ export default function ApprovalsPage() {
     }
   }
 
-  async function releaseAction(resource: 'release-approvals' | 'release-finalizations', id: string) {
+  async function releaseAction(resource: 'release-approvals' | 'release-finalizations', release: ReleaseRecord, attemptedAt: number) {
+    if (busy || loading || error !== null || releaseState(release, attemptedAt) !== 'PENDING') return;
     setBusy(true);
     setBanner(null);
     try {
       const res = await fetch(`/api/bff/commands/${resource}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ data: { id } }),
+        body: JSON.stringify({ data: { id: release.id } }),
       });
       const json = await res.json();
       if (json.completed) {
@@ -163,27 +176,26 @@ export default function ApprovalsPage() {
   }
 
   const allReleases = data?.releases ?? [];
-  const filteredReleases = allReleases.filter(r => (statusFilter === 'ALL' ? true : r.state === statusFilter));
+  const filteredReleases = allReleases.filter(r => statusFilter === 'ALL' || releaseState(r, now) === statusFilter);
   const totalPages = Math.max(1, Math.ceil(filteredReleases.length / pageSize));
-  const pagedReleases = filteredReleases.slice((page - 1) * pageSize, page * pageSize);
+  const safePage = Math.min(page, totalPages);
+  const pagedReleases = filteredReleases.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   const packMap = new Map((data?.packs ?? []).map(p => [p.id, p]));
-  const pendingCount = allReleases.filter(r => r.state !== 'COMPLETED').length;
+  const pendingCount = allReleases.filter(r => releaseState(r, now) === 'PENDING').length;
   const completedCount = allReleases.filter(r => r.state === 'COMPLETED').length;
 
   return (
     <div className="space-y-6">
       <PageBanner
-        code="05 · JOINT APPROVAL CENTER"
-        title="多组织联合审批中心（放行矩阵与门禁校验）"
-        subtitle="按照链上策略动态决定审批矩阵（常规三方 Cell/Lab/Pack；高风险附加 RecycleOrg），未集齐签章或组件不合格禁止放行"
+        title="多组织联合审批中心"
         right={
           <div className="flex items-center gap-2">
             <Link
               href="/policies"
               className="rounded-lg bg-[#2563EB] px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500"
             >
-              策略管理 (v{data?.currentPolicy.version ?? 3}) →
+              策略管理 {data ? `(v${data.currentPolicy.version})` : ''} →
             </Link>
             <button
               onClick={() => void load()}
@@ -197,6 +209,8 @@ export default function ApprovalsPage() {
         }
       />
 
+      <OverviewLoadNotice loading={loading} error={error} hasData={Boolean(data)} onRetry={() => void load()} />
+      {data && <>
       {/* 顶部统计 */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="card-surface p-4">
@@ -227,8 +241,8 @@ export default function ApprovalsPage() {
             subtitle="常规放行仅需所需组织批准；高风险凭证自动附加 RecycleOrgMSP 独立复核"
             icon={<ClipboardCheck className="h-4 w-4 text-[#2563EB]" />}
             action={
-              <div className="flex gap-1 rounded-lg bg-[#EDF2F7] p-1 text-xs font-semibold">
-                {(['ALL', 'PENDING', 'COMPLETED'] as const).map(st => (
+              <div className="flex flex-wrap gap-1 rounded-lg bg-[#EDF2F7] p-1 text-xs font-semibold">
+                {(['ALL', 'PENDING', 'COMPLETED', 'EXPIRED'] as const).map(st => (
                   <button
                     key={st}
                     onClick={() => {
@@ -239,7 +253,7 @@ export default function ApprovalsPage() {
                       statusFilter === st ? 'bg-white text-[#10243A] shadow-2xs' : 'text-[#64748B]'
                     }`}
                   >
-                    {st === 'ALL' ? '全部' : st === 'PENDING' ? '待审批' : '已放行'}
+                    {st === 'ALL' ? '全部' : st === 'PENDING' ? '待审批' : st === 'EXPIRED' ? '已过期' : '已放行'}
                   </button>
                 ))}
               </div>
@@ -253,38 +267,49 @@ export default function ApprovalsPage() {
               {pagedReleases.map(rel => {
                 const approvalMap = new Map(rel.approvals.map(a => [a.msp, a]));
                 const pack = packMap.get(rel.packId);
+                const state = releaseState(rel, now);
                 const isHighRisk = rel.risk?.level === 'HIGH' || rel.requiredOrgs.includes('RecycleOrgMSP');
                 return (
                   <div key={rel.id} className="subtle-surface p-4 text-xs">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="mono font-bold text-[#10243A]">{rel.id}</span>
-                        <span
-                          className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
-                            rel.state === 'COMPLETED'
-                              ? 'bg-[#159B76]/15 text-[#159B76]'
-                              : 'bg-[#D99A2B]/15 text-[#b07612]'
-                          }`}
-                        >
-                          {rel.state === 'COMPLETED' ? '已批准放行 (COMPLETED)' : '待联合审批 (PENDING)'}
-                        </span>
-                        <span
-                          className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
-                            isHighRisk ? 'bg-[#DC5353]/12 text-[#DC5353]' : 'bg-[#2563EB]/10 text-[#2563EB]'
-                          }`}
-                        >
-                          风险等级：{rel.risk?.level ?? 'NORMAL'}
-                        </span>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <ApprovalRingProgress approved={rel.approvals.length} required={rel.requiredOrgs.length} />
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="mono font-bold text-[#10243A]">{rel.id}</span>
+                          <span
+                            className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                              state === 'COMPLETED'
+                                ? 'bg-[#159B76]/15 text-[#159B76]'
+                                : state === 'EXPIRED' ? 'bg-[#DC5353]/12 text-[#DC5353]' : 'bg-[#D99A2B]/15 text-[#b07612]'
+                            }`}
+                          >
+                            {state === 'COMPLETED' ? '已批准放行 (COMPLETED)' : state === 'EXPIRED' ? '已过期' : '待联合审批 (PENDING)'}
+                          </span>
+                          <span
+                            className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                              isHighRisk ? 'bg-[#DC5353]/12 text-[#DC5353]' : 'bg-[#2563EB]/10 text-[#2563EB]'
+                            }`}
+                          >
+                            风险等级：{rel.risk?.level ?? 'NORMAL'}
+                          </span>
+                        </div>
                       </div>
                       <button
                         type="button"
-                        onClick={() => setDrawerRelease(rel)}
+                        onClick={() => setDrawerReleaseId(rel.id)}
                         className="inline-flex items-center gap-1 rounded-md border border-[#dce4ee] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#172B3A] hover:bg-slate-50"
                       >
                         <Eye className="h-3 w-3" />
                         放行详情
                       </button>
                     </div>
+
+                    <WindowCountdownBar
+                      expiresAt={rel.expiresAt}
+                      windowSeconds={data?.currentPolicy.releaseSeconds ?? 600}
+                      now={now}
+                      completed={state === 'COMPLETED'}
+                    />
 
                     <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-[#64748B]">
                       <span>
@@ -320,18 +345,19 @@ export default function ApprovalsPage() {
                       })}
                     </div>
 
-                    {rel.state !== 'COMPLETED' && (
+                    {state === 'EXPIRED' && <p className="mt-3 text-[#DC5353]">申请或风险凭证已过期。请重新发起放行申请。</p>}
+                    {(state === 'PENDING' || state === 'EXPIRED') && (
                       <div className="mt-3 flex flex-wrap gap-2 border-t border-[#dce4ee] pt-3">
                         <button
-                          disabled={busy}
-                          onClick={() => void releaseAction('release-approvals', rel.id)}
+                          disabled={busy || loading || error !== null || state === 'EXPIRED'}
+                          onClick={() => void releaseAction('release-approvals', rel, Date.now())}
                           className="rounded-lg bg-[#2563EB] px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
                         >
                           以 {actor?.name} 批准
                         </button>
                         <button
-                          disabled={busy}
-                          onClick={() => void releaseAction('release-finalizations', rel.id)}
+                          disabled={busy || loading || error !== null || state === 'EXPIRED'}
+                          onClick={() => void releaseAction('release-finalizations', rel, Date.now())}
                           className="rounded-lg bg-[#10243A] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#17324f] disabled:opacity-60"
                         >
                           执行最终放行 (Finalize)
@@ -344,7 +370,7 @@ export default function ApprovalsPage() {
             </div>
           )}
 
-          <PaginationBar page={page} totalPages={totalPages} totalItems={filteredReleases.length} onPageChange={setPage} />
+          <PaginationBar page={safePage} totalPages={totalPages} totalItems={filteredReleases.length} onPageChange={setPage} />
         </div>
 
         {/* 右：发起 PACK 放行申请 */}
@@ -359,7 +385,7 @@ export default function ApprovalsPage() {
               <label className="mb-1 block font-semibold text-[#64748B]">选择电池包 (PACK)</label>
               <select
                 value={selectedPackId}
-                onChange={e => setSelectedPackId(e.target.value)}
+                onChange={e => setPreferredPackId(e.target.value)}
                 className="mono w-full rounded-lg border border-[#dce4ee] bg-white px-3 py-2 text-xs"
               >
                 {(data?.packs ?? []).map(p => (
@@ -370,21 +396,9 @@ export default function ApprovalsPage() {
               </select>
             </div>
 
-            <div className="subtle-surface p-3 text-[11px] text-[#64748B]">
-              <div>
-                当前操作身份：<strong className="mono text-[#172B3A]">{actor?.name ?? '—'}</strong>（{actor?.mspId} ·{' '}
-                {actor?.roleLabel}）
-              </div>
-              <p className="mt-1">
-                提交后后端调用 FastAPI 生成绑定请求的 Ed25519 风险凭证，再交由链码核验：若下游电芯存在{' '}
-                <code className="mono text-[#DC5353]">QC_REJECTED</code> 或 <code className="mono">NOT_TESTED</code>，立即返回{' '}
-                <code className="mono text-[#DC5353]">QUALITY_GATE</code> 拒绝。
-              </p>
-            </div>
-
             <button
               type="submit"
-              disabled={busy || !selectedPackId}
+              disabled={busy || loading || error !== null || !selectedPackId}
               className="w-full rounded-lg bg-[#10243A] py-2.5 text-xs font-semibold text-white hover:bg-[#17324f] disabled:opacity-60"
             >
               {busy ? '风控评估与链码提交中...' : '生成风险凭证并提交放行申请'}
@@ -410,7 +424,7 @@ export default function ApprovalsPage() {
       {/* 放行详情抽屉 */}
       <SlideDrawer
         open={Boolean(drawerRelease)}
-        onClose={() => setDrawerRelease(null)}
+        onClose={() => setDrawerReleaseId(null)}
         title={drawerRelease ? `放行审批详情 · ${drawerRelease.id}` : ''}
         subtitle={drawerRelease ? `目标 PACK：${drawerRelease.packId}` : undefined}
       >
@@ -423,7 +437,15 @@ export default function ApprovalsPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-[#64748B]">审批状态</span>
-                <span className="font-bold text-[#159B76]">{drawerRelease.state}</span>
+                <span className="font-bold">{releaseState(drawerRelease, now) === 'EXPIRED' ? '已过期' : drawerRelease.state}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#64748B]">申请有效期至</span>
+                <span className="mono">{formatDateTime(drawerRelease.expiresAt)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#64748B]">风险凭证有效期至</span>
+                <span className="mono">{formatDateTime(drawerRelease.risk?.expiresAt)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[#64748B]">快照哈希 (snapshotHash)</span>
@@ -443,6 +465,26 @@ export default function ApprovalsPage() {
                 <span className="text-[#64748B]">Fabric 交易</span>
                 <HashChip value={drawerRelease.txId} />
               </div>
+            </div>
+
+            <div className="subtle-surface space-y-2 p-4">
+              <div className="font-bold text-[#172B3A]">风险判定依据</div>
+              {drawerRelease.riskReview ? (
+                <ul className="list-disc space-y-1 pl-4">
+                  {drawerRelease.riskReview.missingMeasurements > 0 && (
+                    <li>{drawerRelease.riskReview.missingMeasurements} 个电芯缺少已导入的量测记录，需要独立复核</li>
+                  )}
+                  {drawerRelease.riskReview.qualityRules.map(rule => (
+                    <li key={rule}>质量量测 · {RISK_RULE_LABELS[rule] ?? rule}</li>
+                  ))}
+                  {drawerRelease.riskReview.operationRules.map(rule => (
+                    <li key={rule}>平台近 5 分钟的操作记录 · {RISK_RULE_LABELS[rule] ?? rule}</li>
+                  ))}
+                  {drawerRelease.risk?.level === 'LOW' && <li>本次评估未触发复核规则</li>}
+                </ul>
+              ) : (
+                <p className="text-[#64748B]">该凭证未保存规则明细，无法追溯具体触发原因。</p>
+              )}
             </div>
 
             <div>
@@ -475,6 +517,7 @@ export default function ApprovalsPage() {
           </div>
         )}
       </SlideDrawer>
+      </>}
     </div>
   );
 }

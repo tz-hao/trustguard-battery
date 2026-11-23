@@ -11,7 +11,8 @@ import {
   ShieldAlert,
   ShieldCheck,
 } from 'lucide-react';
-import { DemoTag, EmptyState, HashChip, PageBanner, SectionHeader } from '@/components/Badges';
+import { EmptyState, HashChip, PageBanner, SectionHeader } from '@/components/Badges';
+import { RiskScorePanel } from '@/components/DataCharts';
 import { formatDateTime } from '@/lib/types';
 
 interface RiskPayload {
@@ -191,12 +192,9 @@ export default function RiskPage() {
   return (
     <div className="space-y-6">
       <PageBanner
-        code="07 · AI RISK ANALYSIS CENTER"
         title="AI 质量与操作双轨风险分析中心"
-        subtitle="FastAPI + Isolation Forest + 工程规则基线 + NetworkX 协作图谱分析；输出绑定请求与有效期的 Ed25519 风险凭证"
         right={
           <div className="flex items-center gap-2">
-            <DemoTag label="仿真集离线评估 + 实时推理" />
             <button
               onClick={() => void load()}
               disabled={loading}
@@ -209,34 +207,57 @@ export default function RiskPage() {
         }
       />
 
+      {/* 综合双轨风险评分仪表盘与因子贡献度 */}
+      {data && (() => {
+        const totalAssetsN = Math.max(1, data.assets.length);
+        const totalMsN = Math.max(1, data.measurements.length);
+        const totalRelN = Math.max(1, data.riskResults.length);
+        const qualityRatio = Math.round((riskAssetsCount / totalAssetsN) * 100);
+        const outlierRatio = Math.round((flaggedMeasurements.length / totalMsN) * 100);
+        const highRiskRatio = Math.round((highRiskCount / totalRelN) * 100);
+        const opRiskRatio = opResult?.analysis.reviewRequired ? 85 : 15;
+        const compositeScore = Math.min(
+          100,
+          Math.round(qualityRatio * 0.35 + outlierRatio * 0.3 + highRiskRatio * 0.2 + opRiskRatio * 0.15),
+        );
+        const levelLabel = compositeScore >= 65 ? '高风险预警' : compositeScore >= 35 ? '中度需复核' : '低风险可控';
+        return (
+          <RiskScorePanel
+            score={compositeScore}
+            levelLabel={levelLabel}
+            factors={[
+              { label: '不合格 / 待复核资产占比', value: qualityRatio, tone: 'danger' },
+              { label: '量测离群点预警比例', value: outlierRatio, tone: 'warning' },
+              { label: '高风险放行凭证比例', value: highRiskRatio, tone: 'brand' },
+              { label: '跨组织互批闭环操作风险', value: opRiskRatio, tone: 'teal' },
+            ]}
+          />
+        );
+      })()}
+
       {/* 风险总览 5 项指标 */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
         <div className="card-surface p-4">
           <div className="text-[11px] text-[#64748B]">风险 / 复核资产</div>
           <div className="mono mt-1 text-2xl font-bold text-[#DC5353]">{riskAssetsCount}</div>
-          <div className="text-[10px] text-[#64748B]">QC_REJECTED / REVIEW_REQUIRED</div>
         </div>
         <div className="card-surface p-4">
           <div className="text-[11px] text-[#64748B]">异常关联批次</div>
           <div className="mono mt-1 text-2xl font-bold text-[#D99A2B]">{abnormalBatchesCount}</div>
-          <div className="text-[10px] text-[#64748B]">含需复核电芯批次</div>
         </div>
         <div className="card-surface p-4">
           <div className="text-[11px] text-[#64748B]">高风险放行凭证</div>
           <div className="mono mt-1 text-2xl font-bold text-[#10243A]">{highRiskCount}</div>
-          <div className="text-[10px] text-[#64748B]">共签发 {data?.riskResults.length ?? 0} 张凭证</div>
         </div>
         <div className="card-surface p-4">
           <div className="text-[11px] text-[#64748B]">测量异常预警点</div>
           <div className="mono mt-1 text-2xl font-bold text-[#2563EB]">{flaggedMeasurements.length}</div>
-          <div className="text-[10px] text-[#64748B]">总测量样本 {data?.measurements.length ?? 0} 条</div>
         </div>
         <div className="card-surface p-4">
-          <div className="text-[11px] text-[#64748B]">推理 P95 时延（仿真）</div>
+          <div className="text-[11px] text-[#64748B]">推理 P95 时延</div>
           <div className="mono mt-1 text-2xl font-bold text-[#159B76]">
             {data?.evaluation ? `${data.evaluation.latencyP95Ms.toFixed(2)} ms` : '—'}
           </div>
-          <div className="text-[10px] text-[#64748B]">{data?.riskReady ? 'FastAPI :18000 就绪' : '降级'}</div>
         </div>
       </div>
 
@@ -245,7 +266,6 @@ export default function RiskPage() {
         <div className="card-surface p-5">
           <SectionHeader
             title="1. Isolation Forest 离群检测"
-            subtitle="quality-iforest-v1 · 批次严格隔离防泄漏"
             icon={<Cpu className="h-4 w-4 text-[#2563EB]" />}
           />
           {data?.evaluation ? (
@@ -258,62 +278,51 @@ export default function RiskPage() {
                   </div>
                 </div>
                 <div className="subtle-surface p-2.5">
-                  <div className="text-[10px] text-[#64748B]">F1 / FPR 误报率</div>
+                  <div className="text-[10px] text-[#64748B]">F1 / 误报率</div>
                   <div className="mono font-bold text-[#172B3A]">
                     {(data.evaluation.model.f1 * 100).toFixed(1)}% / {(data.evaluation.model.falsePositiveRate * 100).toFixed(1)}%
                   </div>
                 </div>
               </div>
               <div className="text-[11px] text-[#64748B]">
-                训练样本 {data.evaluation.trainingSamples} · 测试样本 {data.evaluation.testSamples} · 批次重叠 {data.evaluation.batchOverlap}。
-                {data.evaluation.limitations}
+                训练样本 {data.evaluation.trainingSamples} · 测试样本 {data.evaluation.testSamples}
               </div>
             </div>
           ) : (
-            <EmptyState title="暂无离线评估报告" />
+            <EmptyState title="暂无评估数据" />
           )}
         </div>
 
         <div className="card-surface p-5">
           <SectionHeader
             title="2. 确定性工程规则引擎"
-            subtitle="Rule Baseline · 缺失值与越界硬性识别"
             icon={<Activity className="h-4 w-4 text-[#0F9D8A]" />}
           />
           <div className="space-y-2 text-xs">
             <div className="subtle-surface p-2.5">
-              <div className="mono font-bold text-[#172B3A]">VOLTAGE_OUTSIDE_DEMO_RULE</div>
+              <div className="font-bold text-[#172B3A]">电压阈值校验</div>
               <div className="text-[11px] text-[#64748B]">LFP 限定 2000–4000 mV；三元限定 2500–4500 mV</div>
             </div>
             <div className="subtle-surface p-2.5">
-              <div className="mono font-bold text-[#172B3A]">TEST_TEMPERATURE_OUTSIDE_REFERENCE</div>
+              <div className="font-bold text-[#172B3A]">测试温度范围校验</div>
               <div className="text-[11px] text-[#64748B]">标准测试参考温度区间 15℃ – 35℃</div>
             </div>
-            {data?.evaluation && (
-              <div className="text-[11px] text-[#159B76]">
-                规则基线测试集 F1 = {(data.evaluation.ruleBaseline.f1 * 100).toFixed(1)}%（保留作为强兜底）
-              </div>
-            )}
           </div>
         </div>
 
         <div className="card-surface p-5">
           <SectionHeader
-            title="3. NetworkX 跨机构协作分析"
-            subtitle="operation-rules-v1 · 识别可疑审批簇与环路"
+            title="3. 跨机构协作风险识别"
             icon={<Network className="h-4 w-4 text-[#D99A2B]" />}
           />
           <div className="space-y-2 text-xs text-[#64748B]">
             <div className="subtle-surface p-2.5">
-              <div className="mono font-bold text-[#172B3A]">FAST_APPROVAL_CLUSTER &amp; CYCLIC_APPROVAL</div>
-              <div className="text-[11px]">5 分钟滑窗内检测 &lt;5s 异常快速互批与强连通分量环路</div>
+              <div className="font-bold text-[#172B3A]">极速互批簇与审批闭环</div>
+              <div className="text-[11px]">5 分钟滑窗内检测 &lt;5s 异常快速互批与环路</div>
             </div>
             <div className="subtle-surface p-2.5">
-              <div className="mono font-bold text-[#172B3A]">REPEATED_REPORT_REVERSAL</div>
-              <div className="text-[11px]">识别高频拒签率、高频接口访问与质检结论反复反转</div>
-            </div>
-            <div className="text-[11px] text-[#172B3A]">
-              触发异常时仅提升风险等级并强制附加独立审核，绝不自行降低链码底线权限。
+              <div className="font-bold text-[#172B3A]">质检结论反复变更</div>
+              <div className="text-[11px]">识别高频拒签率与质检结论反复反转</div>
             </div>
           </div>
         </div>
@@ -392,11 +401,8 @@ export default function RiskPage() {
           <div>
             <h2 className="flex items-center gap-2 text-sm font-bold text-[#172B3A]">
               <Network className="h-4 w-4 text-[#2563EB]" />
-              NetworkX 跨组织审批关系图风险分析演示（直连 FastAPI :18000）
+              跨组织审批关系图风险分析
             </h2>
-            <p className="mt-0.5 text-[11px] text-[#64748B]">
-              对比正常多方协同审批与「极速互批强连通闭环」在 NetworkX 有向图上的实时告警输出
-            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -507,7 +513,7 @@ export default function RiskPage() {
 
           <div className="space-y-3 text-xs lg:col-span-6">
             {!opResult ? (
-              <EmptyState title="尚未执行 NetworkX 协作图推演" subtitle="点击上方按钮，实时向 FastAPI :18000 提交审批序列并绘制关系图" />
+              <EmptyState title="尚未执行协作图推演" subtitle="点击右上角按钮分析跨机构审批序列" />
             ) : (
               <>
                 <div
@@ -518,12 +524,12 @@ export default function RiskPage() {
                   }`}
                 >
                   <div className="font-bold">
-                    NetworkX 判定：{opResult.analysis.conclusion}（{opResult.analysis.modelVersion}）
+                    NetworkX 判定：{opResult.analysis.conclusion}
                   </div>
                   <div className="mt-1 text-[11px]">
                     {opResult.analysis.reviewRequired
-                      ? '检测到极速互批簇或强连通环，强制提升至独立机构复核（不降级链码权限）'
-                      : '审批方向正常分散且无强连通环路，未触发可疑协作规则'}
+                      ? '检测到极速互批簇或强连通环，强制提升至独立机构复核'
+                      : '审批方向正常分散且无强连通环路'}
                   </div>
                 </div>
                 <pre className="mono max-h-36 overflow-auto rounded-lg bg-[#0B192C] p-3 text-[11px] text-slate-200">
@@ -534,109 +540,6 @@ export default function RiskPage() {
           </div>
         </div>
       </div>
-
-      {/* 对照实验（基线 A/B vs 实验 C）与并发压测实测报告 */}
-      {(data?.ablation || data?.concurrency) && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          {data?.ablation && (
-            <div className="card-surface p-5 lg:col-span-7">
-              <SectionHeader
-                title="对照实验：基线 A / 基线 B vs 智权链完整方案 C"
-                subtitle="来自 docs/reports/ablation-comparison.json 真实联机验证数据"
-                icon={<ShieldCheck className="h-4 w-4 text-[#159B76]" />}
-              />
-              <div className="mb-4 grid grid-cols-3 gap-3 text-xs">
-                <div className="subtle-surface p-3">
-                  <div className="text-[10px] text-[#64748B]">基线 A（单库无链无 AI）</div>
-                  <div className="mono mt-1 text-lg font-bold text-[#DC5353]">
-                    {data.ablation.summary.baselineA_blocked} / {data.ablation.summary.totalScenariosTested}
-                  </div>
-                  <div className="text-[10px] text-[#64748B]">易受伪造与 SQL 篡改</div>
-                </div>
-                <div className="subtle-surface p-3">
-                  <div className="text-[10px] text-[#64748B]">基线 B（有链无 AI）</div>
-                  <div className="mono mt-1 text-lg font-bold text-[#D99A2B]">
-                    {data.ablation.summary.baselineB_blocked} / {data.ablation.summary.totalScenariosTested}
-                  </div>
-                  <div className="text-[10px] text-[#64748B]">漏报漂移离群与图环路</div>
-                </div>
-                <div className="subtle-surface p-3">
-                  <div className="text-[10px] text-[#64748B]">实验 C（智权链全栈）</div>
-                  <div className="mono mt-1 text-lg font-bold text-[#159B76]">
-                    {data.ablation.summary.experimentC_blocked} / {data.ablation.summary.totalScenariosTested}
-                  </div>
-                  <div className="text-[10px] text-[#159B76]">
-                    附加风控均值 +{data.ablation.summary.addedRiskOverheadMs} ms
-                  </div>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-[11px]">
-                  <thead>
-                    <tr className="border-b border-[#dce4ee] bg-[#F4F7FA] text-[#64748B]">
-                      <th className="px-2.5 py-2 font-semibold">场景</th>
-                      <th className="px-2.5 py-2 font-semibold">基线 A</th>
-                      <th className="px-2.5 py-2 font-semibold">基线 B</th>
-                      <th className="px-2.5 py-2 font-semibold">实验 C 拦截结论</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#edf2f7]">
-                    {data.ablation.cases.map(c => (
-                      <tr key={c.id}>
-                        <td className="px-2.5 py-2 font-semibold text-[#172B3A]">
-                          <span className="mono mr-1">{c.id}</span>
-                          {c.name}
-                        </td>
-                        <td className="mono px-2.5 py-2 text-[#DC5353]">{c.baselineA_SingleDb.blocked ? '拦截' : '放过'}</td>
-                        <td className={`mono px-2.5 py-2 ${c.baselineB_FabricNoAi.blocked ? 'text-[#159B76]' : 'text-[#DC5353]'}`}>
-                          {c.baselineB_FabricNoAi.blocked ? '拦截' : '放过'}
-                        </td>
-                        <td className="px-2.5 py-2 text-[#159B76]">{c.experimentC_FullTrustGuard.mechanism}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {data?.concurrency && (
-            <div className="card-surface p-5 lg:col-span-5">
-              <SectionHeader
-                title="并发吞吐与限流实测基准"
-                subtitle="20 并发阶段实测 RPS/P95 及 120 req/min 限流护盾验证"
-                icon={<Activity className="h-4 w-4 text-[#2563EB]" />}
-              />
-              <div className="space-y-3 text-xs">
-                {data.concurrency.targets.map(t => {
-                  const last = t.stages[t.stages.length - 1];
-                  return (
-                    <div key={t.name} className="subtle-surface p-3">
-                      <div className="flex items-center justify-between font-bold text-[#172B3A]">
-                        <span className="mono">{t.name}</span>
-                        <span className="mono text-[#2563EB]">{last?.rps ?? 0} req/s (c=20)</span>
-                      </div>
-                      <div className="mt-1 text-[11px] text-[#64748B]">{t.desc}</div>
-                      <div className="mono mt-1.5 flex gap-3 text-[11px] text-[#172B3A]">
-                        <span>P50: {last?.p50Ms} ms</span>
-                        <span>P95: {last?.p95Ms} ms</span>
-                        <span className="text-[#159B76]">
-                          成功 {last?.ok}/{last?.totalRequests}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-                <div className="rounded-lg border border-[#D99A2B]/35 bg-[#D99A2B]/10 p-3 text-[11px] text-[#8f5e0c]">
-                  <strong>限流防暴验证（135 并发突发）：</strong>前 {data.concurrency.rateLimitBurstProof.ok} 次正常放行，超出{' '}
-                  {data.concurrency.rateLimitThresholdPerActorMinute} 次/分钟配额后立即拦截{' '}
-                  <strong className="mono">{data.concurrency.rateLimitBurstProof.rateLimited429}</strong> 次（HTTP 429 RATE_LIMITED）。
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* 测量指标列表 & 已签发风险凭证 */}
       {data && (

@@ -3,12 +3,13 @@ import type { IncomingMessage } from 'node:http';
 import { createPublicKey } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { z } from 'zod';
+import { reportSubject } from './report-subject.js';
 import { Database } from './database.js';
 import { FabricService } from './gateway.js';
 import { KeyVault } from './key-vault.js';
 import { requiredEnv, type Configuration } from './config.js';
 import { verifyPermit } from './cryptography.js';
-import type { Asset, ClientIdentity } from './types.js';
+import type { ClientIdentity } from './types.js';
 
 const permitSchema = z.object({ claims: z.object({
   reportId: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,95}$/), actorMSP: z.string().max(96),
@@ -59,7 +60,7 @@ async function main() {
         const row = rows[0];
         if (!row) throw new Error('REPORT_NOT_FOUND');
         // Independent fresh ledger check, rather than relying on the API's permission result.
-        const asset = await fabric.query<Asset>(identity, 'asset', row.asset_id);
+        const asset = await reportSubject(fabric,identity,row.asset_id);
         if (!['inspector', 'manufacturer', 'custodian', 'operator', 'auditor'].includes(permit.claims.actorRole)
           || permit.claims.actorMSP !== row.owner_msp && permit.claims.actorMSP !== asset.holderMSP) throw new Error('FORBIDDEN');
         const denied = await database.pool.query(`SELECT 1 FROM report_grants WHERE report_id=$1 AND grantee_msp=$2 AND (revoked_at IS NOT NULL OR expires_at<=now())`, [permit.claims.reportId, permit.claims.actorMSP]);

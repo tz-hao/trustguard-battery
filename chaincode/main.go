@@ -30,7 +30,7 @@ func (l ledger) Put(key string, value []byte) error {
 			return err
 		}
 		orgs = []string{a.MakerMSP, domain.LabOrg, a.HolderMSP}
-	case strings.HasPrefix(key, "inspection:"):
+	case strings.HasPrefix(key, "inspection:"), strings.HasPrefix(key, "batch-report:"), strings.HasPrefix(key, "batch-latest:"), strings.HasPrefix(key, "retest:"):
 		orgs = []string{domain.LabOrg}
 	case strings.HasPrefix(key, "release:"):
 		var r domain.Release
@@ -114,7 +114,20 @@ func (l ledger) History(key string) ([]domain.HistoryRecord, error) {
 		if entry.IsDelete {
 			value = json.RawMessage("null")
 		}
-		records = append(records, domain.HistoryRecord{TxID: entry.TxId, At: at, Deleted: entry.IsDelete, Value: value})
+		record := domain.HistoryRecord{TxID: entry.TxId, At: at, Deleted: entry.IsDelete, Value: value}
+		audit, err := l.Get("audit:" + entry.TxId)
+		if err != nil {
+			return nil, err
+		}
+		if audit != nil {
+			var source domain.Evidence
+			if err = json.Unmarshal(audit, &source); err != nil {
+				return nil, err
+			}
+			record.ActorMSP = source.ActorMSP
+			record.Action = source.Action
+		}
+		records = append(records, record)
 		if len(records) > 200 {
 			records = records[1:]
 		}

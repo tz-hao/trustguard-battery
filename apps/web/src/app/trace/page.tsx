@@ -27,7 +27,7 @@ import {
   type CommandResultState,
 } from '@/components/Badges';
 import { SlideDrawer } from '@/components/Visuals';
-import { CHEMISTRY_LABELS, formatDateTime, type BatteryAssetView } from '@/lib/types';
+import { CHEMISTRY_LABELS, type BatteryAssetView } from '@/lib/types';
 
 interface BatchSummary {
   id: string;
@@ -70,6 +70,7 @@ interface TraceResponse {
   batchMeta?: BatchSummary | null;
   modules?: BatteryAssetView[];
   asset?: BatteryAssetView;
+  ancestry?: BatteryAssetView[];
   snapshot?: { hash: string; assets: BatteryAssetView[] } | null;
   edges?: { id: string; parentId: string; childId: string; revision: number; activeFrom: string; activeTo: string | null; txId: string }[];
 }
@@ -99,9 +100,10 @@ function qualityStyle(q?: string) {
 
 function TraceContent() {
   const searchParams = useSearchParams();
-  const { actor, switchActor } = useIdentity();
+  const { actor, capabilities, roleScoped, loading: identityLoading, switching, switchActor } = useIdentity();
   const qBatch = searchParams.get('batchId') ?? '';
   const qAsset = searchParams.get('assetId') ?? '';
+  const qCell = searchParams.get('cellId') ?? '';
 
   const [batches, setBatches] = useState<BatchSummary[]>([]);
   const [packs, setPacks] = useState<BatteryAssetView[]>([]);
@@ -132,6 +134,8 @@ function TraceContent() {
   const canvasDrag = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const nodeDrag = useRef<{ id: string; startX: number; startY: number; origDx: number; origDy: number; moved: boolean } | null>(null);
 
+  const querySequence = useRef(0);
+  const [traceError, setTraceError] = useState('');
   const resetLayout = useCallback(() => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
@@ -142,20 +146,27 @@ function TraceContent() {
     async (batchId: string, mode: 'batch' | 'history' = 'batch') => {
       if (!batchId) return;
       setTraceMode(mode);
-      setShowHistorical(mode === 'history' ? true : showHistorical);
+      if (mode === 'history') setShowHistorical(true);
       setSelectedBatch(batchId);
       setSelectedAsset('');
       setDrawerNode(null);
       resetLayout();
+      const seq = ++querySequence.current;
+      setTraceError('');
+      setData(null);
       setLoading(true);
       try {
         const res = await fetch(`/api/bff/trace?batchId=${encodeURIComponent(batchId)}`, { cache: 'no-store' });
-        if (res.ok) setData((await res.json()) as TraceResponse);
+        if (!res.ok) throw new Error();
+        const next = await res.json() as TraceResponse;
+        if (seq === querySequence.current) setData(next);
+      } catch {
+        if (seq === querySequence.current) setTraceError('谱系读取失败，请重新选择查询。');
       } finally {
-        setLoading(false);
+        if (seq === querySequence.current) setLoading(false);
       }
     },
-    [resetLayout, showHistorical],
+    [resetLayout],
   );
 
   const runAssetTrace = useCallback(
@@ -166,12 +177,19 @@ function TraceContent() {
       setSelectedBatch('');
       setDrawerNode(null);
       resetLayout();
+      const seq = ++querySequence.current;
+      setTraceError('');
+      setData(null);
       setLoading(true);
       try {
-        const res = await fetch(`/api/bff/trace?assetId=${encodeURIComponent(assetId)}`, { cache: 'no-store' });
-        if (res.ok) setData((await res.json()) as TraceResponse);
+        const res = await fetch(`/api/bff/trace?assetId=${encodeURIComponent(assetId)}&view=${mode}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error();
+        const next = await res.json() as TraceResponse;
+        if (seq === querySequence.current) setData(next);
+      } catch {
+        if (seq === querySequence.current) setTraceError('谱系读取失败，请重新选择查询。');
       } finally {
-        setLoading(false);
+        if (seq === querySequence.current) setLoading(false);
       }
     },
     [resetLayout],
@@ -193,13 +211,16 @@ function TraceContent() {
       setPacks(pk);
       setModulesAll(md);
       setCellsAll(cl);
-      if (cl.length) setAuthChildId(prev => prev || cl[0].id);
-      if (md.length) {
-        setAuthParentId(prev => prev || md[0].id);
-        setBindParentId(prev => prev || md[0].id);
-      }
+      const preferredCell = cl.find(c => c.state === 'REGISTERED' && !c.parentId && c.holderMSP === 'CellOrgMSP') ?? cl[0];
+      const preferredMod = md.find(m => m.state === 'REGISTERED') ?? md[0];
+      const preferredParent = [...md, ...pk].find(p => p.holderMSP === 'PackOrgMSP' && ['REGISTERED', 'ASSEMBLED'].includes(p.state)) ?? md[0] ?? pk[0];
+      if (preferredCell) setAuthChildId(prev => prev || preferredCell.id);
+      if (preferredMod) setAuthParentId(prev => prev || preferredMod.id);
+      if (preferredParent) setBindParentId(prev => prev || preferredParent.id);
 
-      if (qBatch) {
+      if (qCell) {
+        void runAssetTrace(qCell,'forward');
+      } else if (qBatch) {
         void runBatchTrace(qBatch, 'batch');
       } else if (qAsset) {
         void runAssetTrace(qAsset, 'reverse');
@@ -208,7 +229,12 @@ function TraceContent() {
         void runBatchTrace(preferred.id, 'batch');
       }
     })();
-  }, [qBatch, qAsset, runBatchTrace, runAssetTrace]);
+  }, [qCell, qBatch, qAsset, runBatchTrace, runAssetTrace]);
+
+  function chooseCell(id: string) {
+    if (qCell === id) { void runAssetTrace(id, 'forward'); return; }
+    window.history.replaceState(null,'',`/trace?cellId=${encodeURIComponent(id)}`);
+  }
 
   // Build full lineage graph columns: Material/Batch -> Cell -> Module -> PACK -> Use/Scrap Stage
   const graph: {
@@ -276,7 +302,7 @@ function TraceContent() {
     }
 
     if (data.mode === 'asset' && data.asset) {
-      const snapAssets = data.snapshot?.assets ?? [data.asset];
+      const snapAssets = data.snapshot?.assets ?? [data.asset, ...(data.ancestry ?? [])];
       const cells = snapAssets.filter(a => a.type === 'CELL');
       const mods = snapAssets.filter(a => a.type === 'MODULE');
       const packList = snapAssets.filter(a => a.type === 'PACK');
@@ -366,7 +392,7 @@ function TraceContent() {
 
   async function submitAssemblyAuth(e: React.FormEvent) {
     e.preventDefault();
-    if (!authChildId || !authParentId) return;
+    if (!authChildId || !authParentId || assemblyBusy || identityLoading || switching) return;
     setAssemblyBusy(true);
     setAssemblyBanner(null);
     try {
@@ -379,10 +405,29 @@ function TraceContent() {
         }),
       });
       const json = await res.json();
+      const errCode = json.errorCode ?? json.code ?? 'REJECTED';
       setAssemblyBanner(
         json.completed
-          ? { ok: true, title: `已授权供货装配：${authChildId} → ${authParentId}`, requestId: json.requestId, txId: json.txId, stage: json.stage, blockNumber: json.blockNumber }
-          : { ok: false, title: `授权失败（需 CellOrgMSP manufacturer，当前 ${actor?.name ?? '—'}）`, errorCode: json.errorCode ?? json.code ?? 'REJECTED' },
+          ? {
+              ok: true,
+              title: `已授权供货装配：${authChildId} → ${authParentId}`,
+              requestId: json.requestId,
+              txId: json.txId,
+              stage: json.stage,
+              blockNumber: json.blockNumber,
+            }
+          : {
+              ok: false,
+              title:
+                errCode === 'FORBIDDEN'
+                  ? `权限不足：供货授权需 cell-manufacturer（当前 ${actor?.name ?? '—'}）`
+                  : errCode === 'INVALID_SUPPLY'
+                    ? `供货授权条件不满足：电芯 ${authChildId} 须为未装配 (REGISTERED) 且目标模组 ${authParentId} 须为未装配 (REGISTERED)`
+                    : `供货装配授权未通过（当前 ${actor?.name ?? '—'}）`,
+              requestId: json.requestId,
+              stage: json.stage,
+              errorCode: errCode,
+            },
       );
     } finally {
       setAssemblyBusy(false);
@@ -391,7 +436,7 @@ function TraceContent() {
 
   async function submitAssemblyBind(e: React.FormEvent) {
     e.preventDefault();
-    if (!bindParentId) return;
+    if (!bindParentId || assemblyBusy || identityLoading || switching) return;
     const parent = [...modulesAll, ...packs].find(a => a.id === bindParentId);
     const children = bindChildrenText
       .split(',')
@@ -431,10 +476,18 @@ function TraceContent() {
         }
         if (selectedBatch) void runBatchTrace(selectedBatch, 'batch');
       } else {
+        const errCode = json.errorCode ?? json.code ?? 'REJECTED';
         setAssemblyBanner({
           ok: false,
-          title: `装配绑定被拒绝（需 PackOrgMSP assembler，当前 ${actor?.name ?? '—'}）`,
-          errorCode: json.errorCode ?? json.code ?? 'REJECTED',
+          title:
+            errCode === 'FORBIDDEN'
+              ? `权限不足：装配绑定需 pack-assembler（当前 ${actor?.name ?? '—'}）`
+              : errCode === 'INVALID_ASSEMBLY'
+                ? `装配规则校验未通过：${bindParentId} 当前状态 (${parent?.state ?? '—'}) 或子组件条件不支持此操作`
+                : `装配绑定被拒绝（当前 ${actor?.name ?? '—'}）`,
+          requestId: json.requestId,
+          stage: json.stage,
+          errorCode: errCode,
         });
       }
     } finally {
@@ -442,42 +495,45 @@ function TraceContent() {
     }
   }
 
+  const showAssemblyButton = !roleScoped || capabilities.canAuthorizeAssembly || capabilities.canBindAssembly;
+  const selectedAuthCell = cellsAll.find(c => c.id === authChildId);
+  const selectedAuthModule = modulesAll.find(m => m.id === authParentId);
+  const selectedBindParent = [...modulesAll, ...packs].find(p => p.id === bindParentId);
+  const authCellEligible = Boolean(
+    selectedAuthCell && selectedAuthCell.state === 'REGISTERED' && !selectedAuthCell.parentId && selectedAuthCell.holderMSP === 'CellOrgMSP',
+  );
+  const authModEligible = Boolean(selectedAuthModule && selectedAuthModule.state === 'REGISTERED');
+  const bindParentEditable = Boolean(
+    selectedBindParent && selectedBindParent.holderMSP === 'PackOrgMSP' && ['REGISTERED', 'ASSEMBLED'].includes(selectedBindParent.state),
+  );
+  const candidateChildrenForBind = selectedBindParent
+    ? selectedBindParent.type === 'MODULE'
+      ? cellsAll.filter(c => !c.parentId && c.state === 'REGISTERED' && c.chemistry === selectedBindParent.chemistry)
+      : modulesAll.filter(m => !m.parentId && ['REGISTERED', 'ASSEMBLED'].includes(m.state) && m.chemistry === selectedBindParent.chemistry)
+    : [];
+
   return (
     <div className="space-y-6">
       <PageBanner
-        code="04 · BATTERY LINEAGE & IMPACT"
-        title="动力电池全链条谱系追溯中心（可缩放 · 可拖拽 · 上下游路径高亮）"
-        subtitle="支持正向溯源、反向拆解、问题批次影响范围定位及历史拆装边回溯"
+        title="动力电池全链条谱系追溯中心"
         right={
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setAssemblyOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500"
-            >
-              <Wrench className="h-3.5 w-3.5" />
-              装配授权与绑定管理
-            </button>
-            {data?.mode === 'batch' && data.trace ? (
-              <div className="flex items-center gap-2 rounded-lg border border-[#1e3a5c] bg-[#0B192C] px-3 py-1.5 text-xs">
-                <span className="text-slate-400">已索引区块</span>
-                <strong className="mono text-white">#{data.trace.indexedBlock ?? '—'}</strong>
-                <span className="text-slate-500">|</span>
-                <span className="text-slate-400">账本高度</span>
-                <strong className="mono text-white">#{data.trace.ledgerHeight}</strong>
-                <span
-                  className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                    data.trace.stale ? 'bg-[#D99A2B]/25 text-amber-200' : 'bg-[#159B76]/25 text-emerald-300'
-                  }`}
-                >
-                  {data.trace.stale ? '同步中' : '索引已同步'}
-                </span>
-              </div>
-            ) : null}
+            {showAssemblyButton && (
+              <button
+                type="button"
+                onClick={() => setAssemblyOpen(true)}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-blue-500"
+              >
+                <Wrench className="h-3.5 w-3.5" />
+                装配授权与绑定管理
+              </button>
+            )}
           </div>
         }
       />
 
+      {traceError && <p role="alert">{traceError}</p>}
+      {data?.ancestry && <p role="status" className="card-surface p-3">当前装配路径　{[data.asset!, ...data.ancestry].map(node => node.id).join(' → ')}{!data.ancestry.length && '（未装配）'}</p>}
       {/* 四种追溯视角切换栏 */}
       <div className="card-surface p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -496,13 +552,11 @@ function TraceContent() {
                     const bId = selectedBatch || batches[0]?.id;
                     if (bId) void runBatchTrace(bId, tab.id as 'batch' | 'history');
                   } else if (tab.id === 'reverse') {
-                    const pId = selectedAsset || packs[0]?.id;
+                    const pId = packs.find(p => p.id === selectedAsset)?.id ?? packs[0]?.id;
                     if (pId) void runAssetTrace(pId, 'reverse');
                   } else {
-                    const c = cellsAll.find(x => x.batchId);
-                    if (c?.batchId) void runBatchTrace(c.batchId, 'batch');
-                    else if (c) void runAssetTrace(c.id, 'forward');
-                    setTraceMode('forward');
+                    const cell = cellsAll.find(c => c.id === selectedAsset) ?? cellsAll[0];
+                    if (cell) chooseCell(cell.id);
                   }
                 }}
                 className={`rounded-lg px-3 py-1.5 transition ${
@@ -530,11 +584,12 @@ function TraceContent() {
 
             <select
               value={selectedAsset}
-              onChange={e => e.target.value && void runAssetTrace(e.target.value, 'reverse')}
+              aria-label={traceMode === 'forward' ? '正向追溯电芯' : '反向追溯电池包'}
+              onChange={e => {if (!e.target.value) return; if (traceMode === 'forward') chooseCell(e.target.value); else void runAssetTrace(e.target.value,'reverse');}}
               className="mono rounded-lg border border-[#dce4ee] bg-white px-2.5 py-1.5 text-xs"
             >
-              <option value="">选择电池包 PACK...</option>
-              {packs.map(p => (
+              <option value="">{traceMode === 'forward' ? '选择电芯...' : '选择电池包 PACK...'}</option>
+              {(traceMode === 'forward' ? cellsAll : packs).map(p => (
                 <option key={p.id} value={p.id}>
                   {p.id} ({p.state})
                 </option>
@@ -558,9 +613,6 @@ function TraceContent() {
                     ? `资产谱系溯源：${data.asset.id}`
                     : '谱系关系画布'}
             </h2>
-            <p className="mt-0.5 text-[11px] text-slate-400">
-              可拖动单个节点调整布局 · 拖动画布平移 · 滚轮缩放 · 点击节点高亮上下游路径并打开取证抽屉
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
@@ -690,17 +742,29 @@ function TraceContent() {
                   const y1 = p1.y;
                   const x2 = p2.x - 90;
                   const y2 = p2.y;
+                  const d = `M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2}`;
                   return (
-                    <path
-                      key={`${e.from}-${e.to}-${idx}`}
-                      d={`M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2}`}
-                      fill="none"
-                      stroke={e.historical ? '#64748B' : highlighted ? '#0F9D8A' : '#3185D8'}
-                      strokeOpacity={highlighted ? 0.95 : 0.25}
-                      strokeWidth={e.historical ? 1.5 : highlighted ? 2.4 : 1.6}
-                      strokeDasharray={e.historical ? '6 4' : undefined}
-                      markerEnd={e.historical ? 'url(#arr-hist)' : 'url(#arr-teal)'}
-                    />
+                    <g key={`${e.from}-${e.to}-${idx}`}>
+                      <path
+                        d={d}
+                        fill="none"
+                        stroke={e.historical ? '#64748B' : highlighted ? '#0F9D8A' : '#3185D8'}
+                        strokeOpacity={highlighted ? 0.9 : 0.22}
+                        strokeWidth={e.historical ? 1.5 : highlighted ? 2.4 : 1.6}
+                        strokeDasharray={e.historical ? '6 4' : undefined}
+                        markerEnd={e.historical ? 'url(#arr-hist)' : 'url(#arr-teal)'}
+                      />
+                      {!e.historical && highlighted && (
+                        <path
+                          d={d}
+                          fill="none"
+                          stroke="#5EEAD4"
+                          strokeOpacity="0.85"
+                          strokeWidth="1.6"
+                          className="svg-dash-flow-slow"
+                        />
+                      )}
+                    </g>
                   );
                 })}
 
@@ -837,17 +901,6 @@ function TraceContent() {
               </table>
             </div>
           )}
-
-          <div className="subtle-surface mt-4 flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 text-[11px] text-[#64748B]">
-            <span>
-              已索引区块 <strong className="mono text-[#172B3A]">#{data.trace.indexedBlock ?? '—'}</strong> · 账本高度{' '}
-              <strong className="mono text-[#172B3A]">#{data.trace.ledgerHeight}</strong>
-            </span>
-            <span>更新于 {formatDateTime(data.trace.updatedAt)}</span>
-            <span className="font-semibold text-[#159B76]">
-              {data.trace.stale ? '索引追赶中' : '索引与账本已同步'}
-            </span>
-          </div>
         </div>
       )}
 
@@ -958,97 +1011,190 @@ function TraceContent() {
         <div className="space-y-5 text-xs">
           {assemblyBanner && <TxResultBanner result={assemblyBanner} onClose={() => setAssemblyBanner(null)} />}
 
-          <div className="flex flex-wrap gap-1.5">
-            <span className="text-[#64748B]">快捷切身份：</span>
-            <button
-              type="button"
-              onClick={() => void switchActor('cell-manufacturer')}
-              className="mono rounded border border-[#dce4ee] bg-[#F4F7FA] px-2 py-0.5 font-medium hover:border-[#2563EB]"
-            >
-              cell-manufacturer (授权电芯供应)
-            </button>
-            <button
-              type="button"
-              onClick={() => void switchActor('pack-assembler')}
-              className="mono rounded border border-[#dce4ee] bg-[#F4F7FA] px-2 py-0.5 font-medium hover:border-[#2563EB]"
-            >
-              pack-assembler (装配绑定)
-            </button>
-          </div>
+          {!roleScoped && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-ink-secondary">快捷切身份：</span>
+              <button
+                type="button"
+                disabled={switching}
+                onClick={() => void switchActor('cell-manufacturer')}
+                className={`mono cursor-pointer rounded-md border px-2.5 py-1 font-medium transition ${
+                  actor?.name === 'cell-manufacturer'
+                    ? 'border-brand bg-brand/10 text-brand'
+                    : 'border-line bg-canvas text-ink hover:border-brand'
+                }`}
+              >
+                cell-manufacturer (授权电芯供应)
+              </button>
+              <button
+                type="button"
+                disabled={switching}
+                onClick={() => void switchActor('pack-assembler')}
+                className={`mono cursor-pointer rounded-md border px-2.5 py-1 font-medium transition ${
+                  actor?.name === 'pack-assembler'
+                    ? 'border-teal bg-teal/10 text-teal'
+                    : 'border-line bg-canvas text-ink hover:border-teal'
+                }`}
+              >
+                pack-assembler (装配绑定)
+              </button>
+            </div>
+          )}
 
-          <form onSubmit={submitAssemblyAuth} className="subtle-surface space-y-3 p-4">
-            <div className="font-bold text-[#172B3A]">1. 电芯装配供应授权（AuthorizeAssembly · 需 cell-manufacturer）</div>
-            <div>
-              <label className="mb-1 block text-[#64748B]">选择电芯 (childId)</label>
-              <select
-                value={authChildId}
-                onChange={e => setAuthChildId(e.target.value)}
-                className="mono w-full rounded-lg border border-[#dce4ee] bg-white px-2.5 py-1.5"
+          {(!roleScoped || capabilities.canAuthorizeAssembly) && (
+            <form onSubmit={submitAssemblyAuth} className="subtle-surface space-y-3 p-4">
+              <div className="font-bold text-ink">1. 电芯装配供应授权（AuthorizeAssembly · 需 cell-manufacturer）</div>
+              <div>
+                <label className="mb-1 block font-semibold text-ink-secondary">
+                  选择电芯 (childId · 仅「未装配 REGISTERED」电芯可授权)
+                </label>
+                <select
+                  value={authChildId}
+                  onChange={e => setAuthChildId(e.target.value)}
+                  className="mono w-full rounded-lg border border-line bg-white px-2.5 py-2 outline-none focus:border-brand"
+                >
+                  {[...cellsAll]
+                    .sort((a, b) => Number(a.state !== 'REGISTERED' || Boolean(a.parentId)) - Number(b.state !== 'REGISTERED' || Boolean(b.parentId)))
+                    .map(c => {
+                      const ok = c.state === 'REGISTERED' && !c.parentId && c.holderMSP === 'CellOrgMSP';
+                      return (
+                        <option key={c.id} value={c.id}>
+                          {ok ? '✓ ' : '✗ '}
+                          {c.id} ({c.state}
+                          {c.parentId ? ' · 已装配不可重复授权' : ''})
+                        </option>
+                      );
+                    })}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block font-semibold text-ink-secondary">
+                  目标模组 (parentId · 仅「未装配 REGISTERED」模组可接收授权)
+                </label>
+                <select
+                  value={authParentId}
+                  onChange={e => setAuthParentId(e.target.value)}
+                  className="mono w-full rounded-lg border border-line bg-white px-2.5 py-2 outline-none focus:border-brand"
+                >
+                  {[...modulesAll]
+                    .sort((a, b) => Number(a.state !== 'REGISTERED') - Number(b.state !== 'REGISTERED'))
+                    .map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.state === 'REGISTERED' ? '✓ ' : '✗ '}
+                        {m.id} ({m.state}
+                        {m.state !== 'REGISTERED' ? ' · 已装配不可接收新供货授权' : ''})
+                      </option>
+                    ))}
+                </select>
+              </div>
+              {(!authCellEligible || !authModEligible) && (
+                <div className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-[11px] text-[#8a5808]">
+                  状态预检提示：
+                  {!authCellEligible && `电芯 ${authChildId || '—'} 当前不是未装配状态或已绑定父模组；`}
+                  {!authModEligible && `模组 ${authParentId || '—'} 当前不是未装配 (REGISTERED) 状态。`}
+                  提交将被链码以 <strong className="mono">INVALID_SUPPLY</strong> 拒绝（非证书问题）。
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={assemblyBusy || identityLoading || switching}
+                className="w-full cursor-pointer rounded-lg bg-brand py-2 font-semibold text-white transition hover:bg-brand-hover disabled:opacity-50"
               >
-                {cellsAll.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.id} ({c.state})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-[#64748B]">目标模组 (parentId)</label>
-              <select
-                value={authParentId}
-                onChange={e => setAuthParentId(e.target.value)}
-                className="mono w-full rounded-lg border border-[#dce4ee] bg-white px-2.5 py-1.5"
-              >
-                {modulesAll.map(m => (
-                  <option key={m.id} value={m.id}>
-                    {m.id} ({m.state})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              type="submit"
-              disabled={assemblyBusy}
-              className="w-full rounded-lg bg-[#2563EB] py-2 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              提交供货装配授权
-            </button>
-          </form>
+                {assemblyBusy ? '链码背书提交中...' : `以 ${actor?.name ?? '当前身份'} 提交供货装配授权`}
+              </button>
+            </form>
+          )}
 
-          <form onSubmit={submitAssemblyBind} className="subtle-surface space-y-3 p-4">
-            <div className="font-bold text-[#172B3A]">2. 模组 / PACK 装配绑定或完整拆解（ReplaceAssembly · 需 pack-assembler）</div>
-            <div>
-              <label className="mb-1 block text-[#64748B]">父级组件 (MODULE 或 PACK)</label>
-              <select
-                value={bindParentId}
-                onChange={e => setBindParentId(e.target.value)}
-                className="mono w-full rounded-lg border border-[#dce4ee] bg-white px-2.5 py-1.5"
+          {(!roleScoped || capabilities.canBindAssembly) && (
+            <form onSubmit={submitAssemblyBind} className="subtle-surface space-y-3 p-4">
+              <div className="font-bold text-ink">2. 模组 / PACK 装配绑定或完整拆解（ReplaceAssembly · 需 pack-assembler）</div>
+              <div>
+                <label className="mb-1 block font-semibold text-ink-secondary">
+                  父级组件 (MODULE 或 PACK · 仅未放行/未投用状态可编辑 BOM)
+                </label>
+                <select
+                  value={bindParentId}
+                  onChange={e => setBindParentId(e.target.value)}
+                  className="mono w-full rounded-lg border border-line bg-white px-2.5 py-2 outline-none focus:border-brand"
+                >
+                  {[...modulesAll, ...packs]
+                    .sort(
+                      (a, b) =>
+                        Number(!(a.holderMSP === 'PackOrgMSP' && ['REGISTERED', 'ASSEMBLED'].includes(a.state))) -
+                        Number(!(b.holderMSP === 'PackOrgMSP' && ['REGISTERED', 'ASSEMBLED'].includes(b.state))),
+                    )
+                    .map(p => {
+                      const editable = p.holderMSP === 'PackOrgMSP' && ['REGISTERED', 'ASSEMBLED'].includes(p.state);
+                      return (
+                        <option key={p.id} value={p.id}>
+                          {editable ? '✓ ' : '🔒 '}
+                          {p.id} ({p.type} · rev {p.assemblyVersion} · {p.state}
+                          {!editable ? ' · 已锁定' : ''})
+                        </option>
+                      );
+                    })}
+                </select>
+              </div>
+              {!bindParentEditable && selectedBindParent && (
+                <div className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-[11px] text-[#8a5808]">
+                  状态预检提示：<strong className="mono">{selectedBindParent.id}</strong> 当前处于{' '}
+                  <strong className="mono">{selectedBindParent.state}</strong> 状态（或持有方非 PackOrgMSP），链码禁止修改已放行/在用/报废资产的 BOM，提交将返回{' '}
+                  <strong className="mono">INVALID_ASSEMBLY</strong>（非证书问题）。
+                </div>
+              )}
+              <div>
+                <label className="mb-1 block font-semibold text-ink-secondary">
+                  子组件 ID 列表（逗号分隔；留空提交即为完整拆解）
+                </label>
+                <input
+                  type="text"
+                  value={bindChildrenText}
+                  onChange={e => setBindChildrenText(e.target.value)}
+                  placeholder="例如 cell-1, cell-2（留空执行完整拆解）"
+                  className="mono w-full rounded-lg border border-line bg-white px-2.5 py-2 outline-none focus:border-brand"
+                />
+                {candidateChildrenForBind.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] text-ink-secondary">可选同体系子件：</span>
+                    {candidateChildrenForBind.slice(0, 8).map(ch => {
+                      const currentList = bindChildrenText
+                        .split(',')
+                        .map(s => s.trim())
+                        .filter(Boolean);
+                      const picked = currentList.includes(ch.id);
+                      return (
+                        <button
+                          key={ch.id}
+                          type="button"
+                          onClick={() => {
+                            const next = picked
+                              ? currentList.filter(x => x !== ch.id)
+                              : [...currentList, ch.id];
+                            setBindChildrenText(next.join(', '));
+                          }}
+                          className={`mono cursor-pointer rounded-md border px-2 py-0.5 text-[11px] transition ${
+                            picked
+                              ? 'border-brand bg-brand text-white'
+                              : 'border-line bg-white text-ink hover:border-brand'
+                          }`}
+                        >
+                          {picked ? '✓ ' : '+ '}
+                          {ch.id}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={assemblyBusy || identityLoading || switching}
+                className="w-full cursor-pointer rounded-lg bg-navy-900 py-2 font-semibold text-white transition hover:bg-navy-800 disabled:opacity-50"
               >
-                {[...modulesAll, ...packs].map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.id} ({p.type} · rev {p.assemblyVersion} · {p.state})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-[#64748B]">子组件 ID 列表（逗号分隔；留空提交即为完整拆解）</label>
-              <input
-                type="text"
-                value={bindChildrenText}
-                onChange={e => setBindChildrenText(e.target.value)}
-                placeholder="例如 cell-1, cell-2（留空执行完整拆解）"
-                className="mono w-full rounded-lg border border-[#dce4ee] bg-white px-2.5 py-1.5"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={assemblyBusy}
-              className="w-full rounded-lg bg-[#10243A] py-2 font-semibold text-white hover:bg-[#17324f] disabled:opacity-50"
-            >
-              执行装配绑定 / 版本化拆解
-            </button>
-          </form>
+                {assemblyBusy ? '链码背书提交中...' : `以 ${actor?.name ?? '当前身份'} 执行装配绑定 / 版本化拆解`}
+              </button>
+            </form>
+          )}
         </div>
       </SlideDrawer>
     </div>

@@ -2,7 +2,7 @@
 
 动力电池可信溯源与主动安全防护平台。已实现 Go 业务链码、NestJS mTLS API、FastAPI 风控、
 加密报告与独立密钥服务、可重建索引、策略预演、审计摘要锚定及 Next.js 11 页面安全工作台（`apps/web`，21 个服务端 mTLS BFF 路由）。
-四组织 **local** Fabric 网络基于通道 `batterybusiness`，链码 `battery` 版本 `1.3` / sequence `4`。
+四组织 **local** Fabric 网络基于通道 `batterybusiness`，链码 `battery` 版本 `1.5` / sequence `6`。模拟 PACK 从创建到移交的四笔真实页面回执及数据保留结果见[本地 1.5 交接验收](docs/reports/v15-local-transfer-20261118.json)。
 数据均为显式模拟；已依据标准正文和第 1 号修改单核验 24 位新产品字段与日期规则，正式厂商登记关闭。
 
 ```text
@@ -36,19 +36,42 @@ cd trustguard-battery
 
 > 若本机已有独立安装的 `fabric-samples`，可先设置 `export FABRIC_SAMPLES=/path/to/fabric-samples`；否则 `setup.sh` 会自动下载官方 Fabric 2.5.16 CLI 与配置到 `.tools/fabric`。若不想本地编译 MinIO 静态镜像，可设置 `TRUSTGUARD_MINIO_IMAGE` 指定兼容镜像。
 
+## V2.1 首版功能验收
+
+扫码档案与字段证据在电池数字身份页，单电芯正向查询在谱系页，整批质检与独立复检在检测中心。数字身份页也提供 MES 示例文件和模拟站点冲突记录。逐项操作、判定条件和复跑命令见[六项功能验收说明](docs/reports/v21-local-acceptance.md)。2026-11-18 四组织本地网络完成升级，交易、数据保留和真实页面验收结果见[1.4 本地实测记录](docs/reports/v14-live-acceptance-20261118.json)。
+
+服务器 1.4 策略激活、本地 1.5 四阶段交接及隔离审计 Peer 的验证结果见[创新点逐项验收记录](docs/reports/innovation-acceptance-20261118.md)。
+
 ## 日常启停与检查
+
+以下命令从本地仓库根目录运行。查询四组织业务服务进程需要已初始化的本地环境。
+
+| 目标 | 命令 | 结果与副作用 |
+| --- | --- | --- |
+| 四组织业务网络（只读） | `.venv/bin/python infrastructure/scripts/business_network.py status` | 列出正在运行的业务容器、状态和端口。 |
+| 四组织业务服务（只读） | `.venv/bin/python infrastructure/scripts/business_services.py status` | 依据已记录的 PID 核对当前进程命名空间中可见的六项服务。 |
+| 双组织示例容器（只读） | `infrastructure/scripts/docker-local.sh ps -a --filter label=com.docker.compose.project=trustguard-battery-fabric` | 列出该示例的容器，包括已停止的容器。 |
+| 双组织示例账本（写入） | `npm run verify:fabric` | 成功时在 `trustguardchannel` 通道的 `basic` 链码上提交两笔交易，创建并转移一个新示例资产。报告写入 `docs/reports/phase4-transactions.json`，覆盖原有内容。 |
+
+用以下命令检查本地工具与依赖版本。
 
 ```bash
 source infrastructure/scripts/env.sh
 source .venv/bin/activate
 npm run check:env
+```
 
-# 恢复已有容器并启动本地服务（若已初始化，bootstrap.py 也会自动走安全恢复流程）
+完整启动或恢复本地环境。首次初始化会部署链码，默认写入演示数据。
+
+```bash
 .venv/bin/python infrastructure/scripts/bootstrap.py
-# 或分步管理：
+```
+
+也可分步恢复已有的四组织网络并启动业务服务。
+
+```bash
 .venv/bin/python infrastructure/scripts/business_network.py resume
 .venv/bin/python infrastructure/scripts/business_services.py start
-.venv/bin/python infrastructure/scripts/business_services.py status
 ```
 
 环境依赖已通过根 `package-lock.json` 与 `services/risk/requirements.lock` 固定。Web 前端可通过 `npm run check:types --workspace @trustguard/web`、`npm run build --workspace @trustguard/web` 构建验证，并由 `business_services.py start --service web` 在 `http://127.0.0.1:3100` 启动。

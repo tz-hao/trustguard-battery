@@ -1,0 +1,15 @@
+{
+  "source": "MES_SIM",
+  "simulation": true,
+  "requestId": "mes-demo-supply",
+  "records": [
+    {
+      "kind": "supply",
+      "data": {
+        "childId": "mes-demo-cell",
+        "parentId": "mes-demo-module",
+        "evidenceHash": "10ed07cfcd9fffecdbf974f56bb8cd1bb01df993e2d92db8f4a83379b2a77ead"
+      }
+    }
+  ]
+}

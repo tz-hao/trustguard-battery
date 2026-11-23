@@ -51,6 +51,13 @@ export async function GET(req: NextRequest) {
     const assetRes = await callBackendApi<BatteryAssetView>(name, 'GET', `/assets/${encodeURIComponent(assetId)}`);
     if (assetRes.status !== 200) return NextResponse.json(assetRes.data, { status: assetRes.status });
 
+    if (req.nextUrl.searchParams.get('view') === 'forward') {
+      if (assetRes.data.type !== 'CELL') return NextResponse.json({ code: 'CELL_REQUIRED' }, { status: 400 });
+      const path = await callBackendApi<{asset: BatteryAssetView; ancestors: BatteryAssetView[]}>(name, 'GET', `/assets/${encodeURIComponent(assetId)}/ancestry`);
+      if (path.status !== 200) return NextResponse.json(path.data, { status: path.status });
+      return NextResponse.json({ mode: 'asset', asset: path.data.asset, ancestry: path.data.ancestors });
+    }
+
     const [snapshotRes, edgesRes, inspectionsRes] = await Promise.all([
       assetRes.data.type === 'PACK'
         ? callBackendApi<{ hash: string; assets: BatteryAssetView[] }>(name, 'GET', `/assets/${encodeURIComponent(assetId)}/snapshot`)

@@ -89,7 +89,9 @@ async function inspect(id,result='QC_PASSED'){
   const uploadBody={requestId:reportId,...binding,sourceSignature,contentBase64:plaintext.toString('base64')};
   const uploaded=await api('lab-inspector','POST','/reports',uploadBody);
   if(uploaded.status!==201)throw new Error('REPORT_UPLOAD:'+uploaded.value.code);
-  await command('lab-inspector','inspections',{id:reportId,assetId:id,version,result,reportHash:binding.plaintextHash,sourceHash:uploaded.value.sourceHash});
+  const retest = version > 1 && result==='QC_PASSED' && ['QC_REJECTED','REVIEW_REQUIRED'].includes(current.quality);
+  if(retest) await command('lab-auditor','retest-proposals',{subject:id,version:version-1,reasonHash:sha256('independent retest requested')});
+  await command('lab-inspector',retest?'retest-completions':'inspections',{id:reportId,assetId:id,version,result,reportHash:binding.plaintextHash,sourceHash:uploaded.value.sourceHash});
   const replay=await api('lab-inspector','POST','/reports',uploadBody);assert.deepEqual(replay.value,uploaded.value);
   const downloaded=await api('lab-inspector','GET',`/reports/${reportId}/content`);
   assert.equal(downloaded.status,200);assert.deepEqual(downloaded.value,plaintext);

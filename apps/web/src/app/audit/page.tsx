@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   CheckCircle2,
@@ -13,9 +14,11 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useIdentity } from '@/components/IdentityProvider';
-import { EmptyState, HashChip, OrgBadge, PageBanner, SectionHeader, StagePill } from '@/components/Badges';
+import { EmptyState, HashChip, OrgBadge, OverviewLoadNotice, PageBanner, SectionHeader, StagePill } from '@/components/Badges';
 import { PaginationBar } from '@/components/Visuals';
+import { AuditAnalyticsStrip } from '@/components/DataCharts';
 import { ERROR_DESCRIPTIONS, formatDateTime } from '@/lib/types';
+import { useOverview } from '@/lib/use-overview';
 
 interface TxRecord {
   requestId: string;
@@ -44,6 +47,9 @@ interface SecurityLogRecord {
 
 interface AuditBatchRecord {
   id: string;
+  signerMSP: string | null;
+  blockNumber: string | null;
+  stage: string | null;
   firstLogId: string;
   lastLogId: string;
   count: number;
@@ -53,9 +59,9 @@ interface AuditBatchRecord {
 }
 
 interface LedgerAuditRecord {
-  id: string;
-  digest: string;
-  count: number;
+  requestId: string;
+  resourceId: string;
+  action: string;
   actorMSP: string;
   at: string;
   txId: string;
@@ -70,9 +76,19 @@ interface AuditPayload {
 }
 
 export default function AuditPage() {
-  const { actor, switchActor } = useIdentity();
-  const [data, setData] = useState<AuditPayload | null>(null);
-  const [tab, setTab] = useState<'tx' | 'logs' | 'batches'>('tx');
+  return <Suspense fallback={<p>正在读取审计记录…</p>}><AuditRoute /></Suspense>;
+}
+
+function AuditRoute() {
+  const batch = useSearchParams().get('batch') ?? '';
+  return <AuditView key={batch} batch={batch} />;
+}
+
+function AuditView({ batch }: { batch: string }) {
+  const { actor, switchActor, switching } = useIdentity();
+  const { data, error, loading, load } = useOverview<AuditPayload>('/api/bff/audit' + (batch ? '?batch=' + encodeURIComponent(batch) : ''), switching ? undefined : actor?.name);
+  const [tab, setTab] = useState<'tx' | 'logs' | 'batches'>(batch ? 'batches' : 'tx');
+  const ledgerAudits = (data?.ledgerAudits ?? []).filter(a => !batch || (a.action === 'AnchorAudit' && a.resourceId === batch));
   const [stageFilter, setStageFilter] = useState<'ALL' | 'VERIFIED' | 'REJECTED'>('ALL');
   const [query, setQuery] = useState('');
   const [txPage, setTxPage] = useState(1);
@@ -80,39 +96,9 @@ export default function AuditPage() {
   const pageSize = 8;
 
   const [selectedReqId, setSelectedReqId] = useState<string | null>(null);
-  const [lookupReqId, setLookupReqId] = useState('');
-  const [lookupResult, setLookupResult] = useState<{ status: number; data: unknown } | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch('/api/bff/audit', { cache: 'no-store' });
-      if (res.ok) {
-        const json = (await res.json()) as AuditPayload;
-        setData(json);
-        setSelectedReqId(prev => prev ?? json.transactions[0]?.requestId ?? null);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!actor?.name) return;
-    void load();
-  }, [load, actor?.name]);
-
-  async function verifyRequest(reqIdInput: string) {
-    const clean = reqIdInput.trim();
-    if (!clean) return;
-    setLookupReqId(clean);
-    const res = await fetch(`/api/bff/transactions/${encodeURIComponent(clean)}`, { cache: 'no-store' });
-    setLookupResult({ status: res.status, data: await res.json() });
-  }
 
   const verifiedTxCount = data?.transactions.filter(t => t.stage === 'ledger-verified').length ?? 0;
   const rejectedTxCount = data?.transactions.filter(t => t.stage === 'rejected' || t.stage === 'invalid').length ?? 0;
-  const anchoredLogsCount = data?.securityLogs.filter(l => Boolean(l.anchoredTxId)).length ?? 0;
 
   const q = query.trim().toLowerCase();
   const filteredTx = (data?.transactions ?? []).filter(t => {
@@ -158,23 +144,13 @@ export default function AuditPage() {
   return (
     <div className="space-y-5">
       <PageBanner
-        code="10 · ON-CHAIN AUDIT & FORENSICS"
-        title="区块链审计与交易取证中心（审计证据簿）"
-        subtitle="完整呈现 Hyperledger Fabric 交易阶段（ledger-verified / rejected / invalid）、区块高度、Ed25519 安全事件签名与链上摘要锚定证据"
+        title="区块链审计与交易取证中心"
         right={
           <div className="flex flex-wrap items-center gap-2">
-            {!data?.auditorRoleActive && (
-              <button
-                type="button"
-                onClick={() => void switchActor('lab-auditor')}
-                className="rounded-lg bg-[#2563EB] px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500"
-              >
-                切换为 lab-auditor 查看链上账本
-              </button>
-            )}
             <button
               type="button"
               onClick={() => void load()}
+              disabled={loading}
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600 bg-[#17324f] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#1e3e61]"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -184,100 +160,51 @@ export default function AuditPage() {
         }
       />
 
+      <OverviewLoadNotice loading={loading} error={error} hasData={Boolean(data)} onRetry={() => void load()} />
+      {data && <>
       {/* 4 Consensus & Forensics KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="card-surface p-4">
           <div className="flex items-center justify-between text-xs text-[#64748B]">
-            <span>四节点账本核验通过</span>
+            <span>账本核验通过</span>
             <CheckCircle2 className="h-4 w-4 text-[#159B76]" />
           </div>
           <div className="mono mt-1.5 text-2xl font-bold text-[#159B76]">{verifiedTxCount}</div>
-          <div className="mt-1 text-[11px] text-[#64748B]">阶段：ledger-verified（VALID=0）</div>
         </div>
 
         <div className="card-surface p-4">
           <div className="flex items-center justify-between text-xs text-[#64748B]">
-            <span>拦截拒绝与无效交易</span>
+            <span>拦截拒绝交易</span>
             <XCircle className="h-4 w-4 text-[#DC5353]" />
           </div>
           <div className="mono mt-1.5 text-2xl font-bold text-[#DC5353]">{rejectedTxCount}</div>
-          <div className="mt-1 text-[11px] text-[#64748B]">含背书拒绝 rejected 与区块无效 invalid</div>
         </div>
 
         <div className="card-surface p-4">
           <div className="flex items-center justify-between text-xs text-[#64748B]">
-            <span>Ed25519 安全审计日志</span>
+            <span>安全审计日志</span>
             <ShieldCheck className="h-4 w-4 text-[#2563EB]" />
           </div>
           <div className="mono mt-1.5 text-2xl font-bold text-[#172B3A]">{data?.securityLogs.length ?? 0}</div>
-          <div className="mt-1 text-[11px] text-[#64748B]">已写入账本批次锚定：{anchoredLogsCount} 条</div>
         </div>
 
         <div className="card-surface p-4">
           <div className="flex items-center justify-between text-xs text-[#64748B]">
-            <span>链上审计批次 (AuditBatch)</span>
+            <span>链上审计批次</span>
             <Database className="h-4 w-4 text-[#0F9D8A]" />
           </div>
           <div className="mono mt-1.5 text-2xl font-bold text-[#0F9D8A]">
             {data?.auditorRoleActive ? data.ledgerAudits.length : data?.auditBatches.length ?? 0}
           </div>
-          <div className="mt-1 text-[11px] text-[#64748B]">
-            {data?.auditorRoleActive ? '当前已授权直查链码 audit 记录' : `本地批次 ${data?.auditBatches.length ?? 0} 个`}
-          </div>
         </div>
       </div>
 
-      {/* RequestId Real-Time Reconciliation Terminal */}
-      <div className="card-surface p-5">
-        <SectionHeader
-          title="幂等请求对账终端（GET /api/v1/transactions/:requestId）"
-          subtitle="以当前服务端注入的 mTLS 证书实时复核单笔交易在 Fabric 与事务表中的真实状态；非发起者证书查询将受隐私隔离保护并返回 404 NOT_FOUND"
-          icon={<Search className="h-4 w-4 text-[#2563EB]" />}
-        />
-        <form
-          onSubmit={e => {
-            e.preventDefault();
-            void verifyRequest(lookupReqId);
-          }}
-          className="flex flex-wrap items-center gap-2.5"
-        >
-          <input
-            value={lookupReqId}
-            onChange={e => setLookupReqId(e.target.value)}
-            placeholder="输入 requestId 或点击下方台账任意行的「详情核对」自动填充..."
-            className="mono min-w-[260px] flex-1 rounded-lg border border-[#dce4ee] bg-[#F4F7FA] px-3 py-2 text-xs text-[#172B3A] outline-none focus:border-[#2563EB] focus:bg-white"
-          />
-          <button
-            type="submit"
-            className="rounded-lg bg-[#10243A] px-4 py-2 text-xs font-semibold text-white hover:bg-[#17324f]"
-          >
-            按当前身份实时对账
-          </button>
-          <span className="text-[11px] text-[#64748B]">
-            当前对账身份：<strong className="mono text-[#172B3A]">{actor?.name ?? '...'}</strong>
-          </span>
-        </form>
-
-        {lookupResult && (
-          <div className="mt-3 rounded-xl border border-[#1c3554] bg-[#0b192c] p-3.5 text-xs">
-            <div className="mb-1.5 flex items-center justify-between">
-              <span className="font-semibold text-slate-200">对账接口实时返回</span>
-              <span
-                className={`mono rounded px-2 py-0.5 text-[11px] font-bold ${
-                  lookupResult.status >= 200 && lookupResult.status < 300
-                    ? 'bg-[#159B76]/20 text-emerald-200'
-                    : 'bg-[#D99A2B]/20 text-amber-200'
-                }`}
-              >
-                HTTP {lookupResult.status}
-              </span>
-            </div>
-            <pre className="mono max-h-44 overflow-auto text-[11px] text-slate-200">
-              {JSON.stringify(lookupResult.data, null, 2)}
-            </pre>
-          </div>
-        )}
-      </div>
+      {/* 锚定率环形图 + 交易动作双色柱状分布 */}
+      <AuditAnalyticsStrip
+        totalLogs={data.securityLogs.length}
+        anchoredLogs={data.securityLogs.filter(l => Boolean(l.anchoredTxId || l.auditBatchId)).length}
+        transactions={data.transactions}
+      />
 
       {/* Main Forensics Book */}
       <div className="card-surface p-5">
@@ -398,7 +325,6 @@ export default function AuditPage() {
                                 onClick={e => {
                                   e.stopPropagation();
                                   setSelectedReqId(t.requestId);
-                                  void verifyRequest(t.requestId);
                                 }}
                                 className="rounded-md border border-[#dce4ee] bg-white px-2.5 py-1 text-[11px] font-medium text-[#2563EB] hover:border-[#2563EB]"
                               >
@@ -607,7 +533,7 @@ export default function AuditPage() {
         {tab === 'batches' && (
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <div className="subtle-surface p-4">
-              <SectionHeader title="本地归档锚定批次（AuditBatch）" subtitle="PG 审计队列聚合哈希摘要及对应上链 txId" />
+              <SectionHeader title="审计锚定批次" subtitle="批次摘要、链上签名组织与交易回执" />
               {!data?.auditBatches.length ? (
                 <EmptyState title="暂无已生成的批次记录" />
               ) : (
@@ -615,12 +541,17 @@ export default function AuditPage() {
                   {data.auditBatches.map(b => (
                     <div key={b.id} className="rounded-lg border border-[#dce4ee] bg-white p-3 text-xs">
                       <div className="flex items-center justify-between font-semibold">
-                        <span className="mono text-[#172B3A]">{b.id}</span>
+                        <a className="mono text-[#172B3A] underline" href={'/audit?batch=' + encodeURIComponent(b.id)}>{b.id}</a>
                         <span className="mono text-[#159B76]">{b.count} 条事件</span>
                       </div>
                       <div className="mt-1.5 flex flex-wrap gap-2">
                         <HashChip value={b.digest} label="digest" />
-                        <HashChip value={b.txId} label="txId" />
+                        {batch && b.txId ? <span className="mono break-all">交易 ID {b.txId}</span> : <HashChip value={b.txId} label="txId" />}
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap gap-2">
+                        {b.signerMSP && <span>签名组织 {b.signerMSP}</span>}
+                        {b.blockNumber && <span>区块 #{b.blockNumber}</span>}
+                        {b.stage && <span>回执 {b.stage}</span>}
                       </div>
                       <div className="mt-1.5 text-[11px] text-[#64748B]">
                         覆盖日志区间 #{b.firstLogId} ~ #{b.lastLogId} · {formatDateTime(b.createdAt)}
@@ -653,22 +584,22 @@ export default function AuditPage() {
                     一键切换为 lab-auditor（审计员证书）
                   </button>
                 </div>
-              ) : !data.ledgerAudits.length ? (
-                <EmptyState title="链上暂无审计批次记录" />
+              ) : !ledgerAudits.length ? (
+                <EmptyState title="暂无对应的链上审计记录" />
               ) : (
                 <div className="space-y-2.5">
-                  {data.ledgerAudits.map(a => (
-                    <div key={a.id} className="rounded-lg border border-[#dce4ee] bg-white p-3 text-xs">
+                  {ledgerAudits.map(a => (
+                    <div key={a.txId} className="rounded-lg border border-[#dce4ee] bg-white p-3 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="mono font-bold text-[#172B3A]">{a.id}</span>
+                        <span className="mono font-bold text-[#172B3A]">{a.resourceId || a.requestId}</span>
                         <OrgBadge mspId={a.actorMSP} />
                       </div>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        <HashChip value={a.digest} label="digest" />
+                        <span>{a.action}</span>
                         <HashChip value={a.txId} label="txId" />
                       </div>
                       <div className="mt-1.5 text-[11px] text-[#64748B]">
-                        涵盖 {a.count} 条事件 · 上链时间 {formatDateTime(a.at)}
+                        上链时间 {formatDateTime(a.at)}
                       </div>
                     </div>
                   ))}
@@ -678,6 +609,7 @@ export default function AuditPage() {
           </div>
         )}
       </div>
+      </>}
     </div>
   );
 }

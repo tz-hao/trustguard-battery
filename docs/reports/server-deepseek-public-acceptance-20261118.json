@@ -1,0 +1,125 @@
+{
+  "mode": "live",
+  "origin": "http://<deployment-host>",
+  "code": "DMAPB010000001E115358955",
+  "asset": "pub14-0666136b-pack",
+  "checks": {
+    "archiveEntry": true,
+    "deniedRole": true,
+    "risk_explanation": true,
+    "trace_question": true
+  },
+  "responses": [
+    {
+      "task": "risk_explanation",
+      "http": 201,
+      "requestId": "web-ai-4c2efc8bc2b99f2d911b571a6211bfa6",
+      "state": "completed",
+      "code": null,
+      "evidence": [
+        {
+          "id": "E1",
+          "kind": "asset",
+          "record": "pub14-0666136b-cell",
+          "tx": "fd4f9ccc86ae7a5c5a7ae01999a60485dc88ed693dade9d8b72049df3a2e9793"
+        },
+        {
+          "id": "E2",
+          "kind": "asset",
+          "record": "pub14-0666136b-module",
+          "tx": "548c9f85d69beb01a93a956ee6520dea2dbaefc5ce9027708eb20d3daa0ad8c8"
+        },
+        {
+          "id": "E3",
+          "kind": "asset",
+          "record": "pub14-0666136b-pack",
+          "tx": "8f5deb9836f0bc1f9a7b5c5e1e69830b967a05fb7483aa15522f53cd3934aa7a"
+        },
+        {
+          "id": "E4",
+          "kind": "inspection",
+          "record": "ui-ins-baa85bc5",
+          "tx": "8f5deb9836f0bc1f9a7b5c5e1e69830b967a05fb7483aa15522f53cd3934aa7a"
+        },
+        {
+          "id": "E5",
+          "kind": "risk",
+          "record": "risk-013053633d2640519f642ffa5fdd6974"
+        }
+      ],
+      "summary": "目标资产 asset-3（PACK，LFP）及其下级组件当前均为 ASSEMBLED 状态、质量 QC_PASSED，且为模拟数据；唯一风险记录 E5 标记为 HIGH 但已 stale，不能代表当前状态，需人工复核。"
+    },
+    {
+      "task": "trace_question",
+      "http": 201,
+      "requestId": "web-ai-e3939392e0942413e29621b92c5cb639",
+      "state": "completed",
+      "code": null,
+      "evidence": [
+        {
+          "id": "E1",
+          "kind": "asset",
+          "record": "pub14-0666136b-cell",
+          "tx": "fd4f9ccc86ae7a5c5a7ae01999a60485dc88ed693dade9d8b72049df3a2e9793"
+        },
+        {
+          "id": "E2",
+          "kind": "asset",
+          "record": "pub14-0666136b-module",
+          "tx": "548c9f85d69beb01a93a956ee6520dea2dbaefc5ce9027708eb20d3daa0ad8c8"
+        },
+        {
+          "id": "E3",
+          "kind": "asset",
+          "record": "pub14-0666136b-pack",
+          "tx": "8f5deb9836f0bc1f9a7b5c5e1e69830b967a05fb7483aa15522f53cd3934aa7a"
+        },
+        {
+          "id": "E4",
+          "kind": "inspection",
+          "record": "ui-ins-baa85bc5",
+          "tx": "8f5deb9836f0bc1f9a7b5c5e1e69830b967a05fb7483aa15522f53cd3934aa7a"
+        },
+        {
+          "id": "E5",
+          "kind": "risk",
+          "record": "risk-013053633d2640519f642ffa5fdd6974"
+        }
+      ],
+      "summary": "当前判断缺乏有效的风险或质检记录直接支撑：唯一风险记录 E5 已标记为 stale，不能代表当前状态；质检记录 E4 结果为 QC_PASSED，与高风险判断不一致。"
+    }
+  ],
+  "analysisPosts": 2,
+  "finalRelease": {
+    "dailyLimit": 10,
+    "timezone": "Asia/Shanghai",
+    "mobileRefresh": true,
+    "bothSavedAnswersVerified": true,
+    "additionalModelRequests": 0
+  },
+  "serverVerification": {
+    "buildId": "hszsrVYlimnhSKio-eyhp",
+    "provider": "deepseek",
+    "model": "deepseek-flash",
+    "tokens": [
+      1305,
+      1266
+    ],
+    "apiTestsPassed": 28,
+    "quotaTemporaryTable": "10 accepted, 11th rejected, Asia/Shanghai prior-day reservations excluded, replay free",
+    "usedTodayAtVerification": 2,
+    "network": "server private Fabric",
+    "channel": "batterybusiness",
+    "chaincode": "battery 1.4 sequence 2",
+    "beforeHeight": 547,
+    "verifiedHeight": 553,
+    "verifiedPeers": 4,
+    "historicalTipMatched": true,
+    "newEvents": {
+      "AnchorAudit": 6
+    },
+    "assetCount": 36,
+    "assetDigestUnchanged": true,
+    "objectDigestUnchanged": true
+  }
+}

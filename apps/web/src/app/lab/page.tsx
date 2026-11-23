@@ -17,6 +17,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { HashChip, OrgBadge, SectionHeader } from '@/components/Badges';
+import { DefenseMatrixBoard } from '@/components/DataCharts';
 import { ERROR_DESCRIPTIONS, ROLE_LABELS, formatDateTime } from '@/lib/types';
 
 type AttackId = 'A1' | 'A2' | 'A3' | 'A4' | 'A5' | 'A6' | 'A7' | 'A8';
@@ -170,23 +171,9 @@ export default function LabPage() {
     <div className="space-y-5">
       {/* Deep Navy Security Control Header */}
       <div className="navy-control-panel p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#1e3a5c] pb-5">
-          <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="mono rounded bg-[#DC5353]/25 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-rose-200 ring-1 ring-rose-400/40">
-                09 · BLOCKCHAIN SECURITY LAB
-              </span>
-              <span className="rounded bg-[#0F9D8A]/20 px-2.5 py-0.5 text-[10px] font-semibold text-teal-200">
-                实网攻防对抗 · mTLS / Peer Endorsement / Chaincode
-              </span>
-              <span className="rounded bg-[#17324f] px-2.5 py-0.5 text-[10px] text-slate-300">
-                每次点击均触发真实端口请求与账本前后哈希对比
-              </span>
-            </div>
-            <h1 className="text-xl font-bold tracking-tight text-white">区块链安全攻防实验室（A1–A8 全栈对抗验证）</h1>
-            <p className="max-w-3xl text-xs text-slate-300">
-              验证前端与 API 永不自宣称身份（全量走服务端白名单 mTLS 证书），区分网关完整性核验、Peer 背书拒绝（不进 Orderer 排序）与链码业务门禁拦截，确保阻断后链上状态哈希零变化。
-            </p>
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#1e3a5c] pb-4">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-white">区块链安全攻防实验室</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -237,6 +224,14 @@ export default function LabPage() {
             <div className="mono mt-1 truncate text-[11px] text-slate-300">攻击身份: {activePreset.actor}</div>
           </div>
         </div>
+
+        {/* Active Defense Matrix Scoreboard (A1-A8) */}
+        <DefenseMatrixBoard
+          presets={PRESETS}
+          results={results}
+          selectedId={selectedId}
+          onSelect={id => setSelectedId(id as AttackId)}
+        />
       </div>
 
       {error && (
@@ -550,7 +545,7 @@ export default function LabPage() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="navy-control-panel p-4">
                   <div className="mb-2 flex items-center justify-between text-xs">
-                    <span className="font-bold text-white">攻击请求报文（BFF mTLS Proxy）</span>
+                    <span className="font-bold text-white">攻击请求报文</span>
                     <span className="mono rounded bg-[#2563EB]/25 px-2 py-0.5 text-[10px] text-blue-200">
                       {activeResult.requestSummary.method} {activeResult.requestSummary.route}
                     </span>

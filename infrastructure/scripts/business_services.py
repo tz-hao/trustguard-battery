@@ -24,6 +24,21 @@ def environment():
     return env
 
 
+def ai_environment():
+    path = RUNTIME / "ai-environment.json"
+    if not path.exists():
+        return {}
+    allowed = {"TRUSTGUARD_AI_ENABLED", "DEEPSEEK_API_KEY_FILE", "DEEPSEEK_MODEL",
+               "TRUSTGUARD_AI_TIMEOUT_MS", "TRUSTGUARD_AI_MAX_TOKENS", "TRUSTGUARD_AI_ALLOW_REAL_DATA"}
+    try:
+        values = json.loads(path.read_text())
+        if not isinstance(values, dict) or set(values) - allowed or any(not isinstance(v, str) for v in values.values()):
+            raise ValueError()
+    except (ValueError, OSError):
+        raise RuntimeError("Invalid private AI settings; use only the documented string-valued keys") from None
+    return values
+
+
 def references():
     import sys
     sys.path.insert(0, str(ROOT / "services/risk"))
@@ -90,8 +105,9 @@ def main():
         "api": [node, str(ROOT / "services/api/dist/main.js")],
         "indexer": [node, str(ROOT / "services/api/dist/index-worker.js")],
         "audit": [node, str(ROOT / "services/api/dist/audit-worker.js")],
-        "web": [str(resolve_next_bin()), "start", "-H", "127.0.0.1", "-p", "3100"],
+        "web": [node, str(resolve_next_bin()), "start", "-H", "127.0.0.1", "-p", "3100"],
     }
+    ai_settings = ai_environment() if args.action in ("start", "restart") and args.service in (None, "api") else {}
     for service, command in commands.items():
         if args.service and args.service != service:
             continue
@@ -106,6 +122,9 @@ def main():
         if pid and (Path("/proc") / str(pid) / "cmdline").exists():
             actual = (Path("/proc") / str(pid) / "cmdline").read_bytes().split(b"\0")
             alive = all(arg.encode() in actual for arg in command)
+            if not alive and service == "web" and actual[0].startswith(b"next-server (v"):
+                proc = Path("/proc") / str(pid)
+                alive = (proc / "cwd").resolve() == ROOT / "apps/web" and (proc / "exe").resolve() == Path(node).resolve()
         if args.action == "status":
             print(f"{service}: {'running' if alive else 'not visible in current process namespace; verify via mTLS'}")
             continue
@@ -126,6 +145,9 @@ def main():
             print(f"{service}: existing project process retained")
             continue
         service_env = dict(env)
+        # Optional private DeepSeek settings belong to the API process only.
+        if service == "api":
+            service_env.update(ai_settings)
         if service == "risk":
             service_env["TRUSTGUARD_TLS_CERT"] = str(RUNTIME / "services/risk.crt")
             service_env["TRUSTGUARD_TLS_KEY"] = str(RUNTIME / "services/risk.key")

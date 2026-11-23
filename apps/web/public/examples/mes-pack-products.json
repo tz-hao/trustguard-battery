@@ -1,0 +1,27 @@
+{
+  "source": "MES_SIM",
+  "simulation": true,
+  "requestId": "mes-demo-pack-products",
+  "records": [
+    {
+      "kind": "product",
+      "data": {
+        "id": "mes-demo-module",
+        "code": "DMAMB010000001E119876543",
+        "model": "mes-demo",
+        "manufacturedAt": "2024-01-01",
+        "manufactureSourceHash": "120970d812836f19888625587a4606a5ad23cef31c8684e601771552548fc6b9"
+      }
+    },
+    {
+      "kind": "product",
+      "data": {
+        "id": "mes-demo-pack",
+        "code": "DMAPB010000001E119876543",
+        "model": "mes-demo",
+        "manufacturedAt": "2024-01-01",
+        "manufactureSourceHash": "4862f447f2c7f272fa2f4aaf89dadb3b1ac09105bd5864f8d1a0c9452bb0a226"
+      }
+    }
+  ]
+}

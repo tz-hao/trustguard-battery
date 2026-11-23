@@ -102,7 +102,7 @@ def ensure_builds():
 def main():
     parser = argparse.ArgumentParser(description="Initialize or resume the local TrustGuard Battery environment.")
     parser.add_argument("--no-demo", action="store_true", help="Skip initial simulated demo dataset & attack verification")
-    parser.add_argument("--version", default="1.3", help="Chaincode version to deploy on fresh init (default: 1.3)")
+    parser.add_argument("--version", default="1.4", help="Chaincode version to deploy on fresh init (default: 1.4)")
     parser.add_argument("--sequence", type=int, default=1, help="Chaincode sequence on fresh init (default: 1)")
     args = parser.parse_args()
 

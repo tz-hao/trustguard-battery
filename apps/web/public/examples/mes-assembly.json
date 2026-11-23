@@ -1,0 +1,29 @@
+{
+  "source": "MES_SIM",
+  "simulation": true,
+  "requestId": "mes-demo-assembly",
+  "records": [
+    {
+      "kind": "assembly",
+      "data": {
+        "parentId": "mes-demo-module",
+        "children": [
+          "mes-demo-cell"
+        ],
+        "revision": 1,
+        "evidenceHash": "f8957ded9efca690b80cb64da4d2fe28770676eaa05339ba5e087e22e32cc8f2"
+      }
+    },
+    {
+      "kind": "assembly",
+      "data": {
+        "parentId": "mes-demo-pack",
+        "children": [
+          "mes-demo-module"
+        ],
+        "revision": 1,
+        "evidenceHash": "d868c9d806a47cf167f3992a1240809a1217497ef6b1a21f3bba4adada15c2bd"
+      }
+    }
+  ]
+}

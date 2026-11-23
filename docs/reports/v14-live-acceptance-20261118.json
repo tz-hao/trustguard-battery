@@ -1,0 +1,150 @@
+{
+  "prefix": "v14-02ecab75",
+  "serial": 6569094,
+  "actions": {
+    "production": {
+      "stage": "ledger-verified",
+      "txId": "52e5cd6242190a06b100968b6786cfe6328a21f7b6b9b48f1ad999523167bece",
+      "block": "305"
+    },
+    "pack-products": {
+      "stage": "ledger-verified",
+      "txId": "7de1ba7dd924812ab0915e2cb0c349b1ae5c5a3df7fcaa9613c04bfc6e667a50",
+      "block": "306"
+    },
+    "supply": {
+      "stage": "ledger-verified",
+      "txId": "380efded581f25bd533b60c4aac3b3c8f5d0b51aad98110572bb433961ea9fdf",
+      "block": "307"
+    },
+    "assembly": {
+      "stage": "ledger-verified",
+      "txId": "ddf941b54460f98b976f530f8b3a9b68406c7e3b014b668fb6a35c04af06a93b",
+      "block": "308"
+    },
+    "replay": {
+      "stage": "ledger-verified",
+      "txId": "52e5cd6242190a06b100968b6786cfe6328a21f7b6b9b48f1ad999523167bece",
+      "block": "305"
+    },
+    "individual-cell": {
+      "stage": "ledger-verified",
+      "txId": "2212cd0551a10ef409ee03e003c4bc233a11637b5783e2e3784e9006c7fbb694",
+      "block": "309"
+    },
+    "individual-module": {
+      "stage": "ledger-verified",
+      "txId": "a687cc2ae05a59399df287d391c70b10e05c6a586c7a53fafdb04d78d08627af",
+      "block": "310"
+    },
+    "individual-pack": {
+      "stage": "ledger-verified",
+      "txId": "81173eb70b68a93283465c676faedb11fef469c6e4db83a9fcd4bd7ff611798d",
+      "block": "311"
+    },
+    "batch-v1": {
+      "stage": "ledger-verified",
+      "txId": "22e07dc96d50f202966fef2252d480187a634239256de1380f1aef2956ccdd65",
+      "block": "312"
+    },
+    "blocked": {
+      "stage": "rejected",
+      "txId": "29326a2bd0cbe8aff6e814dead571a2289d27aa7979e2b8fe399134dcc68dd79",
+      "block": null,
+      "code": "QUALITY_GATE"
+    },
+    "no-review": {
+      "stage": "rejected",
+      "txId": "c456140e6589951b47fbd7d27f8956ab7b19514b593a76ca83e295f60b464736",
+      "block": null,
+      "code": "RETEST_REQUIRED"
+    },
+    "propose": {
+      "stage": "ledger-verified",
+      "txId": "45e988d0f1a66e06e65c6dfc3da3e30acba8bd30b71c4026738f45227514dbbc",
+      "block": "313"
+    },
+    "batch-v2": {
+      "stage": "ledger-verified",
+      "txId": "c806c12c94611f374aed4f57887d50a9a8a4e2e1eedd2dc31a09de477ec67ac0",
+      "block": "314"
+    },
+    "release-after-retest": {
+      "stage": "ledger-verified",
+      "txId": "da9a5de839ed7c9a0553547cdb9ae9afee376a1b387fd711ea26c56e8aae2abd",
+      "block": "315"
+    }
+  },
+  "checks": {
+    "mes": "PASS",
+    "trace": "PASS",
+    "qr": "PASS",
+    "fields": "PASS",
+    "scan": "PASS",
+    "qc": "PASS"
+  },
+  "scan0": {
+    "site": "电芯厂",
+    "prior": null,
+    "time": "2026-11-18T03:56:38.753Z"
+  },
+  "scan1": {
+    "site": "电芯厂",
+    "prior": null,
+    "time": "2026-11-18T03:56:38.904Z"
+  },
+  "scan2": {
+    "site": "检测站",
+    "prior": "电芯厂",
+    "time": "2026-11-18T03:56:39.113Z"
+  },
+  "health": {
+    "hash": "01404d25e4535c83ab626325afda27ee40526edd27142161b290e674db208707",
+    "stored": true,
+    "ledgerAnchored": false
+  },
+  "rollback": {
+    "stage": "rejected",
+    "code": "ALREADY_EXISTS",
+    "assetAbsent": true
+  },
+  "channel": "batterybusiness",
+  "chaincode": "battery",
+  "peers": {
+    "cell": {
+      "height": 321,
+      "verifiedOldAssets": 32,
+      "oldBlock": 298,
+      "oldBlockQueryOutputSha256": "1db4812806ca4cc4b652d93bc84e5f6141139f1b193a768087230da29fb07d57",
+      "version": "1.4",
+      "sequence": 5
+    },
+    "pack": {
+      "height": 321,
+      "verifiedOldAssets": 32,
+      "oldBlock": 298,
+      "oldBlockQueryOutputSha256": "1db4812806ca4cc4b652d93bc84e5f6141139f1b193a768087230da29fb07d57",
+      "version": "1.4",
+      "sequence": 5
+    },
+    "lab": {
+      "height": 321,
+      "verifiedOldAssets": 32,
+      "oldBlock": 298,
+      "oldBlockQueryOutputSha256": "1db4812806ca4cc4b652d93bc84e5f6141139f1b193a768087230da29fb07d57",
+      "version": "1.4",
+      "sequence": 5
+    },
+    "recycle": {
+      "height": 321,
+      "verifiedOldAssets": 32,
+      "oldBlock": 298,
+      "oldBlockQueryOutputSha256": "1db4812806ca4cc4b652d93bc84e5f6141139f1b193a768087230da29fb07d57",
+      "version": "1.4",
+      "sequence": 5
+    }
+  },
+  "oldHeight": 299,
+  "totalAssets": 38,
+  "mode": "real local browser, mTLS, Fabric and PostgreSQL; simulated business data"
+}

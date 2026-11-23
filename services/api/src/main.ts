@@ -19,6 +19,9 @@ import { TraceService } from './trace.js';
 import { PolicyService } from './policy.js';
 import {HealthService} from './health.js';
 import { OverviewService } from './overview.js';
+import { AiService } from './ai.js';
+import { ScanService } from './scans.js';
+import { AiController } from './ai-controller.js';
 
 @Catch()
 class SafeExceptionFilter implements ExceptionFilter {
@@ -50,8 +53,9 @@ async function main() {
   const policies=new PolicyService(database,fabric);
   const healthService=new HealthService(database,fabric,internal);
   const overview = new OverviewService(database, fabric, internal, config.identities, config.channel);
+  const ai = new AiService(database, fabric, audit);
   await files.check();
-  @Module({ controllers: [BatteryController], providers: [
+  @Module({ controllers: [BatteryController, AiController], providers: [
     { provide: FabricService, useValue: fabric }, { provide: TransactionService, useValue: transactions }, { provide: RiskService, useValue: risk },
     { provide: FileService, useValue: files },
     { provide: IngestionService, useValue: ingestion },
@@ -59,6 +63,8 @@ async function main() {
     { provide: PolicyService, useValue: policies },
     {provide:HealthService,useValue:healthService},
     { provide: OverviewService, useValue: overview },
+    { provide: ScanService, useValue: new ScanService(database, fabric) },
+    { provide: AiService, useValue: ai },
   ] })
   class AppModule {}
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { httpsOptions: config.tls, logger: false, bodyParser: true });

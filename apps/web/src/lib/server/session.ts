@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { getPublicIdentity, resolveActorName, type ApiResponse } from './api-client';
 
 export const ACTOR_COOKIE = 'tg_actor';
+export const LOGIN_GATE_COOKIE = 'tg_login_gate';
 
 export async function getSessionActor() {
   const cookieStore = await cookies();

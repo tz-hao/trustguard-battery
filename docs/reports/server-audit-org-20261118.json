@@ -1,0 +1,109 @@
+{
+  "environment": "existing-server-private-fabric",
+  "channel": "batterybusiness",
+  "checkedOn": "2026-11-18",
+  "configurationBlock": 597,
+  "channelConfigurationSequence": 1,
+  "chaincode": {
+    "name": "battery",
+    "version": "1.5",
+    "sequence": "3"
+  },
+  "channelApplicationMSPs": [
+    "CellOrgMSP",
+    "PackOrgMSP",
+    "LabOrgMSP",
+    "RecycleOrgMSP",
+    "AuditOrgMSP"
+  ],
+  "auditPeer": {
+    "name": "peer0.audit.battery.local",
+    "persistentLedger": true,
+    "restartPolicy": "unless-stopped",
+    "hostBinding": "127.0.0.1:25051",
+    "observedLedgerHeight": 601,
+    "separateEnrollmentCA": true,
+    "independentWorkerOSIdentity": true,
+    "location": "same server as business peers"
+  },
+  "originalBlock": {
+    "number": 592,
+    "transactionId": "a2b99260803cd703793c1fe2630187304b004278d6fbc5e4f7ca4e5ac8dd187c",
+    "headerSHA256": "c5678af82b672b85daf17901b31d34c2e5628db59e97f9d5a0f5e5c1b77b495a",
+    "dataHash": "d0e090c3fceec005a72206ab2b10b5b88f1dd7877835b14c1a081bd0303c8ba2",
+    "auditIdentityReadFromAuditPeer": true,
+    "checkedHeaderEnvelopesAndValidationFlags": true
+  },
+  "preservation": {
+    "assets": 36,
+    "releases": 6,
+    "businessStateDigestBeforeAndAfter": "a1e832628f00a5dad6e65ab8d13f745510db642c62fcdbe62526dd60bfbfdaa9",
+    "policyDigestBeforeAndAfter": "5d90183e7197449e31b0464e4b0e3bca0239de5511dc86a5d3d8d4abe494407c",
+    "normalReleaseOrganizations": [
+      "CellOrgMSP",
+      "LabOrgMSP",
+      "PackOrgMSP"
+    ],
+    "highRiskReleaseOrganizations": [
+      "CellOrgMSP",
+      "PackOrgMSP",
+      "LabOrgMSP",
+      "RecycleOrgMSP"
+    ],
+    "policyVersion": 2,
+    "releaseWindowSeconds": 540,
+    "channelApplicationQuorums": {
+      "Admins": "3 of 4 existing business admins",
+      "Endorsement": "3 of 4 existing business peers",
+      "LifecycleEndorsement": "3 of 4 existing business peers"
+    },
+    "chaincodeEndorsementBytesVerifiedAgainstOriginalDeployment": true
+  },
+  "acceptanceAnchor": {
+    "id": "audit-11388-11389-7b059b372315",
+    "count": 2,
+    "digest": "7b059b37231530b577cbcb89554dc2e546cf745d40af6b03ce472c2b8453935e",
+    "tx": "5d52ecb24234a2a17db37691515f2704bfa09ca74bb29bd811c4ef6fd69eeb49",
+    "stage": "ledger-verified",
+    "block": "598",
+    "signer": "AuditOrgMSP",
+    "verifiedBy": [
+      "CellOrgMSP",
+      "PackOrgMSP",
+      "LabOrgMSP",
+      "RecycleOrgMSP"
+    ],
+    "headerSHA256": "81126183efe731efdb136de465f2a20ef53397e8ccc7f1c998e3e9aeec546b81",
+    "signatureVerified": true,
+    "events": [
+      {
+        "outcome": "RECEIVED",
+        "action": "GET::resource/api/v1/overview/audit"
+      },
+      {
+        "outcome": "200",
+        "action": "GET::resource/api/v1/overview/audit"
+      }
+    ],
+    "auditPeerReadVerified": true,
+    "validationCode": "VALID"
+  },
+  "nextAutomaticAnchor": {
+    "block": "599",
+    "id": "audit-11390-11399-aee869486035",
+    "signer": "AuditOrgMSP",
+    "stage": "ledger-verified"
+  },
+  "publicReceipt": {
+    "url": "http://<deployment-host>/audit?batch=audit-11388-11389-7b059b372315",
+    "defaultViewChecked": true,
+    "refreshChecked": true,
+    "fullTxIdVisible": true,
+    "auditorChainQueryChecked": true,
+    "historicalSigner": {
+      "block": 596,
+      "msp": "LabOrgMSP"
+    }
+  },
+  "activeServiceCount": 6
+}

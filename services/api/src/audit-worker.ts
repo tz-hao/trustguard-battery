@@ -5,7 +5,8 @@ import {setTimeout as delay} from 'node:timers/promises';
 import {Database} from './database.js';
 import {FabricService} from './gateway.js';
 import {TransactionService} from './transactions.js';
-import {loadConfiguration,requiredEnv,canonicalJson,sha256} from './config.js';
+import {loadFabricConfiguration,requiredEnv,canonicalJson,sha256} from './config.js';
+import {auditSigner} from './audit-identity.js';
 
 interface SecurityLog{
   id:string;actor_hash:string;request_id:string|null;action:string;outcome:string;evidence_hash:string;signature:string;created_at:Date;signature_version:number;
@@ -32,11 +33,14 @@ async function batch(database:Database):Promise<{batch:AuditBatch;rows:SecurityL
   }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
 }
 async function main(){
-  const config=loadConfiguration(),database=new Database(config.databaseUrl);await database.migrate();
+  const config=loadFabricConfiguration(),database=new Database(requiredEnv('TRUSTGUARD_DATABASE_URL'));await database.migrate();
   const fabric=new FabricService(config),transactions=new TransactionService(database,fabric);
-  const identity=config.identities.find(i=>i.name==='lab-auditor');if(!identity)throw new Error('AUDIT_IDENTITY_REQUIRED');
+  const independentMSP = process.env.TRUSTGUARD_AUDIT_SIGNER_MSP;
+  const identity = await auditSigner(config.identities, independentMSP);
   const actor={identity,actorHash:sha256(identity.mspId+':'+identity.clientFingerprint)};
-  const publicKey=createPublicKey(await readFile(path.join(path.dirname(requiredEnv('TRUSTGUARD_AUDIT_KEY_FILE')),'audit-signing.pub')));
+  const verifyKeyFile = independentMSP !== undefined ? requiredEnv('TRUSTGUARD_AUDIT_VERIFY_KEY_FILE')
+    : process.env.TRUSTGUARD_AUDIT_VERIFY_KEY_FILE ?? path.join(path.dirname(requiredEnv('TRUSTGUARD_AUDIT_KEY_FILE')),'audit-signing.pub');
+  const publicKey=createPublicKey(await readFile(verifyKeyFile));
   let stopped=false;process.once('SIGINT',()=>{stopped=true;});process.once('SIGTERM',()=>{stopped=true;});
   const interval=Number(process.env.TRUSTGUARD_AUDIT_INTERVAL_MS??30000);
   if(!Number.isSafeInteger(interval)||interval<1000||interval>60000)throw new Error('INVALID_AUDIT_INTERVAL');
@@ -55,6 +59,11 @@ async function main(){
       const previous=await transactions.replay(actor,command);
       let result=previous?await transactions.status(actor,id):await transactions.execute(actor,command);
       if(result.completed){
+        if (independentMSP !== undefined) {
+          const proof = await fabric.query<{id:string;digest:string;count:number;actorMSP:string;txId:string}>(identity, 'auditAnchor', id);
+          if (proof.id !== id || proof.digest !== digest || proof.count !== rows.length ||
+            proof.actorMSP !== identity.mspId || proof.txId !== result.txId) throw new Error('AUDIT_ANCHOR_MISMATCH');
+        }
         const client=await database.pool.connect();
         try{await client.query('BEGIN');
           await client.query('UPDATE audit_batches SET tx_id=$2 WHERE id=$1',[id,result.txId]);

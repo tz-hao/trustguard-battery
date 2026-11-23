@@ -1,0 +1,230 @@
+{
+  "publicOrigin": "http://<deployment-host>",
+  "channel": "batterybusiness",
+  "chaincode": "battery",
+  "before": {
+    "cell": {
+      "version": "1.3",
+      "sequence": 1,
+      "height": 519,
+      "block": 518,
+      "hash": "9ddb28e27305bf735625500cd16f3507ceab8d2eb96650d12c248deef317c41c"
+    },
+    "pack": {
+      "version": "1.3",
+      "sequence": 1,
+      "height": 519,
+      "block": 518,
+      "hash": "9ddb28e27305bf735625500cd16f3507ceab8d2eb96650d12c248deef317c41c"
+    },
+    "lab": {
+      "version": "1.3",
+      "sequence": 1,
+      "height": 519,
+      "block": 518,
+      "hash": "9ddb28e27305bf735625500cd16f3507ceab8d2eb96650d12c248deef317c41c"
+    },
+    "recycle": {
+      "version": "1.3",
+      "sequence": 1,
+      "height": 519,
+      "block": 518,
+      "hash": "9ddb28e27305bf735625500cd16f3507ceab8d2eb96650d12c248deef317c41c"
+    }
+  },
+  "after": {
+    "cell": {
+      "version": "1.4",
+      "sequence": 2,
+      "height": 536,
+      "block": 518,
+      "hash": "9ddb28e27305bf735625500cd16f3507ceab8d2eb96650d12c248deef317c41c"
+    },
+    "pack": {
+      "version": "1.4",
+      "sequence": 2,
+      "height": 536,
+      "block": 518,
+      "hash": "9ddb28e27305bf735625500cd16f3507ceab8d2eb96650d12c248deef317c41c"
+    },
+    "lab": {
+      "version": "1.4",
+      "sequence": 2,
+      "height": 536,
+      "block": 518,
+      "hash": "9ddb28e27305bf735625500cd16f3507ceab8d2eb96650d12c248deef317c41c"
+    },
+    "recycle": {
+      "version": "1.4",
+      "sequence": 2,
+      "height": 536,
+      "block": 518,
+      "hash": "9ddb28e27305bf735625500cd16f3507ceab8d2eb96650d12c248deef317c41c"
+    }
+  },
+  "ruleSource": {
+    "verified": true,
+    "version": "1.4",
+    "sequence": "2",
+    "packageId": "battery_1.4:e2ad9692780cbd06c06bfec58c89e980042ac029f99af8e8cf4a728a34b17b48",
+    "ruleSourceHash": "ba991f4cd6165cead8cd0512ee9365d20bdbcc7378825e336584017adb39a707",
+    "testSourceHash": "73d4b2dc09fc0622e82bf70021aebf445fc749507ebfe970137dffdc86f73411"
+  },
+  "sourceFilesChecked": 946,
+  "sourceFilesChanged": 47,
+  "verifiedOriginalBlockfilePrefixes": {
+    "cell": {
+      "files": 1,
+      "bytes": 4617824
+    },
+    "pack": {
+      "files": 1,
+      "bytes": 4617824
+    },
+    "lab": {
+      "files": 1,
+      "bytes": 4617824
+    },
+    "recycle": {
+      "files": 1,
+      "bytes": 4617824
+    },
+    "orderer": {
+      "files": 1,
+      "bytes": 4599682
+    }
+  },
+  "historicalAssetsVerified": 30,
+  "totalAssetsAfter": 36,
+  "historicalObjectFilesVerified": 29,
+  "databaseMigrations": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "activeUnits": [
+    "network",
+    "web",
+    "api",
+    "audit",
+    "broker",
+    "indexer",
+    "risk"
+  ],
+  "webBuildId": "KW-0BT6CI7EuzwHpry3Vc",
+  "serverBackupDirectory": "<server-backup-directory>",
+  "browser": {
+    "prefix": "pub14-0666136b",
+    "serial": 5358955,
+    "actions": {
+      "production": {
+        "stage": "ledger-verified",
+        "txId": "a7a8a058fea6af93296ceb8dd35df50885fdb731ee5cdd56b3387df7be058f46",
+        "block": "524"
+      },
+      "pack-products": {
+        "stage": "ledger-verified",
+        "txId": "e892b9a471fafe54f59f65ed1b0646114cdf9f2495c706c6307487b2beb8c2a4",
+        "block": "525"
+      },
+      "supply": {
+        "stage": "ledger-verified",
+        "txId": "8a91e13814589d80c1bc639e438650e8ff5609687d0e731decaec6a3e812492c",
+        "block": "526"
+      },
+      "assembly": {
+        "stage": "ledger-verified",
+        "txId": "6332cfd58fe712c266e994ed79657d86d0a9c1adf4f7575dbe508a8ef665bf9e",
+        "block": "527"
+      },
+      "replay": {
+        "stage": "ledger-verified",
+        "txId": "a7a8a058fea6af93296ceb8dd35df50885fdb731ee5cdd56b3387df7be058f46",
+        "block": "524"
+      },
+      "individual-cell": {
+        "stage": "ledger-verified",
+        "txId": "fd4f9ccc86ae7a5c5a7ae01999a60485dc88ed693dade9d8b72049df3a2e9793",
+        "block": "528"
+      },
+      "individual-module": {
+        "stage": "ledger-verified",
+        "txId": "548c9f85d69beb01a93a956ee6520dea2dbaefc5ce9027708eb20d3daa0ad8c8",
+        "block": "529"
+      },
+      "individual-pack": {
+        "stage": "ledger-verified",
+        "txId": "8f5deb9836f0bc1f9a7b5c5e1e69830b967a05fb7483aa15522f53cd3934aa7a",
+        "block": "530"
+      },
+      "batch-v1": {
+        "stage": "ledger-verified",
+        "txId": "e6c8b4aceb53de14e70058d2c42093bcb4019d177e914bc53cb5b8d5cf50c021",
+        "block": "531"
+      },
+      "blocked": {
+        "stage": "rejected",
+        "txId": "265a448f9af3dd10f46196ce193cba3f4d377390e7195e836a5d23e7e634e796",
+        "block": null,
+        "code": "QUALITY_GATE"
+      },
+      "no-review": {
+        "stage": "rejected",
+        "txId": "6b2a3ff7d98c61f26ec2d1bb4458804de082b5ac9a71785f28946f28b647329b",
+        "block": null,
+        "code": "RETEST_REQUIRED"
+      },
+      "propose": {
+        "stage": "ledger-verified",
+        "txId": "6c78ebfeed7af37e0187f180586729055b2725af52ebca0e99e8c0b2471349ad",
+        "block": "532"
+      },
+      "batch-v2": {
+        "stage": "ledger-verified",
+        "txId": "13029d2ea8034b083e46880ab99c61b53b6775a5f53472ce285eff557bf94db7",
+        "block": "533"
+      },
+      "release-after-retest": {
+        "stage": "ledger-verified",
+        "txId": "9469c07511a84b2f8acbb98385060bf53cc0c37d99b9e0a990e1757906f5a0a8",
+        "block": "534"
+      }
+    },
+    "checks": {
+      "mes": "PASS",
+      "trace": "PASS",
+      "qr": "PASS",
+      "fields": "PASS",
+      "scan": "PASS",
+      "qc": "PASS"
+    },
+    "camera": "HTTP camera unavailable, image fallback verified",
+    "scan0": {
+      "site": "电芯厂",
+      "prior": null,
+      "time": "2026-11-18T04:27:03.450Z"
+    },
+    "scan1": {
+      "site": "电芯厂",
+      "prior": null,
+      "time": "2026-11-18T04:27:03.621Z"
+    },
+    "scan2": {
+      "site": "检测站",
+      "prior": "电芯厂",
+      "time": "2026-11-18T04:27:03.963Z"
+    },
+    "health": {
+      "hash": "b8ed246e596f427fec02ad51d4232f568ebf6a1b815046baeac63b74e60aed02",
+      "stored": true,
+      "ledgerAnchored": false
+    },
+    "rollback": {
+      "stage": "rejected",
+      "code": "ALREADY_EXISTS",
+      "assetAbsent": true
+    }
+  }
+}

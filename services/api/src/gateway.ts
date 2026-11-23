@@ -5,7 +5,7 @@ import * as grpc from '@grpc/grpc-js';
 import { connect, hash, signers, type Gateway, type Network } from '@hyperledger/fabric-gateway';
 import { common, peer, msp } from '@hyperledger/fabric-protos';
 import type { Asset, ClientIdentity, Command, LedgerResult } from './types.js';
-import type { Configuration } from './config.js';
+import type { FabricConfiguration } from './config.js';
 
 interface Connection { gateway: Gateway; network: Network; client: grpc.Client }
 export class InvalidLedgerTransaction extends Error {
@@ -13,7 +13,7 @@ export class InvalidLedgerTransaction extends Error {
 }
 export class FabricService {
   private connections = new Map<string, Promise<Connection>>();
-  constructor(private readonly config: Configuration) {}
+  constructor(private readonly config: FabricConfiguration) {}
   private connection(identity: ClientIdentity, target = identity): Promise<Connection> {
     const key = `${identity.name}@${target.gatewayEndpoint}`;
     const existing = this.connections.get(key);
@@ -112,7 +112,46 @@ export class FabricService {
       if (receipt.result.txId !== txId || receipt.result.requestId !== requestId) throw new Error('RECEIPT_MISMATCH');
       const assetActions = ['RegisterAsset', 'SubmitInspection', 'ReplaceAssembly', 'FinalizeRelease', 'ConfirmTransfer',
         'RecordInstallation', 'RecordFirstUse', 'RecordRetirement', 'ConfirmRecycling', 'RecordScrapConfirmation','ApplyLifecycleCorrection'];
-      if (assetActions.includes(receipt.result.action)) {
+      const {action,resourceId,version} = receipt.result;
+      const batchReport = resourceId.startsWith('batch:') && ['SubmitBatchInspection','CompleteRetest'].includes(action);
+      const queryState = async (kind: string, id: string) => JSON.parse(Buffer.from(await network.getContract(this.config.chaincode)
+        .evaluateTransaction('Query',JSON.stringify({kind,id}))).toString());
+      const transferSteps: Record<string, string> = {
+        CreateTransfer: 'createdTx', SendTransfer: 'sentTx', AcceptTransfer: 'acceptedTx', CommitTransfer: 'committedTx',
+      };
+      if (transferSteps[action] || action === 'CancelTransfer' || action === 'InitiateTransfer') {
+        const transfer = await queryState('transfer',resourceId);
+        const field = transferSteps[action] ?? (action === 'CancelTransfer' ? 'cancelledTx' : 'sentTx');
+        // Historical v1.4 dispatch/cancellation receipts predate the per-step IDs.
+        if ((transferSteps[action] || transfer[field] || transfer.createdTx) && transfer[field] !== txId)
+          throw new Error('TRANSFER_STATE_MISMATCH');
+        if (action === 'CommitTransfer') {
+          const pack = await queryState('asset',transfer.packId) as Asset;
+          if (transfer.state !== 'COMMITTED' || pack.version < version ||
+            (pack.version === version && (pack.holderMSP !== transfer.toMSP || pack.txId !== txId)))
+            throw new Error('TRANSFER_CUSTODY_MISMATCH');
+        }
+      }
+      if (action === 'AnchorAudit' && identity.mspId === 'AuditOrgMSP') {
+        const anchor = await queryState('auditAnchor', resourceId);
+        if (anchor.id !== resourceId || anchor.actorMSP !== identity.mspId || anchor.txId !== txId ||
+            !anchor.count || !/^[0-9a-f]{64}$/.test(anchor.digest)) throw new Error('AUDIT_ANCHOR_MISMATCH');
+      }
+      if (action === 'ImportMES') {
+        const proof = await queryState('mesReceipt',txId);
+        if (proof.txId!==txId || proof.requestId!==requestId || proof.count!==version || proof.organization!==identity.mspId)
+          throw new Error('MES_RECEIPT_MISMATCH');
+      }
+      if (batchReport) {
+        const reports = await queryState('batchInspections',resourceId.slice(6)) as {txId:string;version:number}[];
+        if (!reports.some(row=>row.txId===txId && row.version===version)) throw new Error('BATCH_REPORT_MISMATCH');
+      }
+      if (action==='ProposeRetest' || action==='CompleteRetest') {
+        const reviews = await queryState('retests',resourceId) as {proposedTx:string;completedTx?:string}[];
+        const field = action==='ProposeRetest' ? 'proposedTx' : 'completedTx';
+        if (!reviews.some(row=>row[field]===txId)) throw new Error('RETEST_STATE_MISMATCH');
+      }
+      if (assetActions.includes(action) || (action==='CompleteRetest' && !batchReport)) {
         const asset = JSON.parse(Buffer.from(await network.getContract(this.config.chaincode).evaluateTransaction('Query', JSON.stringify({kind: 'asset', id: receipt.result.resourceId}))).toString()) as Asset;
         if (asset.version < receipt.result.version || asset.version === receipt.result.version && asset.txId !== txId) throw new Error('ASSET_STATE_MISMATCH');
       }

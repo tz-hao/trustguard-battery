@@ -12,6 +12,11 @@ import { FileService } from './files.js';
 import { IngestionService } from './ingestion.js';
 import { TraceService } from './trace.js';
 import { PolicyService } from './policy.js';
+import { X509Certificate } from 'node:crypto';
+import { sha256 } from './config.js';
+import { readFileSync } from 'node:fs';
+import { verifyMesFile } from './mes.js';
+import { ScanService } from './scans.js';
 import { HealthService } from './health.js';
 import { OverviewService } from './overview.js';
 
@@ -23,9 +28,12 @@ const actionMap: Record<string, string> = {
   assets: 'RegisterAsset', inspections: 'SubmitInspection', 'assembly-authorizations': 'AuthorizeAssembly', assembly: 'ReplaceAssembly',
   'release-approvals': 'ApproveRelease', 'release-finalizations': 'FinalizeRelease',
   transfers: 'InitiateTransfer', 'transfer-confirmations': 'ConfirmTransfer', 'transfer-cancellations': 'CancelTransfer',
+  'transfer-drafts': 'CreateTransfer', 'transfer-dispatches': 'SendTransfer',
+  'transfer-acceptances': 'AcceptTransfer', 'transfer-commits': 'CommitTransfer',
   installations: 'RecordInstallation', 'first-use': 'RecordFirstUse', retirements: 'RecordRetirement',
   'recycling-receipts': 'ConfirmRecycling', 'scrap-confirmations': 'RecordScrapConfirmation',
   'lifecycle-corrections':'ProposeLifecycleCorrection','lifecycle-correction-approvals':'ApproveLifecycleCorrection','lifecycle-correction-applications':'ApplyLifecycleCorrection',
+  'batch-inspections': 'SubmitBatchInspection', 'retest-proposals':'ProposeRetest', 'retest-completions':'CompleteRetest',
   'policy-candidates': 'ProposePolicy', 'policy-approvals': 'ApprovePolicy', 'policy-activations': 'ActivatePolicy', 'audit-anchors': 'AnchorAudit',
 };
 
@@ -40,9 +48,15 @@ export class BatteryController {
     @Inject(IngestionService) private readonly ingestion: IngestionService,
     @Inject(TraceService) private readonly trace: TraceService,
     @Inject(PolicyService) private readonly policies: PolicyService,
+    @Inject(ScanService) private readonly scans: ScanService,
     @Inject(HealthService) private readonly healthService:HealthService,
     @Inject(OverviewService) private readonly overview: OverviewService,
   ) {}
+
+  @Post('scans')
+  observe(@Req() req: AuthenticatedRequest, @Body() body: unknown) { return this.scans.record(req.actor,body); }
+  @Get('batteries/:code/scans')
+  observations(@Req() req: AuthenticatedRequest, @Param('code') code: string) { return this.scans.recent(req.actor,code); }
 
   @Get('health')
   health() { return { status: 'ok', network: 'local', mode: 'fabric', simulationData: true }; }
@@ -67,11 +81,18 @@ export class BatteryController {
   @Get('overview/transfers')
   overviewTransfers() { return this.overview.transfers(); }
 
+  @Get('transfers/:id')
+  transfer(@Req() req: AuthenticatedRequest, @Param('id') transferId: string) {
+    return this.fabric.query(req.actor.identity, 'transfer', id.parse(transferId));
+  }
+
   @Get('overview/releases')
   overviewReleases(@Req() req: AuthenticatedRequest) { return this.overview.releases(req.actor); }
 
   @Get('overview/audit')
-  overviewAudit(@Req() req: AuthenticatedRequest) { return this.overview.audit(req.actor); }
+  overviewAudit(@Req() req: AuthenticatedRequest, @Query('batch') batch?: string) {
+    return this.overview.audit(req.actor, z.string().max(96).regex(/^audit-[0-9]+-[0-9]+-[0-9a-f]{12}$/).optional().parse(batch));
+  }
 
   @Post('lab/endorse-probe')
   endorseProbe(@Req() req: AuthenticatedRequest, @Body() body: unknown) {
@@ -120,6 +141,9 @@ export class BatteryController {
   @Get('assets/:id')
   asset(@Req() req: AuthenticatedRequest, @Param('id') assetId: string) { return this.fabric.query(req.actor.identity, 'asset', id.parse(assetId)); }
 
+  @Get('assets/:id/ancestry')
+  ancestry(@Req() req: AuthenticatedRequest,@Param('id') assetId:string){return this.fabric.query(req.actor.identity,'ancestry',id.parse(assetId));}
+
   @Get('assets/:id/inspections')
   inspections(@Req() req: AuthenticatedRequest, @Param('id') assetId: string) { return this.fabric.query(req.actor.identity, 'inspections', id.parse(assetId)); }
 
@@ -163,7 +187,25 @@ export class BatteryController {
     const command={...input,action};
     const replay=await this.transactions.replay(req.actor,command);
     if(replay)return replay;
-    if (action === 'SubmitInspection') await this.files.verifyInspection(req.actor, input.data);
+    // The two historical HTTP operations still return dispatch and final custody.
+    // Each prerequisite has its own recoverable request and ledger receipt.
+    if (action === 'InitiateTransfer' || action === 'ConfirmTransfer') {
+      const prerequisite = action === 'InitiateTransfer' ? 'CreateTransfer' : 'AcceptTransfer';
+      const step = { ...input, action: prerequisite, requestId: 'tr-' + sha256(prerequisite + ':' + input.requestId) };
+      const previous = await this.transactions.replay(req.actor, step);
+      let needed = true;
+      if (!previous && action === 'ConfirmTransfer') {
+        const row = await this.fabric.query<{state: string; createdTx?: string}>(req.actor.identity, 'transfer', id.parse(input.data.id));
+        needed = !!row.createdTx && row.state === 'SENT';
+      }
+      if (needed) {
+        const result = previous
+          ? await this.transactions.status(req.actor, step.requestId)
+          : await this.transactions.execute(req.actor, step);
+        if (!result.completed) return result;
+      }
+    }
+    if (['SubmitInspection','SubmitBatchInspection','CompleteRetest'].includes(action)) await this.files.verifyInspection(req.actor, input.data);
     if (action === 'ProposePolicy') await this.policies.requirePassed(req.actor,input.data);
     if(['ApprovePolicy','ActivatePolicy'].includes(action)){
       const candidate=await this.fabric.query<{id:string;policy:unknown;testsHash:string}>(req.actor.identity,'candidate',id.parse(input.data.id));
@@ -175,6 +217,26 @@ export class BatteryController {
 
   @Post('reports')
   uploadReport(@Req() req: AuthenticatedRequest, @Body() body: unknown) { return this.files.upload(req.actor, body); }
+
+  @Get('quality/:subject')
+  async qualitySubject(@Req() req: AuthenticatedRequest,@Param('subject') subject:string) {
+    const batch=subject.startsWith('batch:');
+    const target=id.parse(batch ? subject.slice(6) : subject);
+    const [state, reports, proposal, retests]=await Promise.all([
+      this.fabric.query(req.actor.identity,batch?'batchStatus':'asset',target),
+      this.fabric.query(req.actor.identity,batch?'batchInspections':'inspections',target),
+      this.fabric.query(req.actor.identity,'retest',subject),
+      this.fabric.query(req.actor.identity,'retests',subject)
+    ]);
+    return {state,reports,proposal,retests};
+  }
+
+  @Post('imports/mes')
+  importMES(@Req() req:AuthenticatedRequest,@Body() body:unknown) {
+    const signer = new X509Certificate(readFileSync(req.actor.identity.certificateFile));
+    const input = verifyMesFile(body,signer.publicKey);
+    return this.transactions.execute(req.actor,{requestId:input.requestId,action:'ImportMES',data:input.data});
+  }
 
   @Post('imports/measurements')
   importMeasurements(@Req() req: AuthenticatedRequest, @Body() body: unknown) { return this.ingestion.csv(req.actor,body); }

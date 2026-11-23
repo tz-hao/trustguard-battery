@@ -3,8 +3,8 @@
 ## 当前范围
 
 本地四组织：CellOrgMSP、PackOrgMSP、LabOrgMSP、RecycleOrgMSP；每组织一个 Peer，单 Raft Orderer。
-通道 `batterybusiness`，链码 `battery` 版本 `1.3`、sequence `4`。业务策略版本独立于链码版本。
-审计使用组织内独立客户端角色，没有第五个独立 AuditOrg。前端工作台位于 `apps/web`（11 页面、18 个服务端 mTLS BFF 路由）。
+2026-11-18 回读四个本地 Peer，通道 `batterybusiness` 的 `battery` 为 1.4、sequence 5。公网四个 Peer 为 1.4、sequence 2，业务策略为 v2。1.5 是本地候选包。
+公网使用四家业务机构的审计身份。本地独立审计演示使用单独通道 `batteryauditdemo`。前端工作台位于 `apps/web`。参见[本轮验收与复验命令](reports/innovation-acceptance-20261118.md)。
 
 已依据补充 PDF（含第 1 号修改单）核验 24 位新产品字段、10 类材料和日期字典。
 `GET codes/{code}` 默认返回修改单规则下的 `CODE_FIELDS_VERIFIED`，携带标准版本、来源摘要、
@@ -125,7 +125,10 @@ Python 使用 `services/risk/requirements.lock`。Go 已提供 vendor 以供本�
 | `inspections` | Lab inspector 签发；API 要求已验证上传的对应报告 |
 | `POST release/requests` | Pack release 申请；body 为 requestId、id、packId，风险凭证由服务端生成 |
 | `release-approvals`、`release-finalizations` | 独立组织批准与最终放行 |
-| `transfers`、`transfer-confirmations`、`transfer-cancellations` | 当前持有方发起、接收方独立确认/取消 |
+| `transfer-drafts`、`transfer-dispatches` | 1.5 候选。当前持有机构的 custodian 创建、发出交接单，创建时登记收件方、凭证 SHA-256、有效期并锁定资产版本 |
+| `transfer-acceptances`、`transfer-commits`、`transfer-cancellations` | 1.5 候选。接收方用所收凭证摘要签收，提交时核对持有方、版本及期限。草稿由转出方撤销，发出或签收后任一参与方可取消 |
+| `GET transfers/{id}`、`GET overview/transfers` | 1.5 候选。分别读取链上交接单与工作台索引，按步骤返回已有交易 ID |
+| `transfers`、`transfer-confirmations` | 兼容原 HTTP 客户端。1.5 候选内部依次完成创建与发出、签收与提交。历史 1.4 已发出单可按原规则完成 |
 | `installations`、`first-use`、`retirements` | 有权限的当前持有方登记业务事件 |
 | `recycling-receipts`、`scrap-confirmations` | Recycle 回收角色确认；预计日期不能代替实际报废 |
 | `lifecycle-corrections`、`lifecycle-correction-approvals`、`lifecycle-correction-applications` | 提议、独立审核、应用更正 |
@@ -155,3 +158,9 @@ Python 使用 `services/risk/requirements.lock`。Go 已提供 vendor 以供本�
 首次部署及升级需显式调用 `business_network.py deploy --version ... --sequence ...`，不会随启动自动升级链码。
 已有运行目录不得重新执行 prepare/up 重建。恢复仅用 resume/start；没有提供 down/reset/prune 路径。
 旧示例 `trustguardchannel` 与早期开发通道 `batterychannel` 均保留，当前业务不使用它们。
+
+## DeepSeek 辅助分析接口（2026-11-18）
+
+新增 `GET /api/v1/ai/status`、`POST /api/v1/ai/analyses`、`GET /api/v1/ai/analyses/{requestId}`。
+支持证据驱动的风险解释与当前单资产/组件问答；保持人工复核，不能触发放行或链上写入。
+默认关闭，缺少密钥时明确不可用，无 Mock 回退。配置、请求示例、权限和验证边界见 [DeepSeek 接入说明](deepseek-api.md)。

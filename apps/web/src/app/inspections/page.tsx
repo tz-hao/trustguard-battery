@@ -1,5 +1,6 @@
 'use client';
 
+import { QualityReview } from '@/components/QualityReview';
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -25,6 +26,7 @@ import {
   type CommandResultState,
 } from '@/components/Badges';
 import { PaginationBar, SlideDrawer } from '@/components/Visuals';
+import { BatchYieldBars, MeasurementBulletGrid } from '@/components/DataCharts';
 import { formatDateTime, type BatteryAssetView } from '@/lib/types';
 
 interface MeasurementItem {
@@ -167,10 +169,14 @@ export default function InspectionsPage() {
       });
       await load();
     } else {
+      const errCode = json.code ?? `HTTP_${res.status}`;
       setBanner({
         ok: false,
-        title: '撤权请求被拒绝（需报告签发机构 LabOrg inspector 身份）',
-        errorCode: json.code ?? `HTTP_${res.status}`,
+        title:
+          errCode === 'FORBIDDEN'
+            ? `撤权权限不足（需报告签发机构 LabOrg inspector，当前 ${actor?.name ?? '—'}）`
+            : `撤权请求未完成（当前 ${actor?.name ?? '—'}）`,
+        errorCode: errCode,
       });
     }
   }
@@ -249,10 +255,14 @@ export default function InspectionsPage() {
         });
         await load();
       } else {
+        const errCode = json.code ?? `HTTP_${res.status}`;
         setBanner({
           ok: false,
-          title: `CSV 导入被拒绝（需 LabOrgMSP inspector 身份，当前: ${actor?.name ?? '—'}）`,
-          errorCode: json.code ?? `HTTP_${res.status}`,
+          title:
+            errCode === 'FORBIDDEN'
+              ? `CSV 导入权限不足（需 LabOrgMSP inspector 身份，当前: ${actor?.name ?? '—'}）`
+              : `CSV 导入未完成（当前: ${actor?.name ?? '—'}）`,
+          errorCode: errCode,
         });
       }
     } finally {
@@ -290,9 +300,7 @@ export default function InspectionsPage() {
   return (
     <div className="space-y-6">
       <PageBanner
-        code="03 · QUALITY INSPECTION CENTER"
         title="动力电池质量检测中心与加密报告存证"
-        subtitle="整合 LIMS 测量数据、Isolation Forest 离群筛查、MinIO AES-GCM 密文存储与独立密钥服务授权读取"
         right={
           <div className="flex items-center gap-2">
             <Link
@@ -313,35 +321,48 @@ export default function InspectionsPage() {
         }
       />
 
-      {/* 顶部安全原则说明条 */}
+      <QualityReview key={actor?.name} assets={assets} />
+      {/* 顶部核心统计 */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <div className="card-surface p-4">
           <div className="text-[11px] text-[#64748B]">已存证链上质检版本</div>
           <div className="mono mt-1 text-2xl font-bold text-[#10243A]">{data?.inspections.length ?? 0}</div>
-          <div className="text-[11px] text-[#159B76]">版本只增不改 · 历史不可覆盖</div>
         </div>
         <div className="card-surface p-4">
-          <div className="text-[11px] text-[#64748B]">AES-GCM 加密报告</div>
+          <div className="text-[11px] text-[#64748B]">加密质检报告</div>
           <div className="mono mt-1 text-2xl font-bold text-[#2563EB]">{data?.reports.length ?? 0}</div>
-          <div className="text-[11px] text-[#64748B]">MinIO 密文 + :18001 Permit 授权</div>
         </div>
         <div className="card-surface p-4">
-          <div className="text-[11px] text-[#64748B]">LIMS 测量样本 / 异常</div>
+          <div className="text-[11px] text-[#64748B]">测量样本 / 异常预警</div>
           <div className="mono mt-1 text-2xl font-bold text-[#172B3A]">
             {ms.length} <span className="text-sm text-[#D99A2B]">/ {outlierCount} 预警</span>
           </div>
-          <div className="text-[11px] text-[#64748B]">AI 评分 ≠ 最终质量结论</div>
         </div>
         <div className="card-surface p-4">
-          <div className="text-[11px] text-[#64748B]">AI 风控服务状态</div>
+          <div className="text-[11px] text-[#64748B]">智能风控状态</div>
           <div className={`mt-1 text-lg font-bold ${data?.riskReady ? 'text-[#159B76]' : 'text-[#DC5353]'}`}>
-            {data?.riskReady ? 'IsolationForest 在线' : '风控不可用（降级）'}
+            {data?.riskReady ? '在线' : '降级'}
           </div>
-          <div className="mono text-[10px] text-[#64748B]">quality-iforest-v1</div>
         </div>
       </div>
 
       {banner && <TxResultBanner result={banner} onClose={() => setBanner(null)} />}
+
+      {/* 批次良率堆叠可视化 */}
+      {(() => {
+        const byBatch = new Map<string, { passed: number; review: number; rejected: number; total: number }>();
+        for (const a of assets) {
+          if (!a.batchId) continue;
+          const b = byBatch.get(a.batchId) ?? { passed: 0, review: 0, rejected: 0, total: 0 };
+          b.total += 1;
+          if (a.quality === 'QC_PASSED') b.passed += 1;
+          else if (a.quality === 'QC_REJECTED') b.rejected += 1;
+          else if (a.quality === 'REVIEW_REQUIRED') b.review += 1;
+          byBatch.set(a.batchId, b);
+        }
+        const batchList = Array.from(byBatch.entries()).map(([id, s]) => ({ id, ...s }));
+        return <BatchYieldBars batches={batchList} />;
+      })()}
 
       {data && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
@@ -446,6 +467,13 @@ export default function InspectionsPage() {
                       </div>
                     </div>
 
+                    <MeasurementBulletGrid
+                      voltageMv={selectedM.voltage_mv}
+                      resistanceUohm={selectedM.resistance_uohm}
+                      capacityMah={selectedM.capacity_mah}
+                      temperatureC={selectedM.temperature_c}
+                    />
+
                     <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#64748B]">
                       <span>
                         模型版本：<strong className="mono">{selectedM.analysis?.modelVersion ?? 'quality-iforest-v1'}</strong> · 规则命中：
@@ -489,8 +517,7 @@ export default function InspectionsPage() {
             {rightTab === 'sign' ? (
               <>
                 <SectionHeader
-                  title="签发版本化检测报告（AES-GCM + 上链）"
-                  subtitle="仅 LabOrgMSP inspector 可签发；复检自动递增版本号，绝不覆盖旧报告"
+                  title="签发版本化检测报告"
                   icon={<ShieldCheck className="h-4 w-4 text-[#0F9D8A]" />}
                 />
 
@@ -523,17 +550,6 @@ export default function InspectionsPage() {
                     </select>
                   </div>
 
-                  <div className="subtle-surface p-3 text-[11px] text-[#64748B]">
-                    <div>
-                      当前执行身份：<strong className="mono text-[#172B3A]">{actor?.name ?? '—'}</strong>（{actor?.mspId} ·{' '}
-                      {actor?.roleLabel}）
-                    </div>
-                    <p className="mt-1">
-                      提交后后端使用私钥签名元数据、AEAD 加密存储至 MinIO，再向 Fabric 提交 SubmitInspection。非{' '}
-                      <code className="mono">LabOrgMSP inspector</code> 将被拒绝。
-                    </p>
-                  </div>
-
                   <button
                     type="submit"
                     disabled={submitting || !targetAssetId}
@@ -547,7 +563,6 @@ export default function InspectionsPage() {
               <>
                 <SectionHeader
                   title="LIMS 签名 CSV 量测数据导入"
-                  subtitle="服务端用 source-signing.key 签名，经 FastAPI 验签后实时触发 AI 异常评估"
                   icon={<Activity className="h-4 w-4 text-[#2563EB]" />}
                 />
                 <form onSubmit={submitCsvMeasurement} className="space-y-3 text-xs">

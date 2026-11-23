@@ -3,7 +3,7 @@ export type Organization = typeof organizations[number];
 export type Role = 'admin' | 'manufacturer' | 'inspector' | 'assembler' | 'approver' | 'release' | 'custodian' | 'operator' | 'recycler' | 'auditor' | 'viewer';
 export interface ClientIdentity {
   name: string;
-  mspId: Organization;
+  mspId: Organization | 'AuditOrgMSP';
   role: Role;
   clientFingerprint: string;
   certificateFile: string;
@@ -12,10 +12,12 @@ export interface ClientIdentity {
   gatewayServerName: string;
   gatewayTlsRootFile: string;
 }
-export interface AuthenticatedActor {
+export type BusinessIdentity = ClientIdentity & { mspId: Organization };
+export interface LedgerActor {
   identity: ClientIdentity;
   actorHash: string;
 }
+export interface AuthenticatedActor extends LedgerActor { identity: BusinessIdentity }
 export interface Command { requestId: string; action: string; data: Record<string, unknown> }
 export interface LedgerResult { requestId: string; txId: string; action: string; resourceId: string; version: number }
 export type TransactionStage = 'built' | 'endorsed' | 'submitted' | 'committed' | 'ledger-verified' | 'rejected' | 'invalid' | 'unknown';

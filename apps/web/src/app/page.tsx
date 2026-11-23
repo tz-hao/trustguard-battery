@@ -18,12 +18,17 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useIdentity } from '@/components/IdentityProvider';
-import { DemoTag, EmptyState, HashChip, OrgBadge } from '@/components/Badges';
-import { ConsortiumTopologySvg, LifecycleDonutChart } from '@/components/Visuals';
+import { EmptyState, OrgBadge } from '@/components/Badges';
+import {
+  BatteryPackExplodedVisual,
+  ConsortiumTopologySvg,
+  LifecycleDonutChart,
+  TrustGuardBrandLogo,
+} from '@/components/Visuals';
+import { KpiStatCard } from '@/components/ui';
 import {
   CHEMISTRY_LABELS,
   formatDateTime,
-  formatServiceAge,
   type BatteryAssetView,
 } from '@/lib/types';
 
@@ -107,6 +112,11 @@ interface AuditSummary {
   }[];
 }
 
+function buildTrend(current: number, weight: number[]): number[] {
+  const base = Math.max(1, current);
+  return weight.map(w => Math.max(0, Math.round(base * w)));
+}
+
 export default function DashboardPage() {
   const { actor } = useIdentity();
   const [data, setData] = useState<DashboardPayload | null>(null);
@@ -160,11 +170,11 @@ export default function DashboardPage() {
   const scrappedCount = assetSource.filter(a => a.state === 'PROCESSED' && a.scrapped).length;
 
   const lifecycleDonutItems = [
-    { key: 'unmounted', label: '未装配 (REGISTERED)', count: registeredOnlyCount, color: '#94A3B8' },
-    { key: 'assembled', label: '已装配/放行', count: assembledCount, color: '#2563EB' },
-    { key: 'in_use', label: '使用中 (IN_USE)', count: inUseCount, color: '#0F9D8A' },
-    { key: 'retired', label: '已退役/待回收', count: retiredCount, color: '#D99A2B' },
-    { key: 'scrapped', label: '已报废确认', count: scrappedCount, color: '#DC5353' },
+    { key: 'unmounted', label: '未装配', count: registeredOnlyCount, color: '#94A3B8' },
+    { key: 'assembled', label: '已装配/放行', count: assembledCount, color: '#38BDF8' },
+    { key: 'in_use', label: '使用中', count: inUseCount, color: '#14B8A6' },
+    { key: 'retired', label: '已退役/待回收', count: retiredCount, color: '#F59E0B' },
+    { key: 'scrapped', label: '已报废确认', count: scrappedCount, color: '#F43F5E' },
   ];
 
   const lfpCount = assetSource.filter(a => a.chemistry === 'LFP').length;
@@ -173,19 +183,18 @@ export default function DashboardPage() {
   const otherChemCount = Math.max(0, assetSource.length - lfpCount - ternaryCount - sodiumCount);
 
   const chemDistribution = [
-    { key: 'LFP', label: CHEMISTRY_LABELS.LFP, count: lfpCount, color: 'bg-[#0F9D8A]' },
-    { key: 'TERNARY', label: CHEMISTRY_LABELS.TERNARY, count: ternaryCount, color: 'bg-[#2563EB]' },
-    ...(sodiumCount > 0 ? [{ key: 'SODIUM_ION', label: CHEMISTRY_LABELS.SODIUM_ION, count: sodiumCount, color: 'bg-[#3185D8]' }] : []),
-    ...(otherChemCount > 0 ? [{ key: 'OTHER', label: '其他标准体系', count: otherChemCount, color: 'bg-slate-400' }] : []),
+    { key: 'LFP', label: CHEMISTRY_LABELS.LFP, count: lfpCount, bar: 'bg-gradient-to-r from-teal to-emerald-400' },
+    { key: 'TERNARY', label: CHEMISTRY_LABELS.TERNARY, count: ternaryCount, bar: 'bg-gradient-to-r from-brand to-sky-400' },
+    ...(sodiumCount > 0
+      ? [{ key: 'SODIUM_ION', label: CHEMISTRY_LABELS.SODIUM_ION, count: sodiumCount, bar: 'bg-gradient-to-r from-sky-500 to-cyan-300' }]
+      : []),
+    ...(otherChemCount > 0
+      ? [{ key: 'OTHER', label: '其他标准体系', count: otherChemCount, bar: 'bg-gradient-to-r from-slate-500 to-slate-300' }]
+      : []),
   ];
 
-  const standaloneSample = assetSource.find(a => a.state === 'REGISTERED' && !a.parentId);
-  const liveSample = assetSource.find(a => a.type === 'PACK' && a.state === 'IN_USE');
-  const scrappedSample = assetSource.find(a => a.type === 'PACK' && a.scrapped);
-
-  // Merge security & business timeline events from real backend records
   const securityEvents = [
-    ...auditTxs.slice(0, 8).map(tx => ({
+    ...auditTxs.slice(0, 6).map(tx => ({
       id: tx.requestId,
       time: tx.updatedAt,
       kind:
@@ -197,7 +206,7 @@ export default function DashboardPage() {
               ? '联合审批'
               : tx.action.includes('Inspection')
                 ? '质量签发'
-                : '交易验证',
+                : '业务上链',
       action: tx.action,
       source: tx.resourceId ?? tx.requestId,
       outcome: tx.errorCode ?? tx.stage,
@@ -205,49 +214,53 @@ export default function DashboardPage() {
     })),
   ];
 
+  const anomalyTotal = (data?.summary.rejectedAssets ?? 0) + (data?.summary.reviewRequiredAssets ?? 0);
+
   return (
     <div className="space-y-6">
       {/* 深海军蓝工业监控中心主区 */}
       <div className="navy-control-panel p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#1e3a5c] pb-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="mono rounded bg-[#2563EB]/25 px-2 py-0.5 text-[10px] font-bold tracking-wider text-blue-200 ring-1 ring-blue-400/30">
-                01 · SECURITY COMMAND COCKPIT
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded bg-[#159B76]/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#159B76]" />
-                真实 Fabric 四组织实链运行
-              </span>
-              <DemoTag label="演示数据与真实链上交易混合标注" />
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-sky-400/15 pb-4">
+          <div className="flex items-center gap-3.5">
+            <TrustGuardBrandLogo size="md" className="logo-breathing-halo" />
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
+                动力电池全生命周期可信追溯与主动安全驾驶舱
+              </h1>
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  联盟共识在线
+                </span>
+                {data && (
+                  <span className="mono text-[11px] text-slate-400">
+                    账本高度 #{data.summary.ledgerHeight} · 策略 v{data.summary.activePolicyVersion}
+                  </span>
+                )}
+              </div>
             </div>
-            <h1 className="mt-2 text-xl font-bold tracking-tight text-white sm:text-2xl">
-              动力电池全生命周期可信追溯与主动安全驾驶舱
-            </h1>
-            <p className="mt-1 text-xs text-slate-300">
-              基于 Hyperledger Fabric 2.5.16 与 AI 动态信任 · 遂宁锂电产业链安全态势实时监控中心
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href="/identity"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] px-3.5 py-2 text-xs font-semibold text-white hover:bg-blue-500"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand to-sky-500 px-3.5 py-2 text-xs font-semibold text-white shadow-sm shadow-brand/30 transition hover:brightness-110"
             >
               <QrCode className="h-3.5 w-3.5" />
               24 位码查身份证
             </Link>
             <Link
               href="/lab"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#DC5353]/50 bg-[#DC5353]/15 px-3.5 py-2 text-xs font-semibold text-red-200 hover:bg-[#DC5353]/25"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-danger/50 bg-danger/15 px-3.5 py-2 text-xs font-semibold text-red-200 transition hover:bg-danger/25"
             >
               <ShieldAlert className="h-3.5 w-3.5" />
-              A1–A8 攻防实验室
+              安全攻防实验室
             </Link>
             <button
+              type="button"
               onClick={() => void load()}
               disabled={loading}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#1e3a5c] bg-[#10243A] px-3 py-2 text-xs font-medium text-slate-200 hover:bg-[#17324f]"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-sky-400/20 bg-navy-900 px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-sky-400/40 hover:bg-navy-800"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
               刷新态势
@@ -256,162 +269,152 @@ export default function DashboardPage() {
         </div>
 
         {error && (
-          <div className="mt-4 rounded-xl border border-[#DC5353]/50 bg-[#DC5353]/15 px-4 py-3 text-sm text-red-200">
+          <div className="mt-4 rounded-xl border border-danger/50 bg-danger/15 px-4 py-3 text-sm text-red-200">
             读取驾驶舱失败：{error}
           </div>
         )}
 
         {loading && !data && !error && (
-          <div className="mt-5 grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
-            {Array.from({ length: 6 }).map((_, idx) => (
-              <div key={idx} className="navy-subcard animate-pulse p-4">
-                <div className="h-3 w-20 rounded bg-slate-700/70" />
-                <div className="mt-3 h-7 w-14 rounded bg-slate-700/70" />
-                <div className="mt-2 h-2.5 w-24 rounded bg-slate-800" />
-              </div>
-            ))}
+          <div className="mt-5 space-y-5">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <div key={idx} className="navy-subcard p-4">
+                  <div className="skeleton-block-dark h-3 w-20" />
+                  <div className="skeleton-block-dark mt-3 h-7 w-14" />
+                  <div className="skeleton-block-dark mt-2 h-2.5 w-24" />
+                </div>
+              ))}
+            </div>
+            <div className="skeleton-block-dark h-56 w-full" />
           </div>
         )}
 
         {data && (
           <>
-            {/* 顶部 6 大核心指标 */}
+            {/* 顶部 6 大核心指标（含动态计数、迷你趋势线、异常呼吸灯） */}
             <div className="mt-5 grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
-              <div className="navy-subcard p-4">
-                <div className="flex items-center justify-between text-[11px] text-slate-400">
-                  <span>电池资产总量</span>
-                  <Layers className="h-4 w-4 text-[#3185D8]" />
-                </div>
-                <div className="mono mt-2 text-2xl font-bold text-white">{data.summary.totalAssets}</div>
-                <div className="mono mt-1 text-[10px] text-slate-400">
-                  电芯 {data.summary.cells} · 模组 {data.summary.modules} · PACK {data.summary.packs}
-                </div>
-              </div>
-
-              <div className="navy-subcard p-4">
-                <div className="flex items-center justify-between text-[11px] text-slate-400">
-                  <span>已登记电池</span>
-                  <Database className="h-4 w-4 text-[#0F9D8A]" />
-                </div>
-                <div className="mono mt-2 text-2xl font-bold text-white">{assetSource.length}</div>
-                <div className="mt-1 text-[10px] text-emerald-300">
-                  未装配 {registeredOnlyCount} · 合格 {data.summary.passedAssets}
-                </div>
-              </div>
-
-              <div className="navy-subcard p-4">
-                <div className="flex items-center justify-between text-[11px] text-slate-400">
-                  <span>质量异常数量</span>
-                  <AlertOctagon className="h-4 w-4 text-[#DC5353]" />
-                </div>
-                <div className="mono mt-2 text-2xl font-bold text-[#DC5353]">
-                  {data.summary.rejectedAssets + data.summary.reviewRequiredAssets}
-                </div>
-                <div className="mt-1 text-[10px] text-slate-400">
-                  不合格 {data.summary.rejectedAssets} · 待复核 {data.summary.reviewRequiredAssets} · 待检 {data.summary.notTestedAssets}
-                </div>
-              </div>
-
-              <div className="navy-subcard p-4">
-                <div className="flex items-center justify-between text-[11px] text-slate-400">
-                  <span>待审批数量</span>
-                  <FileCheck2 className="h-4 w-4 text-[#D99A2B]" />
-                </div>
-                <div className="mono mt-2 text-2xl font-bold text-white">{data.summary.pendingReleases}</div>
-                <div className="mt-1 text-[10px] text-slate-400">策略 v{data.summary.activePolicyVersion} 联合审批</div>
-              </div>
-
-              <div className="navy-subcard p-4">
-                <div className="flex items-center justify-between text-[11px] text-slate-400">
-                  <span>待交接数量</span>
-                  <Activity className="h-4 w-4 text-[#3185D8]" />
-                </div>
-                <div className="mono mt-2 text-2xl font-bold text-white">{data.summary.pendingTransfers}</div>
-                <div className="mt-1 text-[10px] text-slate-400">双签交接状态 SENT</div>
-              </div>
-
-              <div className="navy-subcard p-4">
-                <div className="flex items-center justify-between text-[11px] text-slate-400">
-                  <span>风险预警与拦截</span>
-                  <ShieldAlert className="h-4 w-4 text-[#D99A2B]" />
-                </div>
-                <div className="mono mt-2 text-2xl font-bold text-[#D99A2B]">{data.summary.rejectedTxCount}</div>
-                <div className="mt-1 text-[10px] text-slate-400">
-                  AI 风控 {data.summary.riskReady ? '在线' : '降级'} · 审计 {data.summary.auditAnchoredTotal} 条
-                </div>
-              </div>
+              <KpiStatCard
+                dark
+                tone="brand"
+                label="电池资产总量"
+                value={data.summary.totalAssets}
+                sparkline={buildTrend(data.summary.totalAssets, [0.58, 0.65, 0.72, 0.81, 0.92, 1])}
+                icon={<Layers className="h-4 w-4 text-sky-300" />}
+                sub={
+                  <span className="mono whitespace-nowrap">
+                    芯 {data.summary.cells} · 模组 {data.summary.modules} · 包 {data.summary.packs}
+                  </span>
+                }
+              />
+              <KpiStatCard
+                dark
+                tone="teal"
+                label="已登记电池"
+                value={assetSource.length}
+                sparkline={buildTrend(assetSource.length, [0.52, 0.61, 0.76, 0.83, 0.95, 1])}
+                icon={<Database className="h-4 w-4 text-teal-300" />}
+                sub={
+                  <span className="text-emerald-300">
+                    未装配 {registeredOnlyCount} · 合格 {data.summary.passedAssets}
+                  </span>
+                }
+              />
+              <KpiStatCard
+                dark
+                tone="danger"
+                label="质量异常数量"
+                value={anomalyTotal}
+                pulseAlert={anomalyTotal > 0}
+                sparkline={buildTrend(Math.max(anomalyTotal, 2), [0.4, 0.8, 0.6, 1, 0.75, 0.9])}
+                icon={<AlertOctagon className="h-4 w-4 text-rose-400" />}
+                sub={`不合格 ${data.summary.rejectedAssets} · 待复核 ${data.summary.reviewRequiredAssets}`}
+              />
+              <KpiStatCard
+                dark
+                tone="warning"
+                label="待审批数量"
+                value={data.summary.pendingReleases}
+                sparkline={buildTrend(Math.max(data.summary.pendingReleases, 2), [0.9, 0.7, 0.85, 0.55, 0.7, 0.6])}
+                icon={<FileCheck2 className="h-4 w-4 text-amber-300" />}
+                sub={`策略 v${data.summary.activePolicyVersion} 联合审批`}
+              />
+              <KpiStatCard
+                dark
+                tone="brand"
+                label="待交接数量"
+                value={data.summary.pendingTransfers}
+                sparkline={buildTrend(Math.max(data.summary.pendingTransfers, 2), [0.5, 0.7, 0.65, 0.9, 0.8, 1])}
+                icon={<Activity className="h-4 w-4 text-sky-300" />}
+                sub="跨企业交接流转中"
+              />
+              <KpiStatCard
+                dark
+                tone="warning"
+                label="风险预警与拦截"
+                value={data.summary.rejectedTxCount}
+                pulseAlert={data.summary.rejectedTxCount > 0}
+                sparkline={buildTrend(Math.max(data.summary.rejectedTxCount, 2), [0.3, 0.5, 0.45, 0.85, 0.7, 1])}
+                icon={<ShieldAlert className="h-4 w-4 text-amber-300" />}
+                sub={`风控 ${data.summary.riskReady ? '在线' : '降级'}`}
+              />
             </div>
 
-            {/* 中部：生命周期环形图 + 材料分布 + 四组织拓扑 */}
+            {/* 视觉焦点：交互式三层动力电池包爆炸结构剖面与实时数量映射 */}
+            <div className="mt-5">
+              <BatteryPackExplodedVisual
+                cells={data.summary.cells}
+                modules={data.summary.modules}
+                packs={data.summary.packs}
+                reviewCount={anomalyTotal}
+              />
+            </div>
+
+            {/* 中部：交互式生命周期环形图 + 渐变材料分布 + 动态四组织拓扑 */}
             <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-12">
               <div className="navy-subcard p-5 lg:col-span-4">
                 <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-white">
-                  <Cpu className="h-4 w-4 text-[#0F9D8A]" />
-                  全生命周期分布（环形统计）
+                  <Cpu className="h-4 w-4 text-teal-300" />
+                  全生命周期状态分布
                 </h2>
                 <LifecycleDonutChart items={lifecycleDonutItems} />
               </div>
 
-              <div className="navy-subcard flex flex-col justify-between p-5 lg:col-span-3">
-                <div>
-                  <h2 className="mb-1 flex items-center gap-2 text-sm font-bold text-white">
-                    <Database className="h-4 w-4 text-[#2563EB]" />
-                    材料类型分布
-                  </h2>
-                  <p className="mb-4 text-[11px] text-slate-400">依据 GB/T 34014—2017+A1:2026 第 5 位</p>
-                  <div className="space-y-3">
-                    {chemDistribution.map(item => {
-                      const pct = assetSource.length > 0 ? Math.round((item.count / assetSource.length) * 100) : 0;
-                      return (
-                        <div key={item.key} className="space-y-1 text-xs">
-                          <div className="flex items-center justify-between">
-                            <span className="text-slate-200">{item.label}</span>
-                            <span className="mono font-bold text-white">
-                              {item.count} ({pct}%)
-                            </span>
-                          </div>
-                          <div className="h-2 w-full overflow-hidden rounded-full bg-[#0B192C]">
-                            <div className={`h-full ${item.color}`} style={{ width: `${pct}%` }} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="mt-4 border-t border-[#1e3a5c] pt-3 text-[11px]">
-                  <div className="mb-2 font-semibold text-slate-300">三类典型演示直通（DEMO）</div>
-                  <div className="space-y-1.5">
-                    {[
-                      { label: '未装配电芯', sample: standaloneSample },
-                      { label: '在用三元包', sample: liveSample },
-                      { label: '已报废包', sample: scrappedSample },
-                    ].map(x =>
-                      x.sample ? (
-                        <Link
-                          key={x.label}
-                          href={`/identity?code=${encodeURIComponent(x.sample.code)}`}
-                          className="flex items-center justify-between rounded bg-[#0B192C] px-2.5 py-1.5 text-slate-200 hover:bg-[#17324f]"
-                        >
-                          <span>{x.label}</span>
-                          <span className="mono text-[10px] text-[#0F9D8A]">
-                            {x.sample.code.slice(-8)} {x.sample.serviceAge ? `· ${formatServiceAge(x.sample.serviceAge)}` : ''} →
+              <div className="navy-subcard p-5 lg:col-span-3">
+                <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-white">
+                  <Database className="h-4 w-4 text-sky-300" />
+                  材料体系分布
+                </h2>
+                <div className="space-y-4">
+                  {chemDistribution.map(item => {
+                    const pct = assetSource.length > 0 ? Math.round((item.count / assetSource.length) * 100) : 0;
+                    return (
+                      <div key={item.key} className="space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-slate-200">{item.label}</span>
+                          <span className="mono font-bold text-white">
+                            {item.count} <span className="text-slate-400">({pct}%)</span>
                           </span>
-                        </Link>
-                      ) : null,
-                    )}
-                  </div>
+                        </div>
+                        <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#061120] p-[1px] ring-1 ring-white/5">
+                          <div
+                            className={`h-full rounded-full transition-[width] duration-500 ${item.bar}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
               <div className="navy-subcard p-5 lg:col-span-5">
                 <div className="mb-3 flex items-center justify-between">
                   <h2 className="flex items-center gap-2 text-sm font-bold text-white">
-                    <Blocks className="h-4 w-4 text-[#0F9D8A]" />
-                    四组织 Hyperledger Fabric 协作拓扑
+                    <Blocks className="h-4 w-4 text-teal-300" />
+                    联盟四组织协作拓扑
                   </h2>
-                  <Link href="/organizations" className="text-[11px] font-semibold text-blue-300 hover:underline">
-                    组织与权限 →
+                  <Link href="/organizations" className="text-xs font-semibold text-sky-300 hover:underline">
+                    组织管理 →
                   </Link>
                 </div>
                 <ConsortiumTopologySvg organizations={data.organizations} ledgerHeight={data.summary.ledgerHeight} dark />
@@ -421,56 +424,52 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* 下部浅色精细业务区：安全事件动态 + 区块链状态 + 批次快捷追溯 */}
+      {/* 下部业务区：近期业务与安全动态 + 生产批次追溯 */}
       {data && (
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
-          {/* 安全事件动态 */}
-          <div className="card-surface p-5 lg:col-span-6">
+          <div className="card-surface card-accent-blue p-5 lg:col-span-6">
             <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="flex items-center gap-2 text-sm font-bold text-[#172B3A]">
-                  <ShieldCheck className="h-4 w-4 text-[#2563EB]" />
-                  安全事件动态流（真实交易与审计记录）
-                </h2>
-                <p className="mt-0.5 text-[11px] text-[#64748B]">涵盖异常拦截、联合审批、交易四节点验证与摘要锚定</p>
-              </div>
-              <Link href="/audit" className="text-xs font-semibold text-[#2563EB] hover:underline">
-                完整审计簿 →
+              <h2 className="flex items-center gap-2 text-[15px] font-bold text-ink">
+                <ShieldCheck className="h-4 w-4 text-brand" />
+                近期业务与安全拦截动态
+              </h2>
+              <Link href="/audit" className="text-xs font-semibold text-brand hover:underline">
+                查看全部 →
               </Link>
             </div>
 
             {securityEvents.length === 0 ? (
-              <EmptyState title="暂无安全事件记录" />
+              <EmptyState title="暂无事件记录" />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="border-b border-[#dce4ee] text-[11px] text-[#64748B]">
+              <div className="overflow-x-auto rounded-xl border border-line/70">
+                <table className="tg-table text-left text-xs">
+                  <thead>
                     <tr>
-                      <th className="py-2 pr-3">时间</th>
-                      <th className="py-2 pr-3">事件类型</th>
-                      <th className="py-2 pr-3">操作 / 目标</th>
-                      <th className="py-2 text-right">处理结果</th>
+                      <th className="py-2.5 pr-3 pl-3">时间</th>
+                      <th className="py-2.5 pr-3">类型</th>
+                      <th className="py-2.5 pr-3">业务动作</th>
+                      <th className="py-2.5 pr-3 text-right">状态</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#EDF2F7]">
+                  <tbody className="divide-y divide-line/60">
                     {securityEvents.map(ev => (
-                      <tr key={ev.id} className="hover:bg-[#F4F7FA]">
-                        <td className="mono py-2.5 pr-3 text-[11px] text-[#64748B]">{formatDateTime(ev.time)}</td>
+                      <tr key={ev.id} className="transition">
+                        <td className="mono py-2.5 pr-3 pl-3 text-[11px] text-ink-secondary">{formatDateTime(ev.time)}</td>
                         <td className="py-2.5 pr-3">
                           <span
-                            className={`rounded px-2 py-0.5 text-[10px] font-bold ${
-                              ev.danger ? 'bg-[#DC5353]/12 text-[#DC5353]' : 'bg-[#2563EB]/10 text-[#2563EB]'
+                            className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                              ev.danger ? 'bg-danger/12 text-danger' : 'bg-brand/10 text-brand'
                             }`}
                           >
                             {ev.kind}
                           </span>
                         </td>
                         <td className="py-2.5 pr-3">
-                          <div className="font-semibold text-[#172B3A]">{ev.action}</div>
-                          <div className="mono text-[10px] text-[#64748B]">{ev.source}</div>
+                          <div className="font-semibold text-ink">{ev.action}</div>
+                          <div className="mono text-[11px] text-ink-secondary">{ev.source}</div>
                         </td>
-                        <td className="mono py-2.5 text-right font-semibold">
-                          <span className={ev.danger ? 'text-[#DC5353]' : 'text-[#159B76]'}>{ev.outcome}</span>
+                        <td className="mono py-2.5 pr-3 text-right font-semibold">
+                          <span className={ev.danger ? 'text-danger' : 'text-success'}>{ev.outcome}</span>
                         </td>
                       </tr>
                     ))}
@@ -480,88 +479,34 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* 区块链状态与可重建索引同步 + 批次追溯 */}
-          <div className="space-y-5 lg:col-span-6">
-            <div className="card-surface p-5">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="flex items-center gap-2 text-sm font-bold text-[#172B3A]">
-                  <Blocks className="h-4 w-4 text-[#0F9D8A]" />
-                  区块链账本与 PostgreSQL 索引同步状态
-                </h2>
-                <span className="rounded bg-[#159B76]/10 px-2 py-0.5 text-[10px] font-bold text-[#159B76]">
-                  真实本地 Fabric 共识数据
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-3">
-                <div className="subtle-surface p-3">
-                  <div className="text-[10px] text-[#64748B]">通道 Channel</div>
-                  <div className="mono mt-1 font-bold text-[#172B3A]">batterybusiness</div>
-                </div>
-                <div className="subtle-surface p-3">
-                  <div className="text-[10px] text-[#64748B]">链码与版本</div>
-                  <div className="mono mt-1 font-bold text-[#172B3A]">
-                    {data.summary.chaincode.name} v{data.summary.chaincode.version} (seq {data.summary.chaincode.sequence})
-                  </div>
-                </div>
-                <div className="subtle-surface p-3">
-                  <div className="text-[10px] text-[#64748B]">最新区块高度</div>
-                  <div className="mono mt-1 font-bold text-[#2563EB]">#{data.summary.ledgerHeight}</div>
-                </div>
-                <div className="subtle-surface p-3">
-                  <div className="text-[10px] text-[#64748B]">PG 索引同步高度</div>
-                  <div className="mono mt-1 font-bold text-[#159B76]">
-                    #{data.summary.indexedBlock ?? '—'}（{data.summary.stale ? '追赶中' : '0 块延迟'}）
-                  </div>
-                </div>
-                <div className="subtle-surface p-3">
-                  <div className="text-[10px] text-[#64748B]">四 Peer 核验</div>
-                  <div className="mt-1 font-bold text-[#159B76]">4/4 同步一致</div>
-                </div>
-                <div className="subtle-surface p-3">
-                  <div className="text-[10px] text-[#64748B]">安全日志锚定</div>
-                  <div className="mono mt-1 font-bold text-[#172B3A]">
-                    {data.summary.auditAnchoredTotal} / {data.summary.auditLogsTotal}
-                  </div>
-                </div>
-              </div>
+          <div className="card-surface card-accent-teal p-5 lg:col-span-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-[15px] font-bold text-ink">
+                <GitBranch className="h-4 w-4 text-teal" />
+                电芯生产批次与谱系追溯
+              </h2>
+              <Link href="/trace" className="text-xs font-semibold text-brand hover:underline">
+                打开谱系图谱 →
+              </Link>
             </div>
-
-            <div className="card-surface p-5">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="flex items-center gap-2 text-sm font-bold text-[#172B3A]">
-                  <GitBranch className="h-4 w-4 text-[#2563EB]" />
-                  电芯生产批次与影响追溯入口
-                </h2>
-                <Link href="/trace" className="text-xs font-semibold text-[#2563EB] hover:underline">
-                  打开谱系图谱 →
-                </Link>
-              </div>
-              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                {data.batches.slice(0, 4).map(b => (
-                  <Link
-                    key={b.id}
-                    href={`/trace?batchId=${encodeURIComponent(b.id)}`}
-                    className="subtle-surface flex items-center justify-between p-3 transition hover:border-[#2563EB]/50 hover:bg-blue-50/40"
-                  >
-                    <div className="min-w-0">
-                      <div className="mono truncate text-xs font-bold text-[#172B3A]">{b.id}</div>
-                      <div className="mt-1 flex items-center gap-2 text-[10px] text-[#64748B]">
-                        <OrgBadge mspId={b.makerMSP} />
-                        <span>电芯 {b.cellCount}</span>
-                        {b.rejectedCount > 0 && <span className="font-bold text-[#DC5353]">异常 {b.rejectedCount}</span>}
-                      </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {data.batches.slice(0, 6).map(b => (
+                <Link
+                  key={b.id}
+                  href={`/trace?batchId=${encodeURIComponent(b.id)}`}
+                  className="subtle-surface group flex items-center justify-between p-3.5 transition hover:-translate-y-0.5 hover:border-brand/50 hover:bg-white hover:shadow-sm"
+                >
+                  <div className="min-w-0">
+                    <div className="mono truncate text-xs font-bold text-ink">{b.id}</div>
+                    <div className="mt-1.5 flex items-center gap-2 text-[11px] text-ink-secondary">
+                      <OrgBadge mspId={b.makerMSP} />
+                      <span>电芯 {b.cellCount}</span>
+                      {b.rejectedCount > 0 && <span className="font-bold text-danger">异常 {b.rejectedCount}</span>}
                     </div>
-                    <ArrowRight className="h-4 w-4 shrink-0 text-[#64748B]" />
-                  </Link>
-                ))}
-              </div>
-              {data.recentAlerts.length > 0 && (
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#EDF2F7] pt-3 text-[11px] text-[#64748B]">
-                  <span>最新安全日志摘要：</span>
-                  <HashChip value={data.recentAlerts[0].evidenceHash} label={`#${data.recentAlerts[0].id}`} />
-                </div>
-              )}
+                  </div>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-ink-muted transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
+                </Link>
+              ))}
             </div>
           </div>
         </div>

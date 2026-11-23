@@ -127,7 +127,12 @@ func (f *fixture) add(id, typ, org string) {
 func (f *fixture) inspect(id, result string) {
 	f.t.Helper()
 	a, _ := f.engine.asset(id)
-	f.call(LabOrg, "inspector", "SubmitInspection", InspectionInput{fmt.Sprintf("inspection-%d", f.seq), id, a.InspectionVersion + 1, result, Digest("report"), Digest("source")})
+	action := "SubmitInspection"
+	if result == "QC_PASSED" && a.InspectionVersion > 0 && (a.Quality == "QC_REJECTED" || a.Quality == "REVIEW_REQUIRED") {
+		f.call(LabOrg, "auditor", "ProposeRetest", RetestInput{id, a.InspectionVersion, Digest("reason")})
+		action = "CompleteRetest"
+	}
+	f.call(LabOrg, "inspector", action, InspectionInput{fmt.Sprintf("inspection-%d", f.seq), id, a.InspectionVersion + 1, result, Digest("report"), Digest("source")})
 }
 func (f *fixture) assembled() {
 	f.add("cell1", "CELL", CellOrg)
@@ -171,13 +176,15 @@ func TestFullLifecycleAndImmutableScrap(t *testing.T) {
 	f.call(PackOrg, "operator", "RecordInstallation", LifecycleInput{"pack1", "2026-02-01T00:00:00Z", Digest("install")})
 	f.call(PackOrg, "operator", "RecordFirstUse", LifecycleInput{"pack1", "2026-02-02T00:00:00Z", Digest("first-use")})
 	f.call(PackOrg, "operator", "RecordRetirement", LifecycleInput{"pack1", "2026-11-01T00:00:00Z", Digest("retirement")})
-	f.call(PackOrg, "custodian", "InitiateTransfer", TransferInput{"transfer1", "pack1", RecycleOrg, Digest("receipt"), f.engine.Now.Add(time.Hour).Format(time.RFC3339)})
+	f.call(PackOrg, "custodian", "CreateTransfer", TransferInput{"transfer1", "pack1", RecycleOrg, Digest("receipt"), f.engine.Now.Add(time.Hour).Format(time.RFC3339)})
+	f.call(PackOrg, "custodian", "SendTransfer", IDInput{"transfer1"})
 	f.reject(PackOrg, "custodian", "ConfirmTransfer", ConfirmTransferInput{"transfer1", Digest("receipt")}, "FORBIDDEN")
-	f.call(RecycleOrg, "custodian", "ConfirmTransfer", ConfirmTransferInput{"transfer1", Digest("receipt")})
+	f.call(RecycleOrg, "custodian", "AcceptTransfer", ConfirmTransferInput{"transfer1", Digest("receipt")})
+	f.call(RecycleOrg, "custodian", "CommitTransfer", IDInput{"transfer1"})
 	f.call(RecycleOrg, "recycler", "ConfirmRecycling", LifecycleInput{"pack1", "2026-11-02T00:00:00Z", Digest("recycling")})
 	f.reject(PackOrg, "operator", "RecordScrapConfirmation", LifecycleInput{"pack1", "2026-11-03T00:00:00Z", Digest("scrap")}, "FORBIDDEN")
 	f.call(RecycleOrg, "recycler", "RecordScrapConfirmation", LifecycleInput{"pack1", "2026-11-03T00:00:00Z", Digest("scrap")})
-	f.reject(RecycleOrg, "custodian", "InitiateTransfer", TransferInput{"transfer2", "pack1", PackOrg, Digest("receipt"), f.engine.Now.Add(time.Hour).Format(time.RFC3339)}, "FORBIDDEN")
+	f.reject(RecycleOrg, "custodian", "CreateTransfer", TransferInput{"transfer2", "pack1", PackOrg, Digest("receipt"), f.engine.Now.Add(time.Hour).Format(time.RFC3339)}, "FORBIDDEN")
 	f.reject(RecycleOrg, "recycler", "RecordScrapConfirmation", LifecycleInput{"pack1", "2026-11-04T00:00:00Z", Digest("scrap")}, "INVALID_STATE")
 	a, _ := f.engine.asset("pack1")
 	if a.State != "PROCESSED" || a.ScrappedAt == nil || a.FirstUseAt == nil {
@@ -315,7 +322,10 @@ func TestTransferCanContinueAfterCompletedTransfer(t *testing.T) {
 	f.assembled()
 	for i, route := range [][2]string{{PackOrg, CellOrg}, {CellOrg, PackOrg}} {
 		id := fmt.Sprintf("transfer-%d", i)
-		f.call(route[0], "custodian", "InitiateTransfer", TransferInput{id, "pack1", route[1], Digest("receipt"), f.engine.Now.Add(time.Hour).Format(time.RFC3339)})
+		input := TransferInput{id, "pack1", route[1], Digest("receipt"), f.engine.Now.Add(time.Hour).Format(time.RFC3339)}
+		f.call(route[0], "custodian", "CreateTransfer", input)
+		f.call(route[0], "custodian", "InitiateTransfer", input)
+		f.call(route[1], "custodian", "AcceptTransfer", ConfirmTransferInput{id, Digest("receipt")})
 		f.call(route[1], "custodian", "ConfirmTransfer", ConfirmTransferInput{id, Digest("receipt")})
 	}
 	a, _ := f.engine.asset("pack1")

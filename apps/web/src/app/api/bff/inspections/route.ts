@@ -4,9 +4,10 @@ import { callBackendApi, canonicalJson, getActorPrivateKeyPem, sha256Hex } from 
 import { getSessionActor, jsonRelay, verifyCsrf } from '@/lib/server/session';
 import type { BatteryAssetView } from '@/lib/types';
 
-export async function GET() {
+export async function GET(request: Request) {
   const { name } = await getSessionActor();
-  const res = await callBackendApi(name, 'GET', '/overview/inspections');
+  const subject = new URL(request.url).searchParams.get('subject');
+  const res = await callBackendApi(name, 'GET', subject ? `/quality/${encodeURIComponent(subject)}` : '/overview/inspections');
   return jsonRelay(res);
 }
 
@@ -18,14 +19,20 @@ export async function POST(request: Request) {
     assetId?: string;
     result?: 'QC_PASSED' | 'QC_REJECTED' | 'REVIEW_REQUIRED';
     note?: string;
+    retest?: boolean;
+    expectedVersion?: number;
   };
   if (!body.assetId || !body.result) {
     return NextResponse.json({ code: 'INVALID_INPUT' }, { status: 400 });
   }
-  const assetRes = await callBackendApi<BatteryAssetView>(name, 'GET', `/assets/${encodeURIComponent(body.assetId)}`);
+  const batch = body.assetId.startsWith('batch:');
+  const endpoint = batch ? `/quality/${encodeURIComponent(body.assetId)}` : `/assets/${encodeURIComponent(body.assetId)}`;
+  const assetRes = await callBackendApi<BatteryAssetView | {state: BatteryAssetView}>(name, 'GET', endpoint);
   if (assetRes.status !== 200) return jsonRelay(assetRes);
-
-  const nextVersion = assetRes.data.inspectionVersion + 1;
+  const current = 'state' in assetRes.data && typeof assetRes.data.state === 'object' ? assetRes.data.state : assetRes.data as BatteryAssetView;
+  const nextVersion = current.inspectionVersion + 1;
+  if (body.expectedVersion !== undefined && body.expectedVersion !== current.inspectionVersion)
+    return NextResponse.json({code:'VERSION_CONFLICT'},{status:409});
   const reportId = `ui-ins-${randomUUID().slice(0, 8)}`;
   const plaintext = Buffer.from(
     JSON.stringify({
@@ -54,7 +61,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ stage: 'report-upload-rejected', httpStatus: uploadRes.status, error: uploadRes.data }, { status: uploadRes.status });
   }
 
-  const cmdRes = await callBackendApi(name, 'POST', '/commands/inspections', {
+  const resource = body.retest ? 'retest-completions' : batch ? 'batch-inspections' : 'inspections';
+  const cmdRes = await callBackendApi(name, 'POST', `/commands/${resource}`, {
     requestId: `cmd-${reportId}`,
     data: {
       id: reportId,

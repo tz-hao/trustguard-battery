@@ -1,0 +1,98 @@
+{
+  "network": "local",
+  "channel": "batterybusiness",
+  "chaincode": "battery",
+  "version": "1.5",
+  "sequence": 6,
+  "packageId": "battery_1.5:8ba65cf4185efc168725db781133c6a3f78b241f29c654d1de0fc3d86e794f10",
+  "definitionTxId": "e8d5767c3d1f9fa728a87fdf1e6348f709a3b5d2709c43af67a19d75d55f6650",
+  "page": "http://127.0.0.1:3100/transfers",
+  "simulation": true,
+  "preservation": {
+    "pinnedBlock": 321,
+    "pinnedBlockHeaderSha256": "ff6f6bcb78c829bfa9c3589ba49f4105ceb1851a6eac25687fe178ed2a583dd1",
+    "sameHistoricalHeaderOnFourPeers": true,
+    "preExistingAssets": 38,
+    "preExistingReleases": 8,
+    "allAssetAndReleaseIndexDigestsMatchedBeforeTransfer": true,
+    "otherAssetDigestsMatchedAfterTransfer": 37,
+    "releaseDigestsMatchedAfterTransfer": 8
+  },
+  "pack": "v14-02ecab75-pack-2",
+  "code": "DMAPB010000001E116569095",
+  "steps": [
+    {
+      "txId": "06fce47280059292654ecae9bf5362a23d74ccee4726963d1a8141c750106da6",
+      "requestId": "ui-tr-30db7ed1ecdafbca672dbaea",
+      "block": "329",
+      "stage": "ledger-verified",
+      "state": "CREATED",
+      "action": "CreateTransfer",
+      "actor": "pack-custodian",
+      "holder": "PackOrgMSP",
+      "version": 2,
+      "peers": [
+        "CellOrgMSP",
+        "PackOrgMSP",
+        "LabOrgMSP",
+        "RecycleOrgMSP"
+      ],
+      "afterRefresh": true
+    },
+    {
+      "txId": "184198c578d9d54267a86033bca5e778d8ce36b4f7c3d30ac3921cf972eca28d",
+      "block": "330",
+      "stage": "ledger-verified",
+      "requestId": "ui-93ff7e11",
+      "state": "SENT",
+      "action": "SendTransfer",
+      "actor": "pack-custodian",
+      "holder": "PackOrgMSP",
+      "version": 2,
+      "peers": [
+        "CellOrgMSP",
+        "PackOrgMSP",
+        "LabOrgMSP",
+        "RecycleOrgMSP"
+      ],
+      "afterRefresh": true
+    },
+    {
+      "txId": "82dce4d5347ad517ee746ebbbb74e1ad3c7c9705d35deab4e06907767c86e983",
+      "requestId": "ui-2959ceb3",
+      "block": "332",
+      "stage": "ledger-verified",
+      "state": "ACCEPTED",
+      "action": "AcceptTransfer",
+      "actor": "cell-custodian",
+      "holder": "PackOrgMSP",
+      "version": 2,
+      "peers": [
+        "CellOrgMSP",
+        "PackOrgMSP",
+        "LabOrgMSP",
+        "RecycleOrgMSP"
+      ],
+      "afterRefresh": true
+    },
+    {
+      "txId": "33269937152c00de78a745fe63377912ad63f6ba309490b813498736a07056f9",
+      "requestId": "ui-8616a509",
+      "block": "333",
+      "stage": "ledger-verified",
+      "state": "COMMITTED",
+      "action": "CommitTransfer",
+      "actor": "cell-custodian",
+      "holder": "CellOrgMSP",
+      "version": 3,
+      "peers": [
+        "CellOrgMSP",
+        "PackOrgMSP",
+        "LabOrgMSP",
+        "RecycleOrgMSP"
+      ],
+      "afterRefresh": true
+    }
+  ],
+  "transferId": "ui-tr-30db7ed1ecdafbca672dbaea"
+}

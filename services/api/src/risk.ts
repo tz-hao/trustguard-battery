@@ -21,7 +21,10 @@ export class RiskService {
       WHERE asset_id=ANY($1::text[]) ORDER BY asset_id,created_at DESC`, [cellIds]);
     const base = process.env.TRUSTGUARD_RISK_URL ?? 'https://localhost:18000';
     try {
-      const quality = rows.length ? await this.internal.post<{ results: { reviewRequired: boolean }[] }>(base, '/quality/analyze', { measurements: rows.map(row => row.body) }) : { results: [] };
+      const quality = rows.length ? await this.internal.post<{
+        results: { reviewRequired: boolean; triggeredRules: string[] }[];
+      }>(base, '/quality/analyze', { measurements: rows.map(row => row.body) }) : { results: [] };
+      const missingMeasurements = Math.max(0, cellIds.length - rows.length);
       const qualityReview = rows.length !== cellIds.length || quality.results.some(row => row.reviewRequired);
       const history = await this.db.pool.query<{actor_hash:string;command:{action:string;data:Record<string,unknown>};stage:string;created_at:Date}>(`SELECT actor_hash,command,stage,created_at
         FROM transaction_requests WHERE created_at>now()-interval '5 minutes' ORDER BY created_at LIMIT 5000`);
@@ -42,7 +45,7 @@ export class RiskService {
           target_msp:successful&&parent?owners.get(parent.actor_hash)??null:null,
           approval_latency_seconds:successful&&parent?Math.max(0,Math.floor((row.created_at.valueOf()-parent.created_at.valueOf())/1000)):null}];
       });
-      const operations = await this.internal.post<{ reviewRequired: boolean }>(base, '/operations/analyze', {
+      const operations = await this.internal.post<{ reviewRequired: boolean; triggeredRules: { rule: string }[] }>(base, '/operations/analyze', {
         as_of: new Date().toISOString(), operations:events,
       });
       const evidenceHash = sha256(canonicalJson({ snapshotHash: snapshot.hash, quality, operations }));
@@ -51,8 +54,14 @@ export class RiskService {
         quality_review_required: qualityReview, operation_review_required: operations.reviewRequired,
         evidenceHash, ttl_seconds: Math.min(policy.maxRiskSeconds, 300),
       });
+      const review = {
+        missingMeasurements,
+        qualityRules: [...new Set(quality.results.flatMap(row => row.triggeredRules))],
+        operationRules: [...new Set(operations.triggeredRules.map(row => row.rule))],
+      };
+      // The review summary stays off-chain. Submit exactly the signed attestation.
       await this.db.pool.query(`INSERT INTO risk_results(id,request_id,asset_id,snapshot_hash,policy_version,body) VALUES($1,$2,$3,$4,$5,$6::jsonb)`,
-        [attestation.id, releaseId, packId, snapshot.hash, policy.version, JSON.stringify(attestation)]);
+        [attestation.id, releaseId, packId, snapshot.hash, policy.version, JSON.stringify({ ...attestation, review })]);
       return attestation;
     } catch {
       throw new HttpException({ code: 'RISK_UNAVAILABLE', message: '风控不可用，自动放行已暂停' }, 503);

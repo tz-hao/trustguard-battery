@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { X509Certificate, createHash } from 'node:crypto';
 import { z } from 'zod';
-import { organizations, type ClientIdentity } from './types.js';
+import { organizations, type BusinessIdentity } from './types.js';
 
 const identitySchema = z.object({
   name: z.string().regex(/^[A-Za-z0-9_.-]{1,96}$/),
@@ -19,13 +19,16 @@ export function requiredEnv(name: string): string {
   return value;
 }
 
-export interface Configuration {
-  channel: string; chaincode: string; databaseUrl: string; port: number;
+export interface FabricConfiguration {
+  channel: string; chaincode: string;
+  identities: BusinessIdentity[];
+}
+export interface Configuration extends FabricConfiguration {
+  databaseUrl: string; port: number;
   tls: { cert: Buffer; key: Buffer; ca: Buffer; crl?: Buffer; requestCert: true; rejectUnauthorized: true; minVersion: 'TLSv1.2' };
-  identities: ClientIdentity[];
 }
 
-export function loadConfiguration(): Configuration {
+export function loadFabricConfiguration(): FabricConfiguration {
   const identities = z.array(identitySchema).min(4).parse(JSON.parse(readFileSync(requiredEnv('TRUSTGUARD_IDENTITIES_FILE'), 'utf8')));
   const seen = new Set<string>();
   const names = new Set<string>();
@@ -39,13 +42,17 @@ export function loadConfiguration(): Configuration {
     names.add(identity.name); signers.add(signer);
   }
   for (const msp of organizations) if (!identities.some(i => i.mspId === msp)) throw new Error(`Missing organization: ${msp}`);
+  return { channel: process.env.TRUSTGUARD_CHANNEL ?? 'batterybusiness',
+    chaincode: process.env.TRUSTGUARD_CHAINCODE ?? 'battery', identities };
+}
+
+export function loadConfiguration(): Configuration {
+  const fabric = loadFabricConfiguration();
   const crlFile = requiredEnv('TRUSTGUARD_CLIENT_CRL_FILE');
   const port = Number(process.env.TRUSTGUARD_API_PORT ?? 13000);
   if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Invalid API port');
   return {
-    channel: process.env.TRUSTGUARD_CHANNEL ?? 'batterybusiness',
-    chaincode: process.env.TRUSTGUARD_CHAINCODE ?? 'battery',
-    databaseUrl: requiredEnv('TRUSTGUARD_DATABASE_URL'), port, identities,
+    ...fabric, databaseUrl: requiredEnv('TRUSTGUARD_DATABASE_URL'), port,
     tls: {
       cert: readFileSync(requiredEnv('TRUSTGUARD_TLS_CERT')),
       key: readFileSync(requiredEnv('TRUSTGUARD_TLS_KEY')),

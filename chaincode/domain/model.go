@@ -14,6 +14,7 @@ const (
 	PackOrg    = "PackOrgMSP"
 	LabOrg     = "LabOrgMSP"
 	RecycleOrg = "RecycleOrgMSP"
+	AuditOrg   = "AuditOrgMSP"
 )
 
 var Organizations = []string{CellOrg, PackOrg, LabOrg, RecycleOrg}
@@ -147,6 +148,11 @@ type Transfer struct {
 	ExpiresAt    string `json:"expiresAt"`
 	SenderID     string `json:"senderId"`
 	ReceiverID   string `json:"receiverId,omitempty"`
+	CreatedTx    string `json:"createdTx,omitempty"`
+	SentTx       string `json:"sentTx,omitempty"`
+	AcceptedTx   string `json:"acceptedTx,omitempty"`
+	CommittedTx  string `json:"committedTx,omitempty"`
+	CancelledTx  string `json:"cancelledTx,omitempty"`
 }
 type Risk struct {
 	ID            string `json:"id"`
