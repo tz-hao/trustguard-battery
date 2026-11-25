@@ -344,7 +344,7 @@ export default function TransfersPage() {
 
       <TransferFlowOverview transfers={transfers} />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start">
         <div className="card-surface p-5 lg:col-span-8">
           <SectionHeader
             title="企业交接流水与确认状态"

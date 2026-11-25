@@ -365,7 +365,7 @@ export default function InspectionsPage() {
       })()}
 
       {data && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start">
           {/* 左：容量与内阻散点图 + AI 异常诊断 */}
           <div className="card-surface p-5 lg:col-span-7">
             <SectionHeader

@@ -872,23 +872,23 @@ function TraceContent() {
                         <td className="mono py-2.5 pr-3 text-[11px] text-[#172B3A]">
                           {data.trace?.batchId} → {path.cellId} → {path.moduleId} → {path.packId}
                         </td>
-                        <td className="py-2.5 pr-3">
+                        <td className="whitespace-nowrap py-2.5 pr-3">
                           <span
-                            className={`rounded px-2 py-0.5 text-[10px] font-bold ${
+                            className={`inline-block whitespace-nowrap rounded px-2 py-0.5 text-[10px] font-bold ${
                               path.historical ? 'bg-[#EDF2F7] text-[#64748B]' : 'bg-[#159B76]/15 text-[#159B76]'
                             }`}
                           >
                             {path.historical ? '历史拆装边' : '现行有效装配'}
                           </span>
                         </td>
-                        <td className="py-2.5 pr-3">
+                        <td className="whitespace-nowrap py-2.5 pr-3">
                           {pAsset ? <LifecycleBadge state={pAsset.state} /> : '—'}
                         </td>
-                        <td className="py-2.5 text-right">
+                        <td className="whitespace-nowrap py-2.5 text-right">
                           {pAsset && (
                             <Link
                               href={`/identity?code=${encodeURIComponent(pAsset.code)}`}
-                              className="font-semibold text-[#2563EB] hover:underline"
+                              className="whitespace-nowrap font-semibold text-[#2563EB] hover:underline"
                             >
                               数字身份证 →
                             </Link>

@@ -389,7 +389,7 @@ export default function RiskPage() {
             </div>
           </div>
         ) : (
-          <div className="mt-4 rounded-xl border border-dashed border-[#1e3a5c] py-6 text-center text-xs text-slate-400">
+          <div className="mt-3 rounded-xl border border-dashed border-sky-400/30 bg-[#0b1b30]/60 px-4 py-4 text-center text-xs text-slate-200">
             点击右上角红色按钮，即可现场演示真实异常电芯如何被 AI 风控与 Fabric 链码共同拦截。
           </div>
         )}

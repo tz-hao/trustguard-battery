@@ -257,9 +257,18 @@ export default function PoliciesPage() {
                 <div className="mb-2 text-xs font-bold text-[#172B3A]">
                   隔离安全回归推演对照（当前身份：{actor?.name ?? '—'}，需 admin）
                 </div>
-                <label className="mb-3 block text-xs font-semibold">候选放行窗口（秒）
-                  <input type="number" min={60} max={3600} step={1} className="mono ml-2 w-24 rounded border px-2 py-1"
-                    value={secondsText} onChange={e => setSecondsInput(e.target.value)} aria-invalid={!validSeconds} />
+                <label className="mb-3 inline-flex items-center gap-2 text-xs font-semibold text-ink">
+                  <span>候选放行窗口（秒）</span>
+                  <input
+                    type="number"
+                    min={60}
+                    max={3600}
+                    step={1}
+                    className="mono w-24 rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs font-semibold text-ink shadow-2xs transition focus:border-brand focus:outline-none"
+                    value={secondsText}
+                    onChange={e => setSecondsInput(e.target.value)}
+                    aria-invalid={!validSeconds}
+                  />
                 </label>
                 {!validSeconds && <p role="alert" className="mb-2 text-xs text-red-700">请输入 60 到 3600 之间的整数。</p>}
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

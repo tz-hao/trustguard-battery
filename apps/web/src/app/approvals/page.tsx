@@ -233,7 +233,7 @@ export default function ApprovalsPage() {
 
       {banner && <TxResultBanner result={banner} onClose={() => setBanner(null)} />}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start">
         {/* 左：放行申请与审批矩阵列表 */}
         <div className="card-surface p-5 lg:col-span-8">
           <SectionHeader
