@@ -115,6 +115,7 @@ export default function InspectionsPage() {
   const [filterResult, setFilterResult] = useState('');
   const [filterSearch, setFilterSearch] = useState('');
   const [tablePage, setTablePage] = useState(1);
+  const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
   const pageSize = 6;
 
   const load = useCallback(async () => {
@@ -777,13 +778,44 @@ export default function InspectionsPage() {
                               <Eye className="h-3 w-3" />
                               解密读取
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => void revokeGrant(rep.id, 'CellOrgMSP')}
-                              className="rounded-md border border-[#DC5353]/30 bg-[#DC5353]/8 px-2.5 py-1 text-[11px] font-semibold text-[#DC5353] hover:bg-[#DC5353]/15"
-                            >
-                              撤回 CellOrg
-                            </button>
+                            {(() => {
+                              const alreadyRevoked = revokedOrgs.includes('CellOrgMSP');
+                              const canRevoke = actor?.mspId === 'LabOrgMSP' && actor?.role === 'inspector' && !alreadyRevoked;
+                              const confirming = confirmRevokeId === rep.id;
+                              return (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={!canRevoke}
+                                    title={alreadyRevoked ? '已撤回 CellOrg 访问授权' : actor?.mspId !== 'LabOrgMSP' || actor?.role !== 'inspector' ? '仅 LabOrgMSP 检测员 (inspector) 可撤回授权' : '点击撤回 CellOrg 解密权限'}
+                                    onClick={() => {
+                                      if (!confirming) {
+                                        setConfirmRevokeId(rep.id);
+                                        return;
+                                      }
+                                      setConfirmRevokeId(null);
+                                      void revokeGrant(rep.id, 'CellOrgMSP');
+                                    }}
+                                    className={`cursor-pointer rounded-md border px-2.5 py-1 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-45 ${
+                                      confirming
+                                        ? 'border-[#DC5353] bg-[#DC5353] text-white hover:bg-red-700'
+                                        : 'border-[#DC5353]/30 bg-[#DC5353]/8 text-[#DC5353] hover:bg-[#DC5353]/15'
+                                    }`}
+                                  >
+                                    {alreadyRevoked ? '已撤回 CellOrg' : confirming ? '确认撤权？' : '撤回 CellOrg'}
+                                  </button>
+                                  {confirming && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmRevokeId(null)}
+                                      className="cursor-pointer px-1 text-[11px] text-[#64748B] hover:text-[#172B3A]"
+                                    >
+                                      取消
+                                    </button>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                         ) : (
                           <span className="text-[11px] text-[#94A3B8]">仅链上摘要</span>

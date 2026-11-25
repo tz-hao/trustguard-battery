@@ -78,6 +78,7 @@ export default function PoliciesPage() {
   const seconds = Number(secondsText);
   const validSeconds = /^\d+$/.test(secondsText) && Number.isSafeInteger(seconds) && seconds >= 60 && seconds <= 3600;
   const [banner, setBanner] = useState<CommandResultState | null>(null);
+  const [confirmActivateId, setConfirmActivateId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -318,26 +319,53 @@ export default function PoliciesPage() {
                           <OrgBadge key={a.msp} mspId={a.msp} />
                         ))}
                       </div>
-                      {c.state !== 'ACTIVE' && (
-                        <div className="mt-2.5 flex flex-wrap gap-2 border-t border-[#dce4ee] pt-2">
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() => void executePolicyCmd('policy-approvals', { id: c.id }, `批准候选 ${c.id}`)}
-                            className="rounded-md bg-[#10243A] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#17324f] disabled:opacity-50"
-                          >
-                            审计员批准 ({actor?.role === 'auditor' ? actor.mspId : '需 auditor'})
-                          </button>
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() => void executePolicyCmd('policy-activations', { id: c.id }, `激活策略 ${c.id}`)}
-                            className="rounded-md bg-[#159B76] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-                          >
-                            正式激活 (需四方全签)
-                          </button>
-                        </div>
-                      )}
+                      {c.state !== 'ACTIVE' && (() => {
+                        const alreadySigned = Boolean(actor?.mspId && c.approvals.some(a => a.msp === actor.mspId));
+                        const canApprove = actor?.role === 'auditor' && !alreadySigned;
+                        const allFourApproved = c.approvals.length >= 4;
+                        const canActivate = actor?.role === 'admin' && allFourApproved;
+                        const confirming = confirmActivateId === c.id;
+                        return (
+                          <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-[#dce4ee] pt-2">
+                            <button
+                              type="button"
+                              disabled={busy || !canApprove}
+                              title={alreadySigned ? '本组织已完成审计批准' : actor?.role !== 'auditor' ? '需切换为审计员 (auditor) 身份批准' : '批准该候选策略'}
+                              onClick={() => void executePolicyCmd('policy-approvals', { id: c.id }, `批准候选 ${c.id}`)}
+                              className="cursor-pointer rounded-md bg-[#10243A] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#17324f] disabled:cursor-not-allowed disabled:opacity-45"
+                            >
+                              {alreadySigned ? '本组织已批准' : actor?.role === 'auditor' ? `审计员批准 (${actor.mspId})` : '审计员批准 (需 auditor)'}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy || !canActivate}
+                              title={!allFourApproved ? `需四家组织全签后激活（当前 ${c.approvals.length}/4）` : actor?.role !== 'admin' ? '需组织管理员 (admin) 执行正式激活' : '点击激活该策略'}
+                              onClick={() => {
+                                if (!confirming) {
+                                  setConfirmActivateId(c.id);
+                                  return;
+                                }
+                                setConfirmActivateId(null);
+                                void executePolicyCmd('policy-activations', { id: c.id }, `激活策略 ${c.id}`);
+                              }}
+                              className={`cursor-pointer rounded-md px-2.5 py-1 text-[11px] font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-45 ${
+                                confirming ? 'bg-[#DC5353] hover:bg-red-700' : 'bg-[#159B76] hover:bg-emerald-700'
+                              }`}
+                            >
+                              {confirming ? '再次点击确认正式激活' : `正式激活 (${c.approvals.length}/4)`}
+                            </button>
+                            {confirming && (
+                              <button
+                                type="button"
+                                onClick={() => setConfirmActivateId(null)}
+                                className="cursor-pointer text-[11px] font-medium text-[#64748B] hover:text-[#172B3A]"
+                              >
+                                取消
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>

@@ -85,7 +85,7 @@ function AuditRoute() {
 }
 
 function AuditView({ batch }: { batch: string }) {
-  const { actor, switchActor, switching } = useIdentity();
+  const { actor, roleScoped, switchActor, switching } = useIdentity();
   const { data, error, loading, load } = useOverview<AuditPayload>('/api/bff/audit' + (batch ? '?batch=' + encodeURIComponent(batch) : ''), switching ? undefined : actor?.name);
   const [tab, setTab] = useState<'tx' | 'logs' | 'batches'>(batch ? 'batches' : 'tx');
   const ledgerAudits = (data?.ledgerAudits ?? []).filter(a => !batch || (a.action === 'AnchorAudit' && a.resourceId === batch));
@@ -576,13 +576,15 @@ function AuditView({ batch }: { batch: string }) {
                   <p className="mt-1.5 leading-relaxed">
                     当前使用身份 <strong className="mono">{actor?.name}</strong>（{actor?.roleLabel}）。Hyperledger Fabric 链码强制限定仅 `auditor` 角色证书可读取链上批次审计证据。
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => void switchActor('lab-auditor')}
-                    className="mt-3 rounded-lg bg-[#10243A] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#17324f]"
-                  >
-                    一键切换为 lab-auditor（审计员证书）
-                  </button>
+                  {!roleScoped && (
+                    <button
+                      type="button"
+                      onClick={() => void switchActor('lab-auditor')}
+                      className="mt-3 cursor-pointer rounded-lg bg-[#10243A] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#17324f]"
+                    >
+                      演示模式：切换为 lab-auditor（审计员证书）
+                    </button>
+                  )}
                 </div>
               ) : !ledgerAudits.length ? (
                 <EmptyState title="暂无对应的链上审计记录" />

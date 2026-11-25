@@ -133,9 +133,79 @@ export function LifecycleEventCard({
     eventMeta.allowedOrgs.includes(actor!.mspId) &&
     (selectedEvent !== 'retirements' || actor!.mspId === targetBattery.holderMSP);
 
+  const [confirmScrap, setConfirmScrap] = useState(false);
+  const [echelonOpen, setEchelonOpen] = useState(false);
+  const [echelonModel, setEchelonModel] = useState('ECH-ESS-50KWH');
+  const [echelonSubmitting, setEchelonSubmitting] = useState(false);
+
+  const canRegisterEchelon =
+    targetBattery.type === 'PACK' &&
+    (targetBattery.state === 'RECEIVED_FOR_RECYCLING' || targetBattery.state === 'RETIRED') &&
+    !targetBattery.scrappedAt &&
+    !targetBattery.echelonCode &&
+    targetBattery.holderMSP === 'RecycleOrgMSP' &&
+    actor?.mspId === 'RecycleOrgMSP' &&
+    actor?.role === 'recycler';
+
+  async function submitEchelonRegistration(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canRegisterEchelon || echelonSubmitting) return;
+    setEchelonSubmitting(true);
+    setEventBanner(null);
+    try {
+      const echelonCode = `${targetBattery.code}T01`;
+      const echelonId = `ech-${targetBattery.id}-${Date.now().toString(36).slice(-4)}`;
+      const reportHash = 'a'.repeat(64);
+      const res = await fetch('/api/bff/commands/echelon-assets', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          data: {
+            id: echelonId,
+            originAssetId: targetBattery.id,
+            code: echelonCode,
+            model: echelonModel.trim() || 'ECH-ESS-50KWH',
+            reportHash,
+          },
+        }),
+      });
+      const json = await res.json();
+      if (json.completed) {
+        setEventBanner({
+          ok: true,
+          title: `梯次利用新码 ${echelonCode} 已登记并与原码关联上链`,
+          requestId: json.requestId,
+          txId: json.txId,
+          stage: json.stage,
+          blockNumber: json.blockNumber,
+        });
+        setEchelonOpen(false);
+        await onEventCommitted(echelonCode);
+      } else {
+        setEventBanner({
+          ok: false,
+          title: `梯次利用登记未完成（${json.errorCode ?? json.code ?? 'REJECTED'}）`,
+          requestId: json.requestId,
+          txId: json.txId,
+          stage: json.stage,
+          errorCode: json.errorCode ?? json.code,
+        });
+      }
+    } catch {
+      setEventBanner({ ok: false, title: '未收到梯次利用登记结果，请刷新档案核对' });
+    } finally {
+      setEchelonSubmitting(false);
+    }
+  }
+
   async function submitLifecycleEvent(e: React.FormEvent) {
     e.preventDefault();
-    if (!targetBattery || !actor || identityLoading || switching || submitting || waitingForTransfer) return;
+    if (!targetBattery || !actor || identityLoading || switching || submitting || waitingForTransfer || !roleMatches) return;
+    if (selectedEvent === 'scrap-confirmations' && !confirmScrap) {
+      setConfirmScrap(true);
+      return;
+    }
+    setConfirmScrap(false);
     setSubmitting(true);
     setEventBanner(null);
     try {
@@ -318,26 +388,86 @@ export function LifecycleEventCard({
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={
-            submitting ||
-            identityLoading ||
-            !actor ||
-            switching ||
-            targetBattery.type !== 'PACK' ||
-            targetBattery.state === 'PROCESSED' ||
-            waitingForTransfer
-          }
-          className="w-full cursor-pointer rounded-lg bg-navy-900 py-2.5 text-xs font-semibold text-white transition hover:bg-navy-800 disabled:cursor-not-allowed disabled:opacity-55"
-        >
-          {submitting
-            ? '链码背书提交中...'
-            : targetBattery.state === 'PROCESSED'
-              ? '该电池包已处于报废终态（不可推进）'
-              : `以 ${actor?.name ?? '当前身份'} 提交事件`}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="submit"
+            disabled={
+              submitting ||
+              identityLoading ||
+              !actor ||
+              switching ||
+              !roleMatches ||
+              targetBattery.type !== 'PACK' ||
+              targetBattery.state === 'PROCESSED' ||
+              waitingForTransfer
+            }
+            className={`flex-1 cursor-pointer rounded-lg py-2.5 text-xs font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50 ${
+              confirmScrap && selectedEvent === 'scrap-confirmations'
+                ? 'bg-danger hover:bg-red-700'
+                : 'bg-navy-900 hover:bg-navy-800'
+            }`}
+          >
+            {submitting
+              ? '链码背书提交中...'
+              : targetBattery.state === 'PROCESSED'
+                ? targetBattery.echelonCode
+                  ? '该电池包已合规转入梯次利用（终态锁定）'
+                  : '该电池包已处于报废终态（不可推进）'
+                : !roleMatches
+                  ? `需 ${eventMeta.requiredRoleHint} 身份提交`
+                  : confirmScrap && selectedEvent === 'scrap-confirmations'
+                    ? '再次点击确认正式报废（终态不可逆）'
+                    : `以 ${actor?.name ?? '当前身份'} 提交事件`}
+          </button>
+          {confirmScrap && selectedEvent === 'scrap-confirmations' && (
+            <button
+              type="button"
+              onClick={() => setConfirmScrap(false)}
+              className="cursor-pointer rounded-lg border border-line bg-white px-3 py-2.5 text-xs font-semibold text-ink-secondary hover:bg-subtle"
+            >
+              取消
+            </button>
+          )}
+        </div>
       </form>
+
+      {canRegisterEchelon && (
+        <div className="mt-3 rounded-xl border border-teal/30 bg-teal/[0.05] p-3 text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="font-semibold text-navy-900">退役电池合规转梯次利用（保留原码关联）</span>
+            <button
+              type="button"
+              onClick={() => setEchelonOpen(v => !v)}
+              className="cursor-pointer rounded-lg border border-teal/40 bg-white px-2.5 py-1 text-[11px] font-semibold text-teal hover:bg-teal/10"
+            >
+              {echelonOpen ? '收起登记' : '登记梯次利用新码'}
+            </button>
+          </div>
+          {echelonOpen && (
+            <form onSubmit={submitEchelonRegistration} className="mt-2.5 space-y-2 border-t border-teal/20 pt-2.5">
+              <div className="mono text-[11px] text-ink-secondary">
+                拟生成梯次编码：<strong className="text-ink">{targetBattery.code}T01</strong>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={echelonModel}
+                  onChange={e => setEchelonModel(e.target.value)}
+                  placeholder="梯次重组型号（如 ECH-ESS-50KWH）"
+                  className="flex-1 rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs text-ink"
+                />
+                <button
+                  type="submit"
+                  disabled={echelonSubmitting}
+                  className="cursor-pointer rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#0c8575] disabled:opacity-50"
+                >
+                  {echelonSubmitting ? '上链中...' : '提交梯次关联'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
 
       {waitingForTransfer && (
         <div className="mt-3 rounded-lg border border-brand/30 bg-brand/6 px-3 py-2.5 text-xs text-ink">

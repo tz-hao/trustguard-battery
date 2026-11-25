@@ -346,13 +346,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={() => void handleLogout()}
-            title="切换角色 / 退出登录"
+            title="退出当前登录，返回登录页"
             className={`inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-[#23456d] bg-[#10243a] text-xs font-semibold text-white transition hover:border-teal-400/50 hover:bg-[#17324f] ${
               collapsed ? 'mt-2 p-2' : 'px-3 py-2'
             }`}
           >
             <LogOut className="h-3.5 w-3.5 shrink-0 text-teal-300" />
-            {!collapsed && <span>切换角色 / 退出登录</span>}
+            {!collapsed && <span>退出登录</span>}
           </button>
         </div>
       </div>

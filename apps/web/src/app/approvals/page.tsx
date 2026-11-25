@@ -345,25 +345,53 @@ export default function ApprovalsPage() {
                       })}
                     </div>
 
-                    {state === 'EXPIRED' && <p className="mt-3 text-[#DC5353]">申请或风险凭证已过期。请重新发起放行申请。</p>}
-                    {(state === 'PENDING' || state === 'EXPIRED') && (
-                      <div className="mt-3 flex flex-wrap gap-2 border-t border-[#dce4ee] pt-3">
-                        <button
-                          disabled={busy || loading || error !== null || state === 'EXPIRED'}
-                          onClick={() => void releaseAction('release-approvals', rel, Date.now())}
-                          className="rounded-lg bg-[#2563EB] px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
-                        >
-                          以 {actor?.name} 批准
-                        </button>
-                        <button
-                          disabled={busy || loading || error !== null || state === 'EXPIRED'}
-                          onClick={() => void releaseAction('release-finalizations', rel, Date.now())}
-                          className="rounded-lg bg-[#10243A] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#17324f] disabled:opacity-60"
-                        >
-                          执行最终放行 (Finalize)
-                        </button>
-                      </div>
-                    )}
+                    {state === 'EXPIRED' && <p className="mt-3 text-[#DC5353]">申请或风险凭证已过期，请重新发起放行申请。</p>}
+                    {state === 'PENDING' && (() => {
+                      const alreadySigned = Boolean(actor?.mspId && rel.approvals.some(a => a.msp === actor.mspId));
+                      const orgRequired = Boolean(actor?.mspId && rel.requiredOrgs.includes(actor.mspId));
+                      const canApprove = actor?.role === 'approver' && orgRequired && !alreadySigned;
+                      const allApproved = rel.requiredOrgs.every(org => rel.approvals.some(a => a.msp === org));
+                      const canFinalize = actor?.mspId === 'PackOrgMSP' && actor?.role === 'release' && allApproved;
+                      const approveHint = alreadySigned
+                        ? '本组织已完成审批'
+                        : !orgRequired
+                          ? '当前组织不在本放行单必需审批列表'
+                          : actor?.role !== 'approver'
+                            ? '需切换为必需组织的审批员 (approver)'
+                            : '点击签署本组织审批';
+                      const finalizeHint = !allApproved
+                        ? '需先完成全部必需组织会签'
+                        : actor?.mspId !== 'PackOrgMSP' || actor?.role !== 'release'
+                          ? '需 PackOrgMSP 放行员 (release) 执行最终放行'
+                          : '全部会签已齐备，可执行最终放行';
+                      return (
+                        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#dce4ee] pt-3">
+                          <button
+                            type="button"
+                            disabled={busy || loading || error !== null || !canApprove}
+                            title={approveHint}
+                            onClick={() => void releaseAction('release-approvals', rel, Date.now())}
+                            className="cursor-pointer rounded-lg bg-[#2563EB] px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {alreadySigned ? '本组织已批准' : `以 ${actor?.name ?? '当前身份'} 批准`}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy || loading || error !== null || !canFinalize}
+                            title={finalizeHint}
+                            onClick={() => void releaseAction('release-finalizations', rel, Date.now())}
+                            className="cursor-pointer rounded-lg bg-[#10243A] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#17324f] disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            执行最终放行 (Finalize)
+                          </button>
+                          {!canApprove && !canFinalize && (
+                            <span className="text-[11px] text-[#64748B]">
+                              {allApproved ? '会签已齐备，等待 PackOrgMSP release 放行' : approveHint}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -398,10 +426,15 @@ export default function ApprovalsPage() {
 
             <button
               type="submit"
-              disabled={busy || loading || error !== null || !selectedPackId}
-              className="w-full rounded-lg bg-[#10243A] py-2.5 text-xs font-semibold text-white hover:bg-[#17324f] disabled:opacity-60"
+              disabled={busy || loading || error !== null || !selectedPackId || actor?.mspId !== 'PackOrgMSP' || actor?.role !== 'release'}
+              title={actor?.mspId === 'PackOrgMSP' && actor?.role === 'release' ? '提交放行申请' : '仅 PackOrgMSP 放行员 (release) 可发起放行申请'}
+              className="w-full cursor-pointer rounded-lg bg-[#10243A] py-2.5 text-xs font-semibold text-white hover:bg-[#17324f] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {busy ? '风控评估与链码提交中...' : '生成风险凭证并提交放行申请'}
+              {busy
+                ? '风控评估与链码提交中...'
+                : actor?.mspId !== 'PackOrgMSP' || actor?.role !== 'release'
+                  ? '需 PackOrgMSP release 身份发起'
+                  : '生成风险凭证并提交放行申请'}
             </button>
           </form>
 
