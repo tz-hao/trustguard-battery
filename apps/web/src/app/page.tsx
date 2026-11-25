@@ -233,7 +233,7 @@ export default function DashboardPage() {
                   联盟共识在线
                 </span>
                 {data && (
-                  <span className="mono text-[11px] text-slate-400">
+                  <span className="mono text-[11px] text-slate-300">
                     账本高度 #{data.summary.ledgerHeight} · 策略 v{data.summary.activePolicyVersion}
                   </span>
                 )}
@@ -301,7 +301,7 @@ export default function DashboardPage() {
                 sparkline={buildTrend(data.summary.totalAssets, [0.58, 0.65, 0.72, 0.81, 0.92, 1])}
                 icon={<Layers className="h-4 w-4 text-sky-300" />}
                 sub={
-                  <span className="mono whitespace-nowrap">
+                  <span className="mono text-[11px] leading-snug">
                     芯 {data.summary.cells} · 模组 {data.summary.modules} · 包 {data.summary.packs}
                   </span>
                 }
@@ -442,22 +442,22 @@ export default function DashboardPage() {
               <EmptyState title="暂无事件记录" />
             ) : (
               <div className="overflow-x-auto rounded-xl border border-line/70">
-                <table className="tg-table text-left text-xs">
+                <table className="tg-table min-w-[540px] text-left text-xs">
                   <thead>
                     <tr>
-                      <th className="py-2.5 pr-3 pl-3">时间</th>
-                      <th className="py-2.5 pr-3">类型</th>
-                      <th className="py-2.5 pr-3">业务动作</th>
-                      <th className="py-2.5 pr-3 text-right">状态</th>
+                      <th className="whitespace-nowrap py-2.5 pr-3 pl-3">时间</th>
+                      <th className="whitespace-nowrap py-2.5 pr-3">类型</th>
+                      <th className="whitespace-nowrap py-2.5 pr-3">业务动作</th>
+                      <th className="whitespace-nowrap py-2.5 pr-3 text-right">状态</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line/60">
                     {securityEvents.map(ev => (
                       <tr key={ev.id} className="transition">
-                        <td className="mono py-2.5 pr-3 pl-3 text-[11px] text-ink-secondary">{formatDateTime(ev.time)}</td>
-                        <td className="py-2.5 pr-3">
+                        <td className="mono whitespace-nowrap py-2.5 pr-3 pl-3 text-[11px] text-ink-secondary">{formatDateTime(ev.time)}</td>
+                        <td className="whitespace-nowrap py-2.5 pr-3">
                           <span
-                            className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                            className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
                               ev.danger ? 'bg-danger/12 text-danger' : 'bg-brand/10 text-brand'
                             }`}
                           >

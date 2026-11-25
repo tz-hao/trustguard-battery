@@ -69,7 +69,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         <div
           aria-live="polite"
           aria-label="系统操作提示"
-          className="pointer-events-none fixed top-4 right-4 z-[60] flex w-[320px] max-w-[calc(100vw-2rem)] flex-col gap-2"
+          className="pointer-events-none fixed top-[74px] right-4 z-[60] flex w-[320px] max-w-[calc(100vw-2rem)] flex-col gap-2"
         >
           {items.map(item => {
             const cfg = TONE_STYLES[item.tone];

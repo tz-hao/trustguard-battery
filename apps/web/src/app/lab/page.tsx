@@ -241,7 +241,7 @@ export default function LabPage() {
       )}
 
       {/* Main Split Workspace */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12 lg:items-start">
         {/* Left: A1-A8 Scenario Deck */}
         <div className="navy-control-panel p-4 lg:col-span-4">
           <SectionHeader
@@ -290,18 +290,18 @@ export default function LabPage() {
                     </button>
                   </div>
                   <div className="mt-2.5 flex items-center justify-between border-t border-[#1e3a5c] pt-2 text-[10px]">
-                    <span className="mono text-slate-400">凭证: {p.actor}</span>
+                    <span className="mono text-slate-300">凭证: {p.actor}</span>
                     {res ? (
                       <span
                         className={`inline-flex items-center gap-1 font-semibold ${
-                          res.blocked && res.stateUnchanged ? 'text-[#159B76]' : 'text-[#DC5353]'
+                          res.blocked && res.stateUnchanged ? 'text-[#20c997]' : 'text-[#ff7b7b]'
                         }`}
                       >
                         {res.blocked ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
                         {res.blocked ? `HTTP ${res.responseSummary.httpStatus} · 拦截成功` : '未拦截'}
                       </span>
                     ) : (
-                      <span className="text-slate-500">尚未触发</span>
+                      <span className="text-slate-300/80">待触发</span>
                     )}
                   </div>
                 </div>
@@ -334,9 +334,9 @@ export default function LabPage() {
         </div>
 
         {/* Right: Deep Telemetry Inspector */}
-        <div className="space-y-4 lg:col-span-8">
+        <div className="space-y-4 lg:col-span-8 lg:sticky lg:top-20">
           {!activeResult ? (
-            <div className="navy-control-panel flex h-full min-h-[540px] flex-col items-center justify-center p-8 text-center">
+            <div className="navy-control-panel flex min-h-[420px] flex-col items-center justify-center p-8 text-center">
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#1e3a5c] bg-[#10243A]">
                 <Terminal className="h-7 w-7 text-[#3185D8]" />
               </div>

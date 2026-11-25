@@ -112,13 +112,13 @@ export function BatteryScanner({ onRead }: { onRead: (code: string, record: bool
         {active ? '关闭相机' : '相机扫码查档'}
       </button>
 
-      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-1.5 font-medium text-ink transition hover:border-brand/40 hover:bg-subtle/60">
+      <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-1.5 font-semibold text-ink transition hover:border-brand/40 hover:bg-subtle/60">
         <ImageUp className="h-3.5 w-3.5 text-teal" />
         <span>识别二维码图片</span>
         <input
           type="file"
           accept="image/*"
-          className="max-w-44 text-[11px] text-ink-secondary file:mr-2 file:cursor-pointer file:rounded file:border-0 file:bg-subtle file:px-2 file:py-0.5 file:text-[11px] file:font-semibold file:text-ink"
+          className="sr-only"
           onChange={async e => {
             const file = e.target.files?.[0];
             e.target.value = '';

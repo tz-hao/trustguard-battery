@@ -224,8 +224,8 @@ body.presentation-mode .presentation-sidebar-hide {
 /* Motion Keyframes */
 @keyframes tg-page-in {
   0% {
-    opacity: 0;
-    transform: translateY(8px);
+    opacity: 0.96;
+    transform: translateY(3px);
   }
   100% {
     opacity: 1;
@@ -234,7 +234,7 @@ body.presentation-mode .presentation-sidebar-hide {
 }
 
 .animate-page-in {
-  animation: tg-page-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: tg-page-in 140ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes tg-grid-drift {
@@ -255,14 +255,9 @@ body.presentation-mode .presentation-sidebar-hide {
 }
 
 .login-logo-seamless {
-  -webkit-mask-image:
-    linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%),
-    linear-gradient(to bottom, transparent 0%, #000 13%, #000 80%, transparent 100%);
-  -webkit-mask-composite: source-in;
-  mask-image:
-    linear-gradient(to right, transparent 0%, #000 14%, #000 86%, transparent 100%),
-    linear-gradient(to bottom, transparent 0%, #000 13%, #000 80%, transparent 100%);
-  mask-composite: intersect;
+  mix-blend-mode: multiply;
+  -webkit-mask-image: radial-gradient(ellipse 68% 68% at 50% 50%, #000 54%, transparent 94%);
+  mask-image: radial-gradient(ellipse 68% 68% at 50% 50%, #000 54%, transparent 94%);
 }
 
 @keyframes tg-logo-float {

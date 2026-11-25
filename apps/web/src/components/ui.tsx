@@ -294,7 +294,7 @@ export function KpiStatCard({
           <div className={`kpi-value text-[30px] leading-none font-bold ${valueTone[tone]}`}>{renderedValue}</div>
           {sparkline && sparkline.length >= 2 && <MiniSparkline points={sparkline} stroke={SPARK_COLORS[tone]} />}
         </div>
-        {sub && <div className="mt-2 text-[11px] leading-snug text-slate-400">{sub}</div>}
+        {sub && <div className="mt-2 text-[11px] leading-snug text-slate-200/90">{sub}</div>}
       </div>
     );
   }

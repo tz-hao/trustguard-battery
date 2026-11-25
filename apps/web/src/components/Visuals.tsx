@@ -173,9 +173,9 @@ export function BatteryPackExplodedVisual({
               })}
             </div>
 
-            {/* Bottom-left subtle HUD caption */}
-            <div className="pointer-events-none absolute bottom-3 left-3 rounded-lg border border-white/10 bg-[#061120]/80 px-2.5 py-1 text-[10.5px] font-medium text-sky-200 backdrop-blur-sm">
-              3D 三级剖面映射 · 点击右侧层级切换详情
+            {/* Bottom-left subtle HUD caption (desktop/tablet only so it never overlaps mobile badges) */}
+            <div className="pointer-events-none absolute bottom-3 left-3 hidden rounded-lg border border-white/15 bg-[#061120]/85 px-2.5 py-1 text-[10.5px] font-medium text-sky-200 backdrop-blur-sm sm:block">
+              3D 三级剖面映射 · 点击层级切换详情
             </div>
           </div>
         </div>
@@ -232,14 +232,14 @@ export function BatteryPackExplodedVisual({
               href="/trace"
               className="rounded-xl border border-[#1f3d61] bg-[#0c1e34] p-2.5 transition hover:border-teal/60 hover:bg-[#132c4a]"
             >
-              <div className="text-[11px] text-slate-400">全链谱系图谱</div>
+              <div className="text-[11px] text-slate-300">全链谱系图谱</div>
               <div className="mt-0.5 font-bold text-white">批次 → 电芯 → PACK →</div>
             </Link>
             <Link
               href="/inspections"
               className="rounded-xl border border-[#1f3d61] bg-[#0c1e34] p-2.5 transition hover:border-amber-400/60 hover:bg-[#132c4a]"
             >
-              <div className="text-[11px] text-slate-400">质量复核门禁</div>
+              <div className="text-[11px] text-slate-300">质量复核门禁</div>
               <div className="kpi-value mt-0.5 font-bold text-amber-300">{reviewCount} 项待核验 →</div>
             </Link>
           </div>

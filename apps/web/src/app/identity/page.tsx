@@ -574,8 +574,9 @@ function IdentityContent() {
             <button
               type="button"
               onClick={() => void queryCode(standaloneSample.code)}
-              className="cursor-pointer rounded-lg border border-line bg-canvas px-3 py-1.5 font-medium text-ink transition hover:border-brand hover:bg-white"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-canvas px-3 py-1.5 font-medium text-ink transition hover:border-brand/50 hover:bg-white"
             >
+              <span className="h-1.5 w-1.5 rounded-full bg-ink-muted" />
               未装配电芯
             </button>
           )}
@@ -583,8 +584,9 @@ function IdentityContent() {
             <button
               type="button"
               onClick={() => void queryCode(liveSample.code)}
-              className="cursor-pointer rounded-lg border border-brand/30 bg-brand/8 px-3 py-1.5 font-semibold text-brand transition hover:bg-brand/15"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-brand/30 bg-brand/[0.06] px-3 py-1.5 font-medium text-brand transition hover:border-brand/55 hover:bg-brand/12"
             >
+              <span className="h-1.5 w-1.5 rounded-full bg-brand" />
               使用中电池包
             </button>
           )}
@@ -592,8 +594,9 @@ function IdentityContent() {
             <button
               type="button"
               onClick={() => void queryCode(scrappedSample.code)}
-              className="cursor-pointer rounded-lg border border-navy-900 bg-navy-900 px-3 py-1.5 font-semibold text-white transition hover:bg-navy-800"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-subtle/80 px-3 py-1.5 font-medium text-navy-900 transition hover:border-navy-800/40 hover:bg-white"
             >
+              <span className="h-1.5 w-1.5 rounded-full bg-navy-800" />
               已报废电池包
             </button>
           )}
@@ -601,16 +604,18 @@ function IdentityContent() {
             <button
               type="button"
               onClick={() => void queryCode(sodiumSample.code)}
-              className="cursor-pointer rounded-lg border border-teal/35 bg-teal/10 px-3 py-1.5 font-medium text-teal transition hover:bg-teal/20"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-teal/30 bg-teal/[0.06] px-3 py-1.5 font-medium text-teal transition hover:border-teal/55 hover:bg-teal/12"
             >
+              <span className="h-1.5 w-1.5 rounded-full bg-teal" />
               钠离子电池 (J)
             </button>
           )}
           <button
             type="button"
             onClick={() => void queryCode('DMAPI010000001E110000100')}
-            className="cursor-pointer rounded-lg border border-danger/35 bg-danger/10 px-3 py-1.5 font-medium text-danger transition hover:bg-danger/20"
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-danger/30 bg-danger/[0.06] px-3 py-1.5 font-medium text-danger transition hover:border-danger/55 hover:bg-danger/12"
           >
+            <span className="h-1.5 w-1.5 rounded-full bg-danger" />
             非法编码反例
           </button>
         </div>
@@ -728,7 +733,7 @@ function IdentityContent() {
         <>
           {cmdBanner && <TxResultBanner result={cmdBanner} onClose={() => setCmdBanner(null)} />}
 
-          <div id="id-summary" className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <div id="id-summary" className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start">
             {/* 左侧：电池数字身份信息卡 */}
             <div className="card-surface card-accent-blue p-6 lg:col-span-7">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-4">
@@ -1052,8 +1057,8 @@ function IdentityContent() {
           </div>
 
           {/* 链上记录 + 受控事件推进（含电池包切换选择器）与健康授权 */}
-          <div id="id-records" className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-            <div className={`card-surface p-5 ${showLifecycleCard || showHealthImport ? 'lg:col-span-7' : 'lg:col-span-12'}`}>
+          <div id="id-records" className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start">
+            <div className={`card-surface p-5 ${showLifecycleCard || showHealthImport || result.health ? 'lg:col-span-7' : 'lg:col-span-12'}`}>
               <SectionHeader
                 title="链上记录与历史证据"
                 subtitle={`资产版本 v${result.battery.version} · 最后更新 ${formatDateTime(result.battery.updatedAt)}`}

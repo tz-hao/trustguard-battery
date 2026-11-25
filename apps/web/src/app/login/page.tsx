@@ -348,7 +348,7 @@ export function LoginPortal() {
                       />
                       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#060f1d]/75 via-transparent to-transparent" />
                       {count > 0 && (
-                        <span className="mono absolute top-1.5 right-1.5 rounded-full bg-[#071528]/80 px-1.5 py-0.5 text-[10px] font-semibold text-white backdrop-blur-xs">
+                        <span className="mono absolute top-1.5 right-1.5 rounded-full border border-white/25 bg-[#061224]/92 px-2 py-0.5 text-[10px] font-bold text-white shadow-xs backdrop-blur-xs">
                           {count} 岗
                         </span>
                       )}
@@ -411,6 +411,7 @@ export function LoginPortal() {
                   {orgIdentities.map((item, idx) => {
                     const selected = activeSelection?.name === item.name;
                     const isCore = CORE_IDENTITY_NAMES.has(item.name);
+                    const spanFull = orgIdentities.length % 2 === 1 && idx === orgIdentities.length - 1;
                     return (
                       <button
                         key={item.name}
@@ -426,6 +427,8 @@ export function LoginPortal() {
                         }}
                         onKeyDown={e => handleRoleKeyDown(e, idx)}
                         className={`flex min-h-[80px] cursor-pointer flex-col items-start justify-between rounded-2xl border p-3.5 text-left transition duration-150 ${
+                          spanFull ? 'sm:col-span-2' : ''
+                        } ${
                           selected
                             ? 'border-navy-900 bg-gradient-to-br from-[#0e223a] to-[#173558] text-white shadow-md shadow-navy-950/20'
                             : 'border-line bg-white text-ink hover:border-brand/45 hover:bg-canvas/70'
@@ -472,14 +475,15 @@ export function LoginPortal() {
                   <span className="text-ink-secondary">{selectedOrgProfile.shortName}</span>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1" aria-label="可用工作台模块">
+                <div className="flex flex-wrap items-center gap-1.5" aria-label="可用工作台模块">
+                  <span className="text-[11px] font-medium text-ink-secondary">可访问 {allowedRouteMetas.length} 项：</span>
                   {allowedRouteMetas.map(r => {
                     const Icon = ROUTE_ICONS[r.href];
                     return (
                       <span
                         key={r.href}
                         title={r.label}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-line bg-canvas text-ink-secondary transition hover:border-brand/40 hover:text-brand"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-line/90 bg-subtle/85 text-navy-800 transition hover:border-brand/50 hover:bg-brand/10 hover:text-brand"
                       >
                         <Icon className="h-3.5 w-3.5" />
                       </span>
