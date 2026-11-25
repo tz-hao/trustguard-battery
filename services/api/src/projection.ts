@@ -24,7 +24,7 @@ export function projectBattery(asset: Asset, now = new Date()) {
     REGISTERED: asset.parentId ? '已装配' : '未装配', ASSEMBLED: '已装配未装车',
     RELEASED: '已装配未装车', INSTALLED: '已装车未投入使用', IN_USE: '使用中',
     RETIRED: '已退役', RECEIVED_FOR_RECYCLING: '已交回收企业',
-    PROCESSED: asset.scrappedAt ? '已报废' : '已处理，报废待核验',
+    PROCESSED: asset.scrappedAt ? '已报废' : asset.echelonCode ? '已转梯次利用（保留原码关联）' : '已处理，报废待核验',
   };
   return {
     ...asset, statusLabel: states[asset.state] ?? '状态待核验',

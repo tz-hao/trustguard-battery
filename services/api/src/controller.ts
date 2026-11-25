@@ -32,6 +32,7 @@ const actionMap: Record<string, string> = {
   'transfer-acceptances': 'AcceptTransfer', 'transfer-commits': 'CommitTransfer',
   installations: 'RecordInstallation', 'first-use': 'RecordFirstUse', retirements: 'RecordRetirement',
   'recycling-receipts': 'ConfirmRecycling', 'scrap-confirmations': 'RecordScrapConfirmation',
+  'echelon-assets': 'RegisterEchelonAsset',
   'lifecycle-corrections':'ProposeLifecycleCorrection','lifecycle-correction-approvals':'ApproveLifecycleCorrection','lifecycle-correction-applications':'ApplyLifecycleCorrection',
   'batch-inspections': 'SubmitBatchInspection', 'retest-proposals':'ProposeRetest', 'retest-completions':'CompleteRetest',
   'policy-candidates': 'ProposePolicy', 'policy-approvals': 'ApprovePolicy', 'policy-activations': 'ActivatePolicy', 'audit-anchors': 'AnchorAudit',

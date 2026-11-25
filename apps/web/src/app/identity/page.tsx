@@ -968,6 +968,39 @@ function IdentityContent() {
             </div>
           </div>
 
+          {(result.battery.originCode || result.battery.echelonCode) && (
+            <div className="rounded-xl border border-brand/35 bg-brand/[0.06] px-4 py-3 text-xs text-ink flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <span className="font-bold text-brand">梯次利用新旧编码关联：</span>
+                {result.battery.originCode ? (
+                  <>
+                    当前为梯次利用重组电池，原退役编码{' '}
+                    <button
+                      type="button"
+                      onClick={() => void queryCode(result.battery!.originCode!)}
+                      className="mono font-bold text-brand underline"
+                    >
+                      {result.battery.originCode}
+                    </button>
+                    （不按普通在用电池混淆统计）。
+                  </>
+                ) : (
+                  <>
+                    该退役电池已合规转入梯次利用，新编码{' '}
+                    <button
+                      type="button"
+                      onClick={() => void queryCode(result.battery!.echelonCode!)}
+                      className="mono font-bold text-brand underline"
+                    >
+                      {result.battery.echelonCode}
+                    </button>
+                    （原码已锁定保留关联，非报废处置）。
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
           {result.battery.containingPack && (
             <div className="rounded-xl border border-info/35 bg-info/10 px-4 py-3 text-xs text-ink">
               该组件已装配至电池包{' '}

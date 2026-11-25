@@ -206,6 +206,8 @@ func (e *Engine) dispatch(c Command) (string, uint64, error) {
 		return e.cancelTransfer(c.Data)
 	case "RecordInstallation", "RecordFirstUse", "RecordRetirement", "ConfirmRecycling", "RecordScrapConfirmation":
 		return e.lifecycle(c.Action, c.Data)
+	case "RegisterEchelonAsset":
+		return e.registerEchelonAsset(c.Data)
 	case "ProposeLifecycleCorrection":
 		return e.proposeCorrection(c.Data)
 	case "ApproveLifecycleCorrection":
@@ -1264,6 +1266,100 @@ func (e *Engine) lifecycle(action string, raw []byte) (string, uint64, error) {
 	return a.ID, a.Version, e.put("asset:"+a.ID, a)
 }
 
+func (e *Engine) registerEchelonAsset(raw json.RawMessage) (string, uint64, error) {
+	if err := e.auth("recycler", RecycleOrg); err != nil {
+		return "", 0, err
+	}
+	var in struct {
+		ID            string `json:"id"`
+		OriginAssetID string `json:"originAssetId"`
+		Code          string `json:"code"`
+		Model         string `json:"model"`
+		ReportHash    string `json:"reportHash"`
+	}
+	in, err := decode[struct {
+		ID            string `json:"id"`
+		OriginAssetID string `json:"originAssetId"`
+		Code          string `json:"code"`
+		Model         string `json:"model"`
+		ReportHash    string `json:"reportHash"`
+	}](raw)
+	if err != nil {
+		return "", 0, err
+	}
+	if validID(in.ID) != nil || validID(in.OriginAssetID) != nil {
+		return "", 0, fail("INVALID_ID", "valid echelon and origin asset IDs required")
+	}
+	if strings.TrimSpace(in.Model) == "" || len(in.Model) > 64 {
+		return "", 0, fail("INVALID_INPUT", "echelon model name required")
+	}
+	if !hashPattern.MatchString(in.ReportHash) {
+		return "", 0, fail("INVALID_HASH", "64-hex echelon inspection report hash required")
+	}
+	parsed, err := ParseEchelonCode(in.Code)
+	if err != nil {
+		return "", 0, err
+	}
+	origin, err := e.asset(in.OriginAssetID)
+	if err != nil {
+		return "", 0, err
+	}
+	if origin.HolderMSP != RecycleOrg {
+		return "", 0, fail("FORBIDDEN", "current holder required for echelon utilization")
+	}
+	if origin.ScrappedAt != nil {
+		return "", 0, fail("TERMINAL_STATE", "scrapped asset cannot enter echelon utilization")
+	}
+	if origin.State != "RECEIVED_FOR_RECYCLING" && origin.State != "RETIRED" {
+		return "", 0, fail("INVALID_STATE", "retired or recycling-received asset required for echelon utilization")
+	}
+	if origin.EchelonAssetID != "" {
+		return "", 0, fail("ALREADY_EXISTS", "origin asset already linked to an echelon asset")
+	}
+	if ex, er := e.get("asset:" + in.ID); er != nil || ex != nil {
+		if er != nil {
+			return "", 0, er
+		}
+		return "", 0, fail("ALREADY_EXISTS", "echelon asset ID already exists")
+	}
+	if ex, er := e.get("code:" + in.Code); er != nil || ex != nil {
+		if er != nil {
+			return "", 0, er
+		}
+		return "", 0, fail("ALREADY_EXISTS", "echelon battery code already registered")
+	}
+	asset := Asset{
+		ID:                    in.ID,
+		Code:                  in.Code,
+		Type:                  parsed.ProductType,
+		MakerCode:             parsed.MakerCode,
+		MakerMSP:              origin.MakerMSP,
+		Chemistry:             parsed.Chemistry,
+		Model:                 strings.TrimSpace(in.Model),
+		HolderMSP:             RecycleOrg,
+		Simulation:            origin.Simulation,
+		ManufacturedAt:        origin.ManufacturedAt,
+		ManufactureSourceHash: in.ReportHash,
+		State:                 "REGISTERED",
+		Quality:               "NOT_TESTED",
+		Children:              []string{},
+		OriginAssetID:         origin.ID,
+		OriginCode:            origin.Code,
+	}
+	e.stamp(&asset)
+	origin.EchelonAssetID = asset.ID
+	origin.EchelonCode = asset.Code
+	origin.State = "PROCESSED"
+	e.stamp(&origin)
+	if err = e.put("asset:"+origin.ID, origin); err != nil {
+		return "", 0, err
+	}
+	if err = e.put("asset:"+asset.ID, asset); err != nil {
+		return "", 0, err
+	}
+	return asset.ID, asset.Version, e.put("code:"+asset.Code, asset.ID)
+}
+
 type PolicyInput struct {
 	ID        string `json:"id"`
 	Policy    Policy `json:"policy"`
@@ -1419,7 +1515,7 @@ func (e *Engine) Query(raw []byte) (any, error) {
 	}
 	switch q.Kind {
 	case "code":
-		return ParseCode(q.ID)
+		return ParseAnyCode(q.ID)
 	case "policy":
 		return e.policy()
 	case "mesReceipt":
@@ -1458,8 +1554,8 @@ func (e *Engine) Query(raw []byte) (any, error) {
 	case "battery":
 		// Preserve access to committed provisional records. New registrations
 		// use the stricter standard/date checks; old ledger keys are immutable.
-		if !codePattern.MatchString(q.ID) {
-			return nil, fail("CODE_FORMAT", "expected 24 uppercase ASCII letters or digits")
+		if !codePattern.MatchString(q.ID) && !echelonCodePattern.MatchString(q.ID) {
+			return nil, fail("CODE_FORMAT", "expected 24 uppercase ASCII letters or digits or valid echelon code")
 		}
 		id, er := read[string](e, "code:"+q.ID)
 		if er != nil {

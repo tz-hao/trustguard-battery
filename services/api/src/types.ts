@@ -29,5 +29,6 @@ export interface Asset {
   version: number; assemblyVersion: number; parentId?: string; children: string[];
   inspectionVersion: number; installedAt: string | null; firstUseAt: string | null;
   retiredAt: string | null; recyclingReceivedAt: string | null; scrappedAt: string | null;
+  originAssetId?: string; originCode?: string; echelonAssetId?: string; echelonCode?: string;
   updatedAt: string; txId: string;
 }

@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callBackendApi } from '@/lib/server/api-client';
+import { checkIpRateLimit } from '@/lib/server/rate-limit';
 import { getSessionActor } from '@/lib/server/session';
 import type { BatteryAssetView } from '@/lib/types';
 
 export async function GET(req: NextRequest) {
+  const limited = checkIpRateLimit(req, 'trace-query', 120);
+  if (limited) return limited;
   const { name } = await getSessionActor();
   const batchId = req.nextUrl.searchParams.get('batchId')?.trim();
   const assetId = req.nextUrl.searchParams.get('assetId')?.trim();

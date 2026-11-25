@@ -46,6 +46,10 @@ export interface BatteryAssetView {
   retiredAt: string | null;
   recyclingReceivedAt: string | null;
   scrappedAt: string | null;
+  originAssetId?: string;
+  originCode?: string;
+  echelonAssetId?: string;
+  echelonCode?: string;
   scrapped: boolean;
   updatedAt: string;
   txId: string;
@@ -191,6 +195,34 @@ export const ERROR_DESCRIPTIONS: Record<string, string> = {
   RATE_LIMITED: '接口限流保护已触发，请稍后重试',
   RELEASE_EXPIRED: '放行申请已过期，请重新发起申请',
   RISK_EXPIRED: '风险凭证已过期或失效，请重新发起放行申请',
+  APPROVALS_MISSING: '放行或变更所需的独立组织审批数量不足，请完成全部必需会签',
+  CHRONOLOGY_INVALID: '生命周期事件时间顺序不合法，不能早于前序关键事件',
+  CODE_SERIAL: '第 18–24 位序列号格式不符合对应标准版本要求',
+  CORRECTION_EXPIRED: '日期更正提案已过期，请重新发起更正申请',
+  CORRUPT_LINEAGE: '装配谱系引用异常或存在环路，操作已被链码拦截',
+  DUPLICATE_APPROVAL: '当前组织或审批人已提交过该笔审批，请勿重复签署',
+  DUPLICATE_BINDING: '该子组件已绑定在有效父级组件下，禁止重复装配',
+  EMPTY_ASSEMBLY: '装配清单不能为空，请至少选择一个有效子组件',
+  HISTORY_UNAVAILABLE: '当前账本环境暂不支持历史轨迹查询，请核查节点状态',
+  INVALID_BATCH: '电芯批次不存在或与当前材料体系、组织归属不匹配',
+  INVALID_CORRECTION: '日期更正提案参数或审批条件不合法，请核对字段与理由',
+  INVALID_DATE: '日期格式不合法或日历中不存在该日期',
+  INVALID_HASH: '摘要格式非法，请提供 64 位小写十六进制 SHA-256 哈希',
+  INVALID_INPUT: '输入参数缺失或格式有误，请核对表单必填项',
+  INVALID_MAKER: '厂商代码未在备案映射中登记，或与当前组织身份不匹配',
+  INVALID_RISK: '风险凭证结构不合法或与当前放行请求不匹配',
+  INVALID_TRANSFER_STATE: '当前交接单状态不允许执行此操作，请刷新确认最新阶段',
+  RISK_BINDING: '风险凭证绑定的资产、版本或请求标识与当前放行单不一致',
+  RISK_SIGNATURE: '风险凭证数字签名校验失败，拒绝采信',
+  RISK_SIGNER: '风险凭证签发方不在受信任风控服务白名单内',
+  STALE_APPROVAL: '审批所依据的资产、质检或策略版本已过期，请基于最新版本重审',
+  STALE_CORRECTION: '日期更正提案所依据的资产版本已变化，请重新提交',
+  STALE_POLICY: '请求绑定的安全策略版本已过期，请刷新后按当前生效策略提交',
+  STANDARD_NOT_VERIFIED: '当前版本未启用正式企业编码登记，仅允许明确标注的模拟编码',
+  SUPPLY_REQUIRED: '电芯尚未获得电芯厂供货授权，暂不允许装配到目标模组',
+  UNAUTHENTICATED: '客户端身份证书无效或未通过双向认证',
+  UNKNOWN_ACTION: '链码不支持该写入动作，请检查客户端与链码版本是否一致',
+  UNKNOWN_QUERY: '链码不支持该查询类型，请检查客户端与链码版本是否一致',
 };
 
 export function formatServiceAge(age: ServiceAge | null): string {

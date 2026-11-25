@@ -20,13 +20,19 @@ def main():
     subprocess.run([sys.executable, str(ROOT / "infrastructure/scripts/business_network.py"), "resume"], check=False)
     subprocess.run([sys.executable, str(ROOT / "infrastructure/scripts/business_services.py"), "start"], check=False)
 
-    print("\n== 2. 验证 11 个前端路由可达性 ==")
-    routes = ["/", "/identity", "/inspections", "/trace", "/approvals", "/transfers", "/risk", "/policies", "/lab", "/audit", "/organizations"]
+    print("\n== 2. 验证 12 个前端路由可达性 ==")
+    routes = ["/login", "/", "/identity", "/inspections", "/trace", "/approvals", "/transfers", "/risk", "/policies", "/lab", "/audit", "/organizations"]
     for route in routes:
         status, _ = check_http_get(route)
         if status != 200:
             raise RuntimeError(f"Route {route} returned HTTP {status}")
         print(f"  [OK] {route} -> HTTP {status}")
+
+    ai_status, ai_raw = check_http_get("/api/bff/ai")
+    if ai_status != 200:
+        raise RuntimeError(f"Route /api/bff/ai returned HTTP {ai_status}")
+    ai_info = json.loads(ai_raw)
+    print(f"  [OK] /api/bff/ai -> enabled={ai_info.get('enabled')} available={ai_info.get('available')} (离线安全降级就绪)")
 
     print("\n== 3. 提取实时演示样本（无数据删改） ==")
     _, dash_raw = check_http_get("/api/bff/dashboard")

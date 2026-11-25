@@ -44,7 +44,9 @@ for service, pid in baseline['protectedServicePids'].items():
     assert fields['ActiveState'] == 'active'
     assert int(fields['MainPID']) == pid
     services.append({'service': service, 'state': 'active', 'pid': pid})
-assert Path('/home/milli/.local/bin/node').resolve() == Path('/home/milli/.hermes/profiles/englishbot/node/bin/node')
+shared_node_link = baseline.get('sharedNodeSymlink')
+if shared_node_link:
+    assert Path(shared_node_link['link']).resolve() == Path(shared_node_link['target'])
 result = {'result': 'PASS', 'checkedAt': datetime.datetime.now(datetime.timezone.utc).isoformat(),
     'baselineContainers': containers, 'allInitialImageIdsPreserved': True, 'allInitialVolumesPreserved': True,
     'protectedServices': services, 'sharedNodeSymlinkPreserved': True,

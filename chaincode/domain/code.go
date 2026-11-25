@@ -49,6 +49,30 @@ func ParseCode(code string) (ParsedCode, error) {
 	return parseCode(code, true)
 }
 
+// ParseEchelonCode parses a GB/T 34014 echelon utilization code formed by a
+// valid 24-character base battery code plus 'T' and a 1..6 character suffix.
+func ParseEchelonCode(code string) (ParsedCode, error) {
+	if !echelonCodePattern.MatchString(code) {
+		return ParsedCode{}, fail("CODE_FORMAT", "expected 24-char GB/T 34014 base code plus 'T' and 1-6 uppercase alphanumeric echelon suffix")
+	}
+	base, err := parseCode(code[:24], true)
+	if err != nil {
+		return ParsedCode{}, err
+	}
+	base.Code = code
+	base.CodeScope = "echelon-repurposed"
+	return base, nil
+}
+
+// ParseAnyCode parses either a standard 24-character new-product code or an
+// extended echelon utilization code for read/query endpoints.
+func ParseAnyCode(code string) (ParsedCode, error) {
+	if echelonCodePattern.MatchString(code) {
+		return ParseEchelonCode(code)
+	}
+	return ParseCode(code)
+}
+
 func parseCode(code string, amended bool) (ParsedCode, error) {
 	var p ParsedCode
 	if !codePattern.MatchString(code) {

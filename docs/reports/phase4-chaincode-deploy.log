@@ -54,7 +54,7 @@ executing with the following
 basic_1.0:d0b27e1af09f3039dabac82678c64e8807311f9405008efb867ba8895dd643aa
 [0;32mQuery installed successful on peer0.org1 on channel[0m
 [0;34mUsing organization 1[0m
-+ peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile /home/milli/projects/fabric-samples/test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem --channelID trustguardchannel --name basic --version 1.0 --package-id basic_1.0:d0b27e1af09f3039dabac82678c64e8807311f9405008efb867ba8895dd643aa --sequence 1 --signature-policy 'AND('\''Org1MSP.peer'\'','\''Org2MSP.peer'\'')'
++ peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile <fabric-samples-dir>/test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem --channelID trustguardchannel --name basic --version 1.0 --package-id basic_1.0:d0b27e1af09f3039dabac82678c64e8807311f9405008efb867ba8895dd643aa --sequence 1 --signature-policy 'AND('\''Org1MSP.peer'\'','\''Org2MSP.peer'\'')'
 + res=0
 [34m2026-11-15 19:09:53.269 CST 0001 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [43a48dd7757e88b057f263193be29671eeb53dd42fc79e02139cbc5a5717e1ca] committed with status (VALID) at localhost:7051
 [0;32mChaincode definition approved on peer0.org1 on channel 'trustguardchannel'[0m
@@ -83,7 +83,7 @@ basic_1.0:d0b27e1af09f3039dabac82678c64e8807311f9405008efb867ba8895dd643aa
 }
 [0;34mChecking the commit readiness of the chaincode definition successful on peer0.org2 on channel 'trustguardchannel'[0m
 [0;34mUsing organization 2[0m
-+ peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile /home/milli/projects/fabric-samples/test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem --channelID trustguardchannel --name basic --version 1.0 --package-id basic_1.0:d0b27e1af09f3039dabac82678c64e8807311f9405008efb867ba8895dd643aa --sequence 1 --signature-policy 'AND('\''Org1MSP.peer'\'','\''Org2MSP.peer'\'')'
++ peer lifecycle chaincode approveformyorg -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile <fabric-samples-dir>/test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem --channelID trustguardchannel --name basic --version 1.0 --package-id basic_1.0:d0b27e1af09f3039dabac82678c64e8807311f9405008efb867ba8895dd643aa --sequence 1 --signature-policy 'AND('\''Org1MSP.peer'\'','\''Org2MSP.peer'\'')'
 + res=0
 [34m2026-11-15 19:09:59.485 CST 0001 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [d3f2b27dd1fe07e06394eb4f06ce8d91e5377ff69d5c37c026d07c2a8ba5554a] committed with status (VALID) at localhost:9051
 [0;32mChaincode definition approved on peer0.org2 on channel 'trustguardchannel'[0m
@@ -113,7 +113,7 @@ basic_1.0:d0b27e1af09f3039dabac82678c64e8807311f9405008efb867ba8895dd643aa
 [0;34mChecking the commit readiness of the chaincode definition successful on peer0.org2 on channel 'trustguardchannel'[0m
 [0;34mUsing organization 1[0m
 [0;34mUsing organization 2[0m
-+ peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile /home/milli/projects/fabric-samples/test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem --channelID trustguardchannel --name basic --peerAddresses localhost:7051 --tlsRootCertFiles /home/milli/projects/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/tlsca/tlsca.org1.example.com-cert.pem --peerAddresses localhost:9051 --tlsRootCertFiles /home/milli/projects/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem --version 1.0 --sequence 1 --signature-policy 'AND('\''Org1MSP.peer'\'','\''Org2MSP.peer'\'')'
++ peer lifecycle chaincode commit -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com --tls --cafile <fabric-samples-dir>/test-network/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem --channelID trustguardchannel --name basic --peerAddresses localhost:7051 --tlsRootCertFiles <fabric-samples-dir>/test-network/organizations/peerOrganizations/org1.example.com/tlsca/tlsca.org1.example.com-cert.pem --peerAddresses localhost:9051 --tlsRootCertFiles <fabric-samples-dir>/test-network/organizations/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem --version 1.0 --sequence 1 --signature-policy 'AND('\''Org1MSP.peer'\'','\''Org2MSP.peer'\'')'
 + res=0
 [34m2026-11-15 19:10:05.725 CST 0001 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [dde678e71adfcf3ffeee7ddef4879e98d111fd55418838656841c255b2151830] committed with status (VALID) at localhost:9051
 [34m2026-11-15 19:10:05.725 CST 0002 INFO[0m [chaincodeCmd] [34;1mClientWait[0m -> txid [dde678e71adfcf3ffeee7ddef4879e98d111fd55418838656841c255b2151830] committed with status (VALID) at localhost:7051

@@ -42,7 +42,7 @@ infrastructure/runtime/business/ai-environment.json
 {
   "TRUSTGUARD_AI_ENABLED": "true",
   "DEEPSEEK_MODEL": "deepseek-flash",
-  "DEEPSEEK_API_KEY_FILE": "/home/milli/projects/trustguard-battery/infrastructure/runtime/business/services/deepseek.key",
+  "DEEPSEEK_API_KEY_FILE": "<repo-root>/infrastructure/runtime/business/services/deepseek.key",
   "TRUSTGUARD_AI_TIMEOUT_MS": "30000",
   "TRUSTGUARD_AI_MAX_TOKENS": "2500",
   "TRUSTGUARD_AI_ALLOW_REAL_DATA": "false"
@@ -57,7 +57,7 @@ infrastructure/runtime/business/ai-environment.json
 配置完成且本地依赖已运行后：
 
 ```bash
-cd /home/milli/projects/trustguard-battery
+cd <repo-root>
 npm run build --workspace @trustguard/api
 .venv/bin/python infrastructure/scripts/business_services.py restart --service api
 ```

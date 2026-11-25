@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  node-checks:
+    name: Web & API (typecheck, lint, test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run check:types --workspace @trustguard/web
+      - run: npm run lint --workspace @trustguard/web
+      - run: npm run check:types --workspace @trustguard/api
+      - run: npm test --workspace @trustguard/api
+
+  chaincode-checks:
+    name: Chaincode (vet & test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: chaincode/go.mod
+      - working-directory: chaincode
+        run: |
+          go vet ./...
+          go test -count=1 ./...
+
+  python-and-hygiene-checks:
+    name: Risk Service, Config & Repo Hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r services/risk/requirements.lock pytest
+      - run: PYTHONPATH=services/risk pytest services/risk tests/test_ai_config.py tests/test_business_config.py tests/test_repo_hygiene.py tests/test_shared_contracts.py

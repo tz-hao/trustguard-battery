@@ -1,12 +1,12 @@
 # 智权链·锂安溯
 
 动力电池可信溯源与主动安全防护平台。已实现 Go 业务链码、NestJS mTLS API、FastAPI 风控、
-加密报告与独立密钥服务、可重建索引、策略预演、审计摘要锚定及 Next.js 11 页面安全工作台（`apps/web`，21 个服务端 mTLS BFF 路由）。
+加密报告与独立密钥服务、可重建索引、策略预演、审计摘要锚定及 Next.js 12 页面安全工作台（`apps/web`，11 个业务工作台页面 + `/login` 登录页，24 个服务端 mTLS BFF 路由）。
 四组织 **local** Fabric 网络基于通道 `batterybusiness`，链码 `battery` 版本 `1.5` / sequence `6`。模拟 PACK 从创建到移交的四笔真实页面回执及数据保留结果见[本地 1.5 交接验收](docs/reports/v15-local-transfer-20261118.json)。
 数据均为显式模拟；已依据标准正文和第 1 号修改单核验 24 位新产品字段与日期规则，正式厂商登记关闭。
 
 ```text
-apps/web          Next.js / React 11 页面前端与服务端 mTLS BFF（127.0.0.1:3100）
+apps/web          Next.js / React 12 页面前端（11 个工作台页 + 登录页）与 24 个服务端 mTLS BFF 路由（127.0.0.1:3100）
 services/api      NestJS / Fabric Gateway / 文件、索引、审计、总览与验收/消融脚本
 services/risk     FastAPI / Isolation Forest / NetworkX / 规则与签名数据适配器
 chaincode         Go 业务规则、Fabric 入口及离线 vendor

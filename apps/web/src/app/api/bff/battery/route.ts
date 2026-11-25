@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callBackendApi } from '@/lib/server/api-client';
+import { checkIpRateLimit } from '@/lib/server/rate-limit';
 import { getSessionActor } from '@/lib/server/session';
 import type { BatteryAssetView, ParsedCodeView } from '@/lib/types';
 
 export async function GET(req: NextRequest) {
+  const limited = checkIpRateLimit(req, 'battery-code', 60, 'TRUSTGUARD_BFF_CODE_RATE_LIMIT');
+  if (limited) return limited;
   const rawCode = (req.nextUrl.searchParams.get('code') ?? '').trim().toUpperCase();
   if (!rawCode) {
     return NextResponse.json({ code: 'INVALID_INPUT', message: '请输入电池编码' }, { status: 400 });

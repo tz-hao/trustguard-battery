@@ -21,6 +21,7 @@ var Organizations = []string{CellOrg, PackOrg, LabOrg, RecycleOrg}
 var idPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,95}$`)
 var hashPattern = regexp.MustCompile(`^[a-f0-9]{64}$`)
 var codePattern = regexp.MustCompile(`^[A-Z0-9]{24}$`)
+var echelonCodePattern = regexp.MustCompile(`^[A-Z0-9]{24}T[A-Z0-9]{1,6}$`)
 
 type Actor struct{ MSP, ID, Role string }
 type Command struct {
@@ -96,6 +97,10 @@ type Asset struct {
 	RetiredAt             *string  `json:"retiredAt"`
 	RecyclingReceivedAt   *string  `json:"recyclingReceivedAt"`
 	ScrappedAt            *string  `json:"scrappedAt"`
+	OriginAssetID         string   `json:"originAssetId,omitempty"`
+	OriginCode            string   `json:"originCode,omitempty"`
+	EchelonAssetID        string   `json:"echelonAssetId,omitempty"`
+	EchelonCode           string   `json:"echelonCode,omitempty"`
 	UpdatedAt             string   `json:"updatedAt"`
 	TxID                  string   `json:"txId"`
 }
