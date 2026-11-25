@@ -19,12 +19,17 @@ export function TrustGuardBrandLogo({
 }) {
   const dim = size === 'xl' ? 116 : size === 'lg' ? 76 : size === 'md' ? 46 : 36;
   const radius = size === 'xl' ? 'rounded-3xl' : size === 'lg' ? 'rounded-2xl' : 'rounded-xl';
-  const src = variant === 'full' ? '/brand/logo-full.jpg' : '/brand/logo-mark.png';
+  const isMark = variant === 'mark';
+  const src = isMark ? '/brand/logo-mark.png' : '/brand/logo-full.jpg';
 
   return (
     <div
       style={{ width: dim, height: dim }}
-      className={`relative shrink-0 overflow-hidden ${radius} ring-1 ring-sky-300/35 shadow-md shadow-sky-950/35 ${className}`}
+      className={`relative flex shrink-0 items-center justify-center ${
+        isMark
+          ? 'drop-shadow-[0_6px_16px_rgba(14,165,233,0.32)]'
+          : `overflow-hidden ${radius} ring-1 ring-sky-300/35 shadow-md shadow-sky-950/35`
+      } ${className}`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -32,7 +37,7 @@ export function TrustGuardBrandLogo({
         alt="智权链·锂安溯 TrustGuard Battery"
         width={dim}
         height={dim}
-        className="h-full w-full object-cover select-none"
+        className={`h-full w-full select-none ${isMark ? 'object-contain' : 'object-cover'}`}
       />
     </div>
   );
