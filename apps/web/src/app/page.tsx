@@ -28,7 +28,9 @@ import {
 import { KpiStatCard } from '@/components/ui';
 import {
   CHEMISTRY_LABELS,
+  formatActionLabel,
   formatDateTime,
+  formatStageLabel,
   type BatteryAssetView,
 } from '@/lib/types';
 
@@ -465,11 +467,13 @@ export default function DashboardPage() {
                           </span>
                         </td>
                         <td className="py-2.5 pr-3">
-                          <div className="font-semibold text-ink">{ev.action}</div>
+                          <div className="font-semibold text-ink">{formatActionLabel(ev.action)}</div>
                           <div className="mono text-[11px] text-ink-secondary">{ev.source}</div>
                         </td>
-                        <td className="mono py-2.5 pr-3 text-right font-semibold">
-                          <span className={ev.danger ? 'text-danger' : 'text-success'}>{ev.outcome}</span>
+                        <td className="whitespace-nowrap py-2.5 pr-3 text-right font-semibold">
+                          <span className={ev.danger ? 'text-danger' : 'text-success'}>
+                            {formatStageLabel(ev.outcome)}
+                          </span>
                         </td>
                       </tr>
                     ))}

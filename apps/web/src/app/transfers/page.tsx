@@ -296,6 +296,8 @@ export default function TransfersPage() {
           txId: json.txId,
           stage: json.stage,
           blockNumber: json.blockNumber,
+          nextHref: step.resource === 'transfer-commits' && tr.pack?.code ? `/identity?code=${encodeURIComponent(tr.pack.code)}` : undefined,
+          nextLabel: step.resource === 'transfer-commits' && tr.pack?.code ? '打开该电池数字身份证' : undefined,
         });
         await load({ id: tr.id, field: step.field, tx: json.txId });
       } else {

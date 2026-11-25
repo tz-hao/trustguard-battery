@@ -1,10 +1,12 @@
 'use client';
 
+import Link from 'next/link';
 import { QRCodeSVG } from 'qrcode.react';
 import React, { useState } from 'react';
 import {
   Activity,
   AlertTriangle,
+  ArrowRight,
   Ban,
   Check,
   CheckCircle2,
@@ -18,7 +20,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useToast } from '@/components/ToastProvider';
-import { ERROR_DESCRIPTIONS, ORG_LABELS, QUALITY_LABELS } from '@/lib/types';
+import { ERROR_DESCRIPTIONS, ORG_LABELS, QUALITY_LABELS, formatStageLabel } from '@/lib/types';
 
 export function QualityBadge({ quality }: { quality: string }) {
   const info = QUALITY_LABELS[quality] ?? { label: quality, tone: 'slate' as const };
@@ -258,6 +260,8 @@ export interface CommandResultState {
   blockNumber?: string | null;
   errorCode?: string | null;
   detail?: unknown;
+  nextHref?: string;
+  nextLabel?: string;
 }
 
 export function TxResultBanner({ result, onClose }: { result: CommandResultState | null; onClose?: () => void }) {
@@ -279,16 +283,27 @@ export function TxResultBanner({ result, onClose }: { result: CommandResultState
           ) : (
             <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
           )}
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <div className="font-semibold">{result.title}</div>
             {desc && <div className="text-xs leading-relaxed opacity-90">{desc}</div>}
             <div className="mono flex flex-wrap gap-x-4 gap-y-1 text-xs opacity-85">
-              {result.stage && <span>阶段: {result.stage}</span>}
+              {result.stage && <span>状态: {formatStageLabel(result.stage)}</span>}
               {result.errorCode && <span>错误码: {result.errorCode}</span>}
               {result.blockNumber && <span>区块: #{result.blockNumber}</span>}
-              {result.requestId && <span>requestId: {result.requestId}</span>}
-              {result.txId && <span>txId: {result.txId.slice(0, 18)}...</span>}
+              {result.requestId && <span>单号: {result.requestId}</span>}
+              {result.txId && <span>交易: {result.txId.slice(0, 18)}...</span>}
             </div>
+            {result.ok && result.nextHref && result.nextLabel && (
+              <div className="pt-1">
+                <Link
+                  href={result.nextHref}
+                  className="inline-flex items-center gap-1 rounded-lg border border-success/40 bg-white px-3 py-1 text-xs font-semibold text-[#0c5e47] shadow-2xs transition hover:border-success hover:bg-success hover:text-white"
+                >
+                  <span>{result.nextLabel}</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            )}
           </div>
         </div>
         {onClose && (

@@ -218,6 +218,9 @@ function IdentityContent() {
     async (target: string) => {
       const cleaned = target.trim().toUpperCase();
       if (!cleaned) return;
+      if (typeof window !== 'undefined') {
+        window.history.replaceState(null, '', `/identity?code=${encodeURIComponent(cleaned)}`);
+      }
       setCodeInput(cleaned);
       setLoading(true);
       setCmdBanner(null);
@@ -530,13 +533,20 @@ function IdentityContent() {
               placeholder="输入或粘贴 24 位 GB/T 34014 动力电池编码（例：DMAPE010000001E11...）"
               className="mono w-full rounded-xl border border-line bg-canvas py-3 pr-20 pl-10 text-xs font-bold tracking-normal text-ink outline-none transition focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/15 sm:pr-28 sm:pl-11 sm:text-sm sm:tracking-wider"
             />
-            <span
-              className={`mono absolute top-3 right-3 rounded-md px-2 py-1 text-[11px] font-bold ${
-                codeInput.trim().length === 24 ? 'bg-success/15 text-success' : 'bg-subtle text-ink-secondary'
-              }`}
-            >
-              {codeInput.trim().length} / 24 位
-            </span>
+            {(() => {
+              const trimmed = codeInput.trim();
+              const isEchelon = /^[A-Z0-9]{24}T[A-Z0-9]{1,6}$/.test(trimmed);
+              const isValidLen = trimmed.length === 24 || isEchelon;
+              return (
+                <span
+                  className={`mono absolute top-3 right-3 rounded-md px-2 py-1 text-[11px] font-bold ${
+                    isValidLen ? 'bg-success/15 text-success' : 'bg-subtle text-ink-secondary'
+                  }`}
+                >
+                  {isEchelon ? `梯次码 · ${trimmed.length} 位` : `${trimmed.length} / 24 位`}
+                </span>
+              );
+            })()}
           </div>
           <button
             type="submit"
@@ -731,6 +741,28 @@ function IdentityContent() {
       {/* 核心档案：电池数字身份证主区 + 物理剖面图 */}
       {result?.battery && (
         <>
+          <nav
+            aria-label="档案页内快速定位"
+            className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-white/90 px-3.5 py-2 text-xs shadow-2xs"
+          >
+            <span className="font-semibold text-ink-secondary">快速定位：</span>
+            {[
+              { href: '#id-summary', label: '数字身份证' },
+              { href: '#id-lifecycle', label: '生命周期时间轴' },
+              { href: '#id-records', label: '链上证据与健康' },
+              { href: '#battery-advisor', label: 'AI 风险问答' },
+              { href: '#id-ledger', label: '全量资产台账' },
+            ].map(item => (
+              <a
+                key={item.href}
+                href={item.href}
+                className="rounded-lg bg-canvas px-2.5 py-1 font-medium text-ink transition hover:bg-brand/10 hover:text-brand"
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
+
           {cmdBanner && <TxResultBanner result={cmdBanner} onClose={() => setCmdBanner(null)} />}
 
           <div id="id-summary" className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start">
@@ -1210,10 +1242,10 @@ function IdentityContent() {
                             onChange={e => setCorrField(e.target.value as typeof corrField)}
                             className="rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs"
                           >
-                            <option value="installedAt">installedAt (装车日期)</option>
-                            <option value="firstUseAt">firstUseAt (首次投用)</option>
-                            <option value="retiredAt">retiredAt (退役日期)</option>
-                            <option value="scrappedAt">scrappedAt (报废确认)</option>
+                            <option value="installedAt">装车日期</option>
+                            <option value="firstUseAt">首次投用日期</option>
+                            <option value="retiredAt">退役日期</option>
+                            <option value="scrappedAt">报废确认日期</option>
                           </select>
                           <input
                             type="text"
@@ -1349,9 +1381,19 @@ function IdentityContent() {
 
           <FieldEvidence asset={result.battery} history={result.history ?? []} health={result.health} />
           {actor && !switching && (
-            <BatteryAdvisor key={actor.name + ':' + result.battery.id} assetId={result.battery.id} />
+            <div id="battery-advisor">
+              <BatteryAdvisor key={actor.name + ':' + result.battery.id} assetId={result.battery.id} />
+            </div>
           )}
-          <ScanObservations key={`${actor?.name}-${result.battery.code}-${scanRevision}`} code={result.battery.code} />
+          <details className="card-surface group p-4 text-xs">
+            <summary className="cursor-pointer list-none font-bold text-ink flex items-center justify-between">
+              <span>标签扫码站点记录与异地冲突监测（按需展开）</span>
+              <span className="text-brand group-open:rotate-180 transition-transform">▾</span>
+            </summary>
+            <div className="mt-3">
+              <ScanObservations key={`${actor?.name}-${result.battery.code}-${scanRevision}`} code={result.battery.code} />
+            </div>
+          </details>
         </>
       )}
 
@@ -1467,7 +1509,17 @@ function IdentityContent() {
         />
       </div>
 
-      {showMesImport && <MesImport />}
+      {showMesImport && (
+        <details className="card-surface group p-4 text-xs">
+          <summary className="cursor-pointer list-none font-bold text-ink flex items-center justify-between">
+            <span>产线生产记录批量导入（按需展开）</span>
+            <span className="text-brand group-open:rotate-180 transition-transform">▾</span>
+          </summary>
+          <div className="mt-3">
+            <MesImport />
+          </div>
+        </details>
+      )}
 
       {/* 新增批次与 24 位编码建档抽屉 */}
       <RegistrationDrawer

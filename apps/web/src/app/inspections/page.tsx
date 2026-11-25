@@ -195,13 +195,17 @@ export default function InspectionsPage() {
       });
       const json = await res.json();
       if (res.ok && json.command?.completed) {
+        const targetObj = assets.find(a => a.id === targetAssetId);
+        const needTrace = inspectResult !== 'QC_PASSED' && targetObj?.batchId;
         setBanner({
           ok: true,
-          title: `已上传 AEAD 加密报告并追加链上质检版本（${inspectResult}）`,
+          title: `已上传加密检测报告并更新链上质检结论（${inspectResult === 'QC_PASSED' ? '合格' : inspectResult === 'QC_REJECTED' ? '不合格' : '待独立复核'}）`,
           requestId: json.command.requestId,
           txId: json.command.txId,
           stage: json.command.stage,
           blockNumber: json.command.blockNumber,
+          nextHref: needTrace ? `/trace?batchId=${encodeURIComponent(targetObj.batchId!)}` : undefined,
+          nextLabel: needTrace ? '追踪该异常批次影响的电池包' : undefined,
         });
         await load();
       } else {

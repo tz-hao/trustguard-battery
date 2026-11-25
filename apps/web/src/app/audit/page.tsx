@@ -17,7 +17,7 @@ import { useIdentity } from '@/components/IdentityProvider';
 import { EmptyState, HashChip, OrgBadge, OverviewLoadNotice, PageBanner, SectionHeader, StagePill } from '@/components/Badges';
 import { PaginationBar } from '@/components/Visuals';
 import { AuditAnalyticsStrip } from '@/components/DataCharts';
-import { ERROR_DESCRIPTIONS, formatDateTime } from '@/lib/types';
+import { ERROR_DESCRIPTIONS, formatActionLabel, formatDateTime } from '@/lib/types';
 import { useOverview } from '@/lib/use-overview';
 
 interface TxRecord {
@@ -108,6 +108,7 @@ function AuditView({ batch }: { batch: string }) {
     return (
       t.requestId.toLowerCase().includes(q) ||
       t.action.toLowerCase().includes(q) ||
+      formatActionLabel(t.action).toLowerCase().includes(q) ||
       (t.txId ?? '').toLowerCase().includes(q) ||
       (t.resourceId ?? '').toLowerCase().includes(q) ||
       (t.errorCode ?? '').toLowerCase().includes(q)
@@ -118,6 +119,7 @@ function AuditView({ batch }: { batch: string }) {
     if (!q) return true;
     return (
       l.action.toLowerCase().includes(q) ||
+      formatActionLabel(l.action).toLowerCase().includes(q) ||
       l.outcome.toLowerCase().includes(q) ||
       (l.requestId ?? '').toLowerCase().includes(q) ||
       l.evidenceHash.toLowerCase().includes(q)
@@ -133,7 +135,7 @@ function AuditView({ batch }: { batch: string }) {
   const pagedLogs = filteredLogs.slice((safeLogPage - 1) * pageSize, safeLogPage * pageSize);
 
   const selectedTx =
-    data?.transactions.find(t => t.requestId === selectedReqId) ?? pagedTx[0] ?? data?.transactions[0] ?? null;
+    filteredTx.find(t => t.requestId === selectedReqId) ?? pagedTx[0] ?? filteredTx[0] ?? null;
   const linkedLog = selectedTx
     ? data?.securityLogs.find(l => l.requestId === selectedTx.requestId) ?? null
     : null;
@@ -300,7 +302,10 @@ function AuditView({ batch }: { batch: string }) {
                               isSelected ? 'bg-[#2563EB]/6' : 'hover:bg-[#F4F7FA]'
                             }`}
                           >
-                            <td className="px-3 py-2.5 font-semibold text-[#172B3A]">{t.action}</td>
+                            <td className="px-3 py-2.5">
+                              <div className="font-semibold text-[#172B3A]">{formatActionLabel(t.action)}</div>
+                              <div className="mono text-[10px] text-[#64748B]">{t.action}</div>
+                            </td>
                             <td className="px-3 py-2.5">
                               <HashChip value={t.requestId} head={10} tail={4} />
                             </td>
@@ -367,7 +372,10 @@ function AuditView({ batch }: { batch: string }) {
                         </div>
                         <div className="flex justify-between gap-2">
                           <span className="text-slate-400">业务动作</span>
-                          <span className="mono font-semibold text-white">{selectedTx.action}</span>
+                          <span className="font-semibold text-white">
+                            {formatActionLabel(selectedTx.action)}{' '}
+                            <span className="mono text-[10px] font-normal text-slate-300">({selectedTx.action})</span>
+                          </span>
                         </div>
                         <div className="flex justify-between gap-2">
                           <span className="text-slate-400">目标资源</span>

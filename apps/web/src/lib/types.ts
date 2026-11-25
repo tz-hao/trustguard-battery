@@ -161,6 +161,65 @@ export const PRODUCT_TYPE_LABELS: Record<string, string> = {
   PACK: '动力电池包 (PACK)',
 };
 
+export const ACTION_LABELS: Record<string, string> = {
+  Initialize: '初始化账本基线',
+  RegisterMaker: '登记制造企业映射',
+  RegisterMaterialLot: '登记上游原料批次',
+  RegisterBatch: '创建电芯生产批次',
+  RegisterAsset: '登记电池数字身份',
+  RegisterEchelonAsset: '登记梯次利用新码',
+  SubmitInspection: '签发质量检测报告',
+  SubmitBatchInspection: '签发整批质检结论',
+  ProposeRetest: '发起独立复检申请',
+  CompleteRetest: '完成独立复检签发',
+  ImportMES: '导入产线生产记录',
+  AuthorizeAssembly: '授权电芯供货装配',
+  ReplaceAssembly: '绑定或更换装配关系',
+  RequestRelease: '发起电池包放行申请',
+  ApproveRelease: '签署多方放行会签',
+  FinalizeRelease: '执行电池包最终放行',
+  CreateTransfer: '创建跨企交接草稿',
+  SendTransfer: '发出跨企交接单',
+  InitiateTransfer: '发起跨企资产交接',
+  AcceptTransfer: '核对并签收交接单',
+  CommitTransfer: '提交完成持有权移交',
+  ConfirmTransfer: '确认完成持有权移交',
+  CancelTransfer: '取消跨企交接单',
+  RecordInstallation: '登记装车事件',
+  RecordFirstUse: '登记首次投入使用',
+  RecordRetirement: '登记电池退役事件',
+  ConfirmRecycling: '确认回收企业入库',
+  RecordScrapConfirmation: '确认电池正式报废',
+  ProposeLifecycleCorrection: '发起受控日期更正',
+  ApproveLifecycleCorrection: '批准受控日期更正',
+  ApplyLifecycleCorrection: '应用受控日期更正',
+  ProposePolicy: '提交安全策略提案',
+  ApprovePolicy: '审计批准候选策略',
+  ActivatePolicy: '正式激活安全策略',
+  AnchorAudit: '锚定安全审计摘要',
+};
+
+export const STAGE_LABELS: Record<string, string> = {
+  'ledger-verified': '已上链核实',
+  committed: '已写入区块',
+  submitted: '已提交排序',
+  endorsed: '已完成背书',
+  built: '已构建提案',
+  rejected: '已拦截拒绝',
+  invalid: '校验未通过',
+  unknown: '待确认',
+};
+
+export function formatActionLabel(action: string | null | undefined): string {
+  if (!action) return '—';
+  return ACTION_LABELS[action] ?? action;
+}
+
+export function formatStageLabel(stage: string | null | undefined): string {
+  if (!stage) return '—';
+  return STAGE_LABELS[stage] ?? stage;
+}
+
 export const ERROR_DESCRIPTIONS: Record<string, string> = {
   FORBIDDEN: '权限拒绝：当前证书所属组织、岗位角色或资产持有方无权执行此操作（电芯建档/供货需 cell-manufacturer，模组/PACK 建档需 pack-manufacturer，装配绑定需 pack-assembler）',
   INVALID_SUPPLY: '供货授权校验失败：仅允许对「CellOrg 持有且未装配 (REGISTERED)」的单体电芯，授权给「未装配 (REGISTERED)」的目标模组',

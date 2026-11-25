@@ -154,11 +154,13 @@ export default function ApprovalsPage() {
       if (json.completed) {
         setBanner({
           ok: true,
-          title: resource === 'release-approvals' ? `已代表 ${actor?.mspId} 签署批准` : `电池包最终放行完成 (RELEASED)`,
+          title: resource === 'release-approvals' ? `已代表 ${actor?.mspId} 签署批准` : `电池包最终放行完成`,
           requestId: json.requestId,
           txId: json.txId,
           stage: json.stage,
           blockNumber: json.blockNumber,
+          nextHref: resource === 'release-finalizations' ? '/transfers' : undefined,
+          nextLabel: resource === 'release-finalizations' ? '前往发起跨企业交接' : undefined,
         });
         await load();
       } else {

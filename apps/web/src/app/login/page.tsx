@@ -26,6 +26,7 @@ import {
   ALL_ROUTES,
   CORE_IDENTITY_NAMES,
   ORG_PROFILES,
+  canAccessRoute,
   getAllowedRoutes,
   getDefaultRouteForActor,
   getRoleSummaryForIdentity,
@@ -168,6 +169,11 @@ export function LoginPortal() {
       if (!target || switching || loading || entering) return;
       setEntering(true);
       saveLastLoginActor(target.name);
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/login';
+      const currentSearch = typeof window !== 'undefined' ? window.location.search : '';
+      const params = new URLSearchParams(currentSearch);
+      const redirectParam = params.get('redirect') ?? '';
+
       await switchActor(target.name, { enableRoleScope: true });
       notify({
         tone: 'success',
@@ -175,8 +181,19 @@ export function LoginPortal() {
         description: `${target.orgLabel.split(' ')[0]} · 已进入专属工作台`,
       });
       window.setTimeout(() => {
+        if (currentPath !== '/login' && canAccessRoute(target, currentPath)) {
+          setEntering(false);
+          return;
+        }
+        if (redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
+          const targetPath = redirectParam.split('?')[0];
+          if (canAccessRoute(target, targetPath)) {
+            router.push(redirectParam);
+            return;
+          }
+        }
         router.push(getDefaultRouteForActor(target));
-      }, 180);
+      }, 160);
     },
     [entering, loading, notify, router, switchActor, switching],
   );

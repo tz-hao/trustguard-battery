@@ -460,9 +460,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 });
               }}
               title={presentationMode ? '退出大屏模式' : '开启大屏模式'}
-              className={`${presentationMode ? 'inline-flex' : 'hidden md:inline-flex'} cursor-pointer items-center gap-1 rounded-xl border px-2.5 py-1.5 text-xs font-medium transition ${
+              className={`${presentationMode ? 'inline-flex' : 'hidden md:inline-flex'} cursor-pointer items-center gap-1 rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition ${
                 presentationMode
-                  ? 'border-brand bg-brand text-white shadow-xs'
+                  ? 'border-[#2563EB] bg-[#2563EB] !text-white shadow-xs hover:bg-[#1d4ed8]'
                   : 'border-line bg-canvas text-ink-secondary hover:bg-subtle hover:text-ink'
               }`}
             >

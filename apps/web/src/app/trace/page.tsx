@@ -104,6 +104,7 @@ function TraceContent() {
   const qBatch = searchParams.get('batchId') ?? '';
   const qAsset = searchParams.get('assetId') ?? '';
   const qCell = searchParams.get('cellId') ?? '';
+  const qView = searchParams.get('view') ?? '';
 
   const [batches, setBatches] = useState<BatchSummary[]>([]);
   const [packs, setPacks] = useState<BatteryAssetView[]>([]);
@@ -143,8 +144,12 @@ function TraceContent() {
   }, []);
 
   const runBatchTrace = useCallback(
-    async (batchId: string, mode: 'batch' | 'history' = 'batch') => {
+    async (batchId: string, mode: 'batch' | 'history' = 'batch', syncUrl = true) => {
       if (!batchId) return;
+      if (syncUrl && typeof window !== 'undefined') {
+        const nextUrl = `/trace?batchId=${encodeURIComponent(batchId)}${mode === 'history' ? '&view=history' : ''}`;
+        window.history.replaceState(null, '', nextUrl);
+      }
       setTraceMode(mode);
       if (mode === 'history') setShowHistorical(true);
       setSelectedBatch(batchId);
@@ -170,8 +175,15 @@ function TraceContent() {
   );
 
   const runAssetTrace = useCallback(
-    async (assetId: string, mode: 'forward' | 'reverse' = 'reverse') => {
+    async (assetId: string, mode: 'forward' | 'reverse' = 'reverse', syncUrl = true) => {
       if (!assetId) return;
+      if (syncUrl && typeof window !== 'undefined') {
+        const nextUrl =
+          mode === 'forward'
+            ? `/trace?cellId=${encodeURIComponent(assetId)}`
+            : `/trace?assetId=${encodeURIComponent(assetId)}&view=reverse`;
+        window.history.replaceState(null, '', nextUrl);
+      }
       setTraceMode(mode);
       setSelectedAsset(assetId);
       setSelectedBatch('');
@@ -219,21 +231,20 @@ function TraceContent() {
       if (preferredParent) setBindParentId(prev => prev || preferredParent.id);
 
       if (qCell) {
-        void runAssetTrace(qCell,'forward');
+        void runAssetTrace(qCell, 'forward', false);
       } else if (qBatch) {
-        void runBatchTrace(qBatch, 'batch');
+        void runBatchTrace(qBatch, qView === 'history' ? 'history' : 'batch', false);
       } else if (qAsset) {
-        void runAssetTrace(qAsset, 'reverse');
+        void runAssetTrace(qAsset, qView === 'forward' ? 'forward' : 'reverse', false);
       } else if (bJson.batches.length > 0) {
         const preferred = bJson.batches.find(b => b.id.includes('live')) ?? bJson.batches[0];
-        void runBatchTrace(preferred.id, 'batch');
+        void runBatchTrace(preferred.id, 'batch', false);
       }
     })();
-  }, [qCell, qBatch, qAsset, runBatchTrace, runAssetTrace]);
+  }, [qCell, qBatch, qAsset, qView, runBatchTrace, runAssetTrace]);
 
   function chooseCell(id: string) {
-    if (qCell === id) { void runAssetTrace(id, 'forward'); return; }
-    window.history.replaceState(null,'',`/trace?cellId=${encodeURIComponent(id)}`);
+    void runAssetTrace(id, 'forward', true);
   }
 
   // Build full lineage graph columns: Material/Batch -> Cell -> Module -> PACK -> Use/Scrap Stage
