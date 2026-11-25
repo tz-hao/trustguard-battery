@@ -416,26 +416,39 @@ export default function ApprovalsPage() {
                 onChange={e => setPreferredPackId(e.target.value)}
                 className="mono w-full rounded-lg border border-[#dce4ee] bg-white px-3 py-2 text-xs"
               >
-                {(data?.packs ?? []).map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.id} · {p.state} · {p.quality}
-                  </option>
-                ))}
+                {(data?.packs ?? []).map(p => {
+                  const eligible = p.state === 'ASSEMBLED';
+                  return (
+                    <option key={p.id} value={p.id} disabled={!eligible}>
+                      {p.id} · {p.state} · {p.quality}
+                      {eligible ? '' : '（不可放行）'}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
-            <button
-              type="submit"
-              disabled={busy || loading || error !== null || !selectedPackId || actor?.mspId !== 'PackOrgMSP' || actor?.role !== 'release'}
-              title={actor?.mspId === 'PackOrgMSP' && actor?.role === 'release' ? '提交放行申请' : '仅 PackOrgMSP 放行员 (release) 可发起放行申请'}
-              className="w-full cursor-pointer rounded-lg bg-[#10243A] py-2.5 text-xs font-semibold text-white hover:bg-[#17324f] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {busy
-                ? '风控评估与链码提交中...'
-                : actor?.mspId !== 'PackOrgMSP' || actor?.role !== 'release'
-                  ? '需 PackOrgMSP release 身份发起'
-                  : '生成风险凭证并提交放行申请'}
-            </button>
+            {(() => {
+              const selectedPack = (data?.packs ?? []).find(p => p.id === selectedPackId);
+              const packEligible = selectedPack?.state === 'ASSEMBLED';
+              const isPackRelease = actor?.mspId === 'PackOrgMSP' && actor?.role === 'release';
+              return (
+                <button
+                  type="submit"
+                  disabled={busy || loading || error !== null || !selectedPackId || !packEligible || !isPackRelease}
+                  title={!isPackRelease ? '仅 PackOrgMSP 放行员 (release) 可发起放行申请' : !packEligible ? '仅已装配 (ASSEMBLED) 状态的电池包可发起放行' : '提交放行申请'}
+                  className="w-full cursor-pointer rounded-lg bg-[#10243A] py-2.5 text-xs font-semibold text-white hover:bg-[#17324f] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {busy
+                    ? '风控评估与链码提交中...'
+                    : !isPackRelease
+                      ? '需 PackOrgMSP release 身份发起'
+                      : !packEligible
+                        ? '所选电池包当前状态不可放行'
+                        : '生成风险凭证并提交放行申请'}
+                </button>
+              );
+            })()}
           </form>
 
           {data?.currentPolicy && (

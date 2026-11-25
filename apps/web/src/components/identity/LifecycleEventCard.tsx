@@ -136,7 +136,28 @@ export function LifecycleEventCard({
   const [confirmScrap, setConfirmScrap] = useState(false);
   const [echelonOpen, setEchelonOpen] = useState(false);
   const [echelonModel, setEchelonModel] = useState('ECH-ESS-50KWH');
+  const [echelonReportHash, setEchelonReportHash] = useState('');
   const [echelonSubmitting, setEchelonSubmitting] = useState(false);
+  const echelonHashValid = /^[a-f0-9]{64}$/.test(echelonReportHash.trim());
+
+  async function computeSha256Hex(bytes: ArrayBuffer): Promise<string> {
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  async function generateDemoEchelonHash() {
+    const payload = new TextEncoder().encode(`echelon:${targetBattery.id}:${targetBattery.code}:${Date.now()}`);
+    setEchelonReportHash(await computeSha256Hex(payload.buffer));
+  }
+
+  async function handleEchelonFileHash(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setEchelonReportHash(await computeSha256Hex(await file.arrayBuffer()));
+  }
 
   const canRegisterEchelon =
     targetBattery.type === 'PACK' &&
@@ -149,13 +170,12 @@ export function LifecycleEventCard({
 
   async function submitEchelonRegistration(e: React.FormEvent) {
     e.preventDefault();
-    if (!canRegisterEchelon || echelonSubmitting) return;
+    if (!canRegisterEchelon || echelonSubmitting || !echelonHashValid) return;
     setEchelonSubmitting(true);
     setEventBanner(null);
     try {
       const echelonCode = `${targetBattery.code}T01`;
       const echelonId = `ech-${targetBattery.id}-${Date.now().toString(36).slice(-4)}`;
-      const reportHash = 'a'.repeat(64);
       const res = await fetch('/api/bff/commands/echelon-assets', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -165,7 +185,7 @@ export function LifecycleEventCard({
             originAssetId: targetBattery.id,
             code: echelonCode,
             model: echelonModel.trim() || 'ECH-ESS-50KWH',
-            reportHash,
+            reportHash: echelonReportHash.trim(),
           },
         }),
       });
@@ -448,22 +468,46 @@ export function LifecycleEventCard({
               <div className="mono text-[11px] text-ink-secondary">
                 拟生成梯次编码：<strong className="text-ink">{targetBattery.code}T01</strong>
               </div>
-              <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={echelonModel}
+                onChange={e => setEchelonModel(e.target.value)}
+                placeholder="梯次重组型号（如 ECH-ESS-50KWH）"
+                className="w-full rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs text-ink"
+              />
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
+                  <span className="font-semibold text-ink-secondary">梯次检测评估报告 SHA-256</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => void generateDemoEchelonHash()}
+                      className="cursor-pointer rounded border border-brand/30 bg-brand/8 px-2 py-0.5 font-semibold text-brand hover:bg-brand/15"
+                    >
+                      生成演示摘要
+                    </button>
+                    <label className="cursor-pointer rounded border border-line bg-white px-2 py-0.5 font-medium text-ink-secondary hover:border-brand/40 hover:text-ink">
+                      文件计算
+                      <input type="file" className="sr-only" onChange={e => void handleEchelonFileHash(e)} />
+                    </label>
+                  </div>
+                </div>
                 <input
                   type="text"
-                  value={echelonModel}
-                  onChange={e => setEchelonModel(e.target.value)}
-                  placeholder="梯次重组型号（如 ECH-ESS-50KWH）"
-                  className="flex-1 rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs text-ink"
+                  value={echelonReportHash}
+                  onChange={e => setEchelonReportHash(e.target.value)}
+                  maxLength={64}
+                  placeholder="输入或计算 64 位小写 SHA-256 评估报告摘要"
+                  className="mono w-full rounded-lg border border-line bg-white px-2.5 py-1.5 text-[11px] text-ink"
                 />
-                <button
-                  type="submit"
-                  disabled={echelonSubmitting}
-                  className="cursor-pointer rounded-lg bg-teal px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#0c8575] disabled:opacity-50"
-                >
-                  {echelonSubmitting ? '上链中...' : '提交梯次关联'}
-                </button>
               </div>
+              <button
+                type="submit"
+                disabled={echelonSubmitting || !echelonHashValid}
+                className="w-full cursor-pointer rounded-lg bg-teal py-2 text-xs font-semibold text-white hover:bg-[#0c8575] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {echelonSubmitting ? '上链中...' : echelonHashValid ? '提交梯次利用新旧码关联' : '请先填写或计算 64 位评估报告摘要'}
+              </button>
             </form>
           )}
         </div>

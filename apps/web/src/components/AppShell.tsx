@@ -429,6 +429,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           {/* Right Tools & Current Role */}
           <div className="flex items-center gap-2">
+            {!roleScoped && (
+              <button
+                type="button"
+                onClick={() => {
+                  setRoleScoped(true);
+                  notify({
+                    tone: 'info',
+                    title: '已恢复岗位权限视图',
+                    description: '导航与操作入口已按当前登录岗位收口',
+                  });
+                }}
+                title="当前处于全局演示视图，点击恢复岗位权限视图"
+                className="inline-flex cursor-pointer items-center gap-1 rounded-xl border border-warning/40 bg-warning/10 px-2.5 py-1.5 text-xs font-semibold text-[#9a6309] transition hover:bg-warning/20"
+              >
+                <Lock className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">恢复岗位视图</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => {
@@ -441,7 +460,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 });
               }}
               title={presentationMode ? '退出大屏模式' : '开启大屏模式'}
-              className={`hidden cursor-pointer items-center gap-1 rounded-xl border px-2.5 py-1.5 text-xs font-medium transition xl:inline-flex ${
+              className={`${presentationMode ? 'inline-flex' : 'hidden md:inline-flex'} cursor-pointer items-center gap-1 rounded-xl border px-2.5 py-1.5 text-xs font-medium transition ${
                 presentationMode
                   ? 'border-brand bg-brand text-white shadow-xs'
                   : 'border-line bg-canvas text-ink-secondary hover:bg-subtle hover:text-ink'

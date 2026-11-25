@@ -1013,7 +1013,7 @@ function TraceContent() {
 
           {!roleScoped && (
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-ink-secondary">快捷切身份：</span>
+              <span className="text-ink-secondary">演示模式 · 切换证书：</span>
               <button
                 type="button"
                 disabled={switching}

@@ -553,10 +553,15 @@ export default function InspectionsPage() {
 
                   <button
                     type="submit"
-                    disabled={submitting || !targetAssetId}
-                    className="w-full rounded-lg bg-[#10243A] py-2.5 text-xs font-semibold text-white hover:bg-[#17324f] disabled:opacity-60"
+                    disabled={submitting || !targetAssetId || actor?.mspId !== 'LabOrgMSP' || actor?.role !== 'inspector'}
+                    title={actor?.mspId === 'LabOrgMSP' && actor?.role === 'inspector' ? '加密存储并签发检测报告' : '仅 LabOrgMSP 检测员 (inspector) 可签发报告'}
+                    className="w-full cursor-pointer rounded-lg bg-[#10243A] py-2.5 text-xs font-semibold text-white hover:bg-[#17324f] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {submitting ? '加密上传与链码签发中...' : '加密存储并上链签发报告'}
+                    {submitting
+                      ? '加密上传与链码签发中...'
+                      : actor?.mspId !== 'LabOrgMSP' || actor?.role !== 'inspector'
+                        ? '需 LabOrgMSP inspector 身份签发'
+                        : '加密存储并上链签发报告'}
                   </button>
                 </form>
               </>
@@ -653,10 +658,15 @@ export default function InspectionsPage() {
 
                   <button
                     type="submit"
-                    disabled={csvBusy || !csvCellId}
-                    className="w-full rounded-lg bg-[#2563EB] py-2.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                    disabled={csvBusy || !csvCellId || actor?.mspId !== 'LabOrgMSP' || actor?.role !== 'inspector'}
+                    title={actor?.mspId === 'LabOrgMSP' && actor?.role === 'inspector' ? '签名导入 CSV 量测并执行 AI 异常筛查' : '仅 LabOrgMSP 检测员 (inspector) 可导入签名量测'}
+                    className="w-full cursor-pointer rounded-lg bg-[#2563EB] py-2.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {csvBusy ? '签名导入与 AI 分析中...' : '签名导入 CSV 量测（需 lab-inspector）'}
+                    {csvBusy
+                      ? '签名导入与 AI 分析中...'
+                      : actor?.mspId !== 'LabOrgMSP' || actor?.role !== 'inspector'
+                        ? '需 LabOrgMSP inspector 身份导入'
+                        : '签名导入 CSV 量测并 AI 筛查'}
                   </button>
                 </form>
               </>
