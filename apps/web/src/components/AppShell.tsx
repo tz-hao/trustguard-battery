@@ -460,14 +460,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 });
               }}
               title={presentationMode ? '退出大屏模式' : '开启大屏模式'}
+              style={presentationMode ? { backgroundColor: '#2563EB', borderColor: '#2563EB', color: '#FFFFFF' } : undefined}
               className={`${presentationMode ? 'inline-flex' : 'hidden md:inline-flex'} cursor-pointer items-center gap-1 rounded-xl border px-2.5 py-1.5 text-xs font-semibold transition ${
                 presentationMode
-                  ? 'border-[#2563EB] bg-[#2563EB] !text-white shadow-xs hover:bg-[#1d4ed8]'
+                  ? 'shadow-xs hover:brightness-110'
                   : 'border-line bg-canvas text-ink-secondary hover:bg-subtle hover:text-ink'
               }`}
             >
-              <Monitor className="h-3.5 w-3.5" />
-              <span>{presentationMode ? '退出大屏' : '大屏'}</span>
+              <Monitor className="h-3.5 w-3.5" style={presentationMode ? { color: '#FFFFFF' } : undefined} />
+              <span style={presentationMode ? { color: '#FFFFFF' } : undefined}>{presentationMode ? '退出大屏' : '大屏'}</span>
             </button>
 
             {/* Notification Bell */}
