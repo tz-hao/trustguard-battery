@@ -42,7 +42,7 @@ def main():
     assets = json.loads(assets_raw).get("assets", [])
     batches = json.loads(batches_raw).get("batches", [])
 
-    standalone = next((a for a in assets if a["state"] == "REGISTERED" and not a.get("parentId")), None)
+    standalone = next((a for a in assets if a["type"] == "CELL" and a["state"] == "REGISTERED" and not a.get("parentId")), None)
     in_use = next((a for a in assets if a["type"] == "PACK" and a["state"] == "IN_USE"), None)
     scrapped = next((a for a in assets if a["type"] == "PACK" and a.get("scrapped")), None)
     rejected_batch = next((b for b in batches if b.get("rejectedCount", 0) > 0), batches[0] if batches else None)

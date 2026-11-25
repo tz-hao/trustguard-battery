@@ -286,8 +286,8 @@ function IdentityContent() {
   );
 
   const standaloneSample =
-    samples.find(a => a.state === 'REGISTERED' && !a.parentId && a.chemistry === 'LFP') ??
-    samples.find(a => a.state === 'REGISTERED' && !a.parentId);
+    samples.find(a => a.type === 'CELL' && a.state === 'REGISTERED' && !a.parentId && a.chemistry === 'LFP') ??
+    samples.find(a => a.type === 'CELL' && a.state === 'REGISTERED' && !a.parentId);
   const liveSample = samples.find(a => a.type === 'PACK' && a.state === 'IN_USE');
   const scrappedSample = samples.find(a => a.type === 'PACK' && a.scrapped);
   const sodiumSample = samples.find(a => a.chemistry === 'SODIUM_ION');

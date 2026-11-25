@@ -13,6 +13,25 @@ const orgLabels: Record<Organization, string> = {
   RecycleOrgMSP: '退役回收企业 (RecycleOrg)',
 };
 
+export function isActivePendingRelease(
+  release: { state?: unknown; expiresAt?: unknown; risk?: { expiresAt?: unknown } | null },
+  now = Date.now(),
+): boolean {
+  if (release.state !== 'PENDING') return false;
+  if (typeof release.expiresAt === 'string' && Date.parse(release.expiresAt) <= now) return false;
+  if (typeof release.risk?.expiresAt === 'string' && Date.parse(release.risk.expiresAt) <= now) return false;
+  return true;
+}
+
+export function isActivePendingTransfer(
+  transfer: { state?: unknown; expiresAt?: unknown },
+  now = Date.now(),
+): boolean {
+  if (typeof transfer.state !== 'string' || !['CREATED', 'SENT', 'ACCEPTED'].includes(transfer.state)) return false;
+  if (typeof transfer.expiresAt === 'string' && Date.parse(transfer.expiresAt) <= now) return false;
+  return true;
+}
+
 export class OverviewService {
   constructor(
     private readonly db: Database,
@@ -124,8 +143,9 @@ export class OverviewService {
       };
     });
 
-    const pendingReleases = releaseRows.rows.map(r => r.body).filter(r => r.state !== 'COMPLETED');
-    const pendingTransfers = transferRows.rows.map(r => r.body).filter(t => ['CREATED', 'SENT', 'ACCEPTED'].includes(t.state));
+    const nowMs = Date.now();
+    const pendingReleases = releaseRows.rows.map(r => r.body).filter(r => isActivePendingRelease(r, nowMs));
+    const pendingTransfers = transferRows.rows.map(r => r.body).filter(t => isActivePendingTransfer(t, nowMs));
     const nextBlock = BigInt(cursorRows.rows[0]?.next_block ?? '0');
 
     return {
