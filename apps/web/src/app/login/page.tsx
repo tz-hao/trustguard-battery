@@ -693,7 +693,7 @@ export function LoginPortal() {
                           void loginWithIdentity(item);
                         }}
                         onKeyDown={e => handleRoleKeyDown(e, idx)}
-                        className={`flex min-h-[86px] cursor-pointer flex-col items-start justify-between rounded-2xl border p-3 text-left transition duration-150 ${
+                        className={`flex min-h-[82px] cursor-pointer flex-col items-start justify-start rounded-2xl border p-3 text-left transition duration-150 ${
                           spanFull ? 'sm:col-span-2' : ''
                         } ${
                           selected
