@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   ArrowLeftRight,
   ArrowRight,
@@ -124,6 +124,7 @@ function pickBestIdentityForPath(
 
 export function LoginPortal() {
   const router = useRouter();
+  const pathname = usePathname();
   const { identities, loading, switching, switchActor } = useIdentity();
   const { notify } = useToast();
 
@@ -142,12 +143,16 @@ export function LoginPortal() {
     queueMicrotask(() => {
       if (!active) return;
       if (saved) setLastActorName(saved);
-      if (targetPath) setDeepLinkPath(targetPath);
+      setDeepLinkPath(targetPath);
+      if (!targetPath) {
+        deepLinkHandledRef.current = false;
+        setModalOpen(false);
+      }
     });
     return () => {
       active = false;
     };
-  }, []);
+  }, [pathname]);
 
   const lastIdentity = useMemo(
     () => (lastActorName ? identities.find(i => i.name === lastActorName) ?? null : null),
