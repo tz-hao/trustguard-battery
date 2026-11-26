@@ -60,7 +60,7 @@ const HERO_PILLARS = [
   {
     icon: QrCode,
     title: '24 位国标身份',
-    desc: '电芯 · 模组 · 电池包全级建档',
+    desc: '三级资产编码与源头建档',
     accent: 'text-sky-400 bg-brand/15 border-sky-400/25',
   },
   {
@@ -312,7 +312,7 @@ export function LoginPortal() {
       {/* 1. TOP BAR: Workspace-Aligned Deep Navy Glass Header                */}
       {/* =================================================================== */}
       <header className="w-full border-b border-sky-400/12 bg-[#071324]/65 backdrop-blur-md">
-        <div className="mx-auto flex h-[74px] w-full max-w-[1400px] items-center justify-between px-6 sm:px-10 lg:px-12">
+        <div className="mx-auto flex h-[74px] w-full max-w-[1600px] items-center justify-between px-6 sm:px-10 lg:px-14">
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -364,8 +364,8 @@ export function LoginPortal() {
       {/* =================================================================== */}
       {/* 2. CENTER HERO: Balanced 54:46 Golden Proportion & Rich Subcards    */}
       {/* =================================================================== */}
-      <main className="mx-auto flex w-full max-w-[1360px] flex-1 items-center px-6 py-8 sm:px-10 lg:px-12 lg:py-6">
-        <div className="grid w-full grid-cols-1 items-center gap-10 lg:grid-cols-[54%_46%] lg:gap-8">
+      <main className="mx-auto flex w-full max-w-[1520px] flex-1 items-center px-6 py-8 sm:px-10 lg:px-14 lg:py-6">
+        <div className="grid w-full grid-cols-1 items-center gap-10 lg:grid-cols-[54%_46%] lg:gap-10">
           {/* Left Column: Eyebrow + Crisp Title + 3 Workspace Navy Subcards + CTA */}
           <div className="order-2 flex flex-col items-start lg:order-1">
             {/* Eyebrow Status Badge */}
@@ -508,7 +508,7 @@ export function LoginPortal() {
                 alt="智权链·锂安溯 立体磨砂玻璃徽标雕塑"
                 width={792}
                 height={817}
-                className="login-sculpture-img h-[250px] w-auto object-contain select-none sm:h-[340px] lg:h-[min(37vw,485px)]"
+                className="login-sculpture-img h-[250px] w-auto object-contain select-none sm:h-[340px] lg:h-[min(39vw,535px)]"
               />
             </div>
           </div>
@@ -519,7 +519,7 @@ export function LoginPortal() {
       {/* 3. BOTTOM CONSORTIUM BAR: Anchors Vertical Balance & Direct Access  */}
       {/* =================================================================== */}
       <footer className="w-full border-t border-sky-400/12 bg-[#071324]/70 backdrop-blur-md">
-        <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center justify-between gap-3 px-6 py-3.5 text-xs text-slate-400 sm:px-10 lg:px-12">
+        <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-center justify-between gap-3 px-6 py-3.5 text-xs text-slate-400 sm:px-10 lg:px-14">
           <div className="flex flex-wrap items-center gap-2 sm:gap-5">
             <span className="font-semibold text-slate-300">联盟共识节点：</span>
             {ORG_PROFILES.map(org => (
