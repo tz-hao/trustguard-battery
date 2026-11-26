@@ -7,9 +7,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   BadgeCheck,
-  Building2,
   Compass,
-  Cpu,
   Eye,
   Factory,
   FileCheck2,
@@ -18,7 +16,6 @@ import {
   Loader2,
   Lock,
   Microscope,
-  QrCode,
   Recycle,
   Settings2,
   ShieldCheck,
@@ -55,27 +52,6 @@ const ORG_TAB_NAMES: Record<OrganizationMSP, string> = {
   LabOrgMSP: '独立检测',
   RecycleOrgMSP: '退役回收',
 };
-
-const HERO_PILLARS = [
-  {
-    icon: QrCode,
-    title: '24 位国标身份',
-    desc: '电芯 · 模组 · 电池包全级建档',
-    accent: 'text-sky-400 bg-brand/15 border-sky-400/25',
-  },
-  {
-    icon: ShieldCheck,
-    title: '四方联盟背书',
-    desc: '跨企流转与联合放行防篡改',
-    accent: 'text-teal-300 bg-teal/15 border-teal-400/25',
-  },
-  {
-    icon: Cpu,
-    title: '双轨主动风控',
-    desc: '离群筛查与加密质检门禁',
-    accent: 'text-blue-300 bg-info/15 border-blue-400/25',
-  },
-];
 
 const ROLE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   manufacturer: Factory,
@@ -160,7 +136,6 @@ export function LoginPortal() {
   const [enteringName, setEnteringName] = useState<string | null>(null);
   const [lastActorName, setLastActorName] = useState<string | null>(null);
   const [deepLinkPath, setDeepLinkPath] = useState<string | null>(null);
-  const [chainBlockHeight, setChainBlockHeight] = useState<number | null>(null);
   const deepLinkHandledRef = useRef(false);
 
   useEffect(() => {
@@ -181,29 +156,6 @@ export function LoginPortal() {
     };
   }, [pathname]);
 
-  useEffect(() => {
-    let active = true;
-    void (async () => {
-      try {
-        const res = await fetch('/api/bff/dashboard', { cache: 'no-store' });
-        if (!active || !res.ok) return;
-        const json = (await res.json()) as {
-          chain?: { blockHeight?: number };
-          summary?: { blockHeight?: number };
-        };
-        const height = json.chain?.blockHeight ?? json.summary?.blockHeight ?? null;
-        if (typeof height === 'number' && height > 0) {
-          setChainBlockHeight(height);
-        }
-      } catch {
-        // graceful fallback
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
-
   const lastIdentity = useMemo(
     () => (lastActorName ? identities.find(i => i.name === lastActorName) ?? null : null),
     [identities, lastActorName],
@@ -211,6 +163,7 @@ export function LoginPortal() {
 
   const deepLinkMeta = useMemo(() => findRouteMeta(deepLinkPath), [deepLinkPath]);
 
+  // Automatically open identity modal & pre-select authorized org when arriving via deep link
   useEffect(() => {
     if (deepLinkHandledRef.current || identities.length === 0) return;
     if (deepLinkPath && deepLinkMeta) {
@@ -307,262 +260,147 @@ export function LoginPortal() {
   }
 
   return (
-    <div className="login-workspace-canvas relative flex min-h-screen w-full flex-col justify-between overflow-x-hidden text-white selection:bg-brand/35">
-      {/* =================================================================== */}
-      {/* 1. TOP BAR: Workspace-Aligned Deep Navy Glass Header                */}
-      {/* =================================================================== */}
-      <header className="w-full border-b border-sky-400/12 bg-[#071324]/65 backdrop-blur-md">
-        <div className="mx-auto flex h-[74px] w-full max-w-[1400px] items-center justify-between px-6 sm:px-10 lg:px-12">
-          <div className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/brand/logo-mark.png"
-              alt="智权链·锂安溯"
-              width={38}
-              height={38}
-              className="h-9 w-9 object-contain drop-shadow-[0_4px_14px_rgba(37,99,235,0.38)] select-none"
-            />
-            <div>
-              <div className="text-[16px] font-bold tracking-wide text-white sm:text-[17px]">
-                智权链 · 锂安溯
-              </div>
-              <div className="hidden text-[10.5px] font-medium text-teal-300/90 sm:block">
-                动力电池溯源与主动安全工作台
-              </div>
-            </div>
+    <div className="login-minimal-canvas relative flex min-h-screen w-full flex-col overflow-x-hidden text-white selection:bg-teal-400/25">
+      {/* Full-Bleed Edge-to-Edge Top Bar */}
+      <header className="flex h-20 w-full shrink-0 items-center justify-between px-6 sm:h-[88px] sm:px-10 lg:px-16">
+        <div className="flex items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/logo-mark.png"
+            alt="智权链·锂安溯"
+            width={42}
+            height={42}
+            className="h-9 w-9 object-contain drop-shadow-[0_4px_14px_rgba(20,184,166,0.32)] select-none sm:h-[42px] sm:w-[42px]"
+          />
+          <span className="text-lg font-bold tracking-wide text-slate-50 sm:text-[19px]">
+            智权链·锂安溯
+          </span>
+        </div>
+
+        <nav aria-label="平台核心能力" className="hidden items-center gap-9 md:flex lg:gap-11">
+          {NAV_SHORTCUTS.map(item => (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => openPicker(item.msp)}
+              className="cursor-pointer text-[14.5px] font-medium text-slate-400 transition hover:text-white"
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        <button
+          type="button"
+          onClick={() => openPicker()}
+          className="crystal-cta-sm cursor-pointer rounded-xl px-4 py-2 text-[13px] font-semibold tracking-wide text-white active:scale-[0.98] sm:px-5 sm:py-2.5 sm:text-sm"
+        >
+          选择身份
+        </button>
+      </header>
+
+      {/* Full-Screen Responsive 2-Column Hero Stage */}
+      <main className="mx-auto grid w-full max-w-[1680px] flex-1 grid-cols-1 items-center gap-8 px-6 pt-2 pb-10 sm:px-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-6 lg:px-20 lg:pt-0 lg:pb-7 xl:px-24">
+        {/* Left: Viewport-Scaled Display Typography + Crystal Buttons */}
+        <div className="order-2 flex flex-col items-start lg:order-1 lg:-mt-4">
+          <h1
+            style={{ fontSize: 'clamp(2.5rem, 5.1vw, 4.75rem)' }}
+            className="leading-[1.08] font-extrabold tracking-tight text-white"
+          >
+            智权链 · 锂安溯
+          </h1>
+          <p
+            style={{ fontSize: 'clamp(1.5rem, 2.9vw, 2.65rem)' }}
+            className="mt-3.5 font-bold tracking-tight text-slate-200 sm:mt-4"
+          >
+            - TrustGuard Battery -
+          </p>
+
+          <div className="mt-7 space-y-2 sm:mt-9">
+            <p
+              style={{ fontSize: 'clamp(1.15rem, 1.72vw, 1.56rem)' }}
+              className="font-bold tracking-wide text-[#2dd4bf]"
+            >
+              每一颗电芯，全周期可信。
+            </p>
+            <p
+              style={{ fontSize: 'clamp(1rem, 1.45vw, 1.32rem)' }}
+              className="leading-snug font-medium text-[#7089a4]"
+            >
+              四方联盟多点背书。
+            </p>
+            <p
+              style={{ fontSize: 'clamp(1rem, 1.45vw, 1.32rem)' }}
+              className="leading-snug font-medium text-[#7089a4]"
+            >
+              主动风控实时把关。
+            </p>
           </div>
 
-          <nav aria-label="平台核心能力" className="hidden items-center gap-8 md:flex lg:gap-10">
-            {NAV_SHORTCUTS.map(item => (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() => openPicker(item.msp)}
-                className="cursor-pointer text-[13.5px] font-medium text-slate-300/85 transition hover:text-sky-300"
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-3">
-            <span className="hidden items-center gap-2 rounded-full border border-sky-400/20 bg-[#0c1f36]/80 px-3 py-1.5 text-xs font-medium text-slate-300 xl:inline-flex">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
-              {chainBlockHeight ? `联盟链在线 · #${chainBlockHeight}` : '四组织联盟在线'}
-            </span>
+          <div className="mt-8 flex flex-wrap items-center gap-4 sm:mt-11">
             <button
               type="button"
               onClick={() => openPicker()}
-              className="brand-cta-sm cursor-pointer rounded-xl px-4 py-2 text-xs font-semibold tracking-wide text-white active:scale-[0.98] sm:px-5 sm:py-2.5 sm:text-[13.5px]"
+              className="crystal-cta-lg group inline-flex cursor-pointer items-center gap-2.5 rounded-[14px] px-7 py-3.5 text-base font-bold tracking-wide text-white active:scale-[0.98] sm:px-8 sm:py-4 sm:text-[17px]"
             >
-              选择身份
+              <span>选择身份登录</span>
+              <ArrowRight className="h-[18px] w-[18px] transition-transform duration-150 group-hover:translate-x-0.5" />
             </button>
+
+            {lastIdentity && (
+              <button
+                type="button"
+                disabled={Boolean(enteringName) || switching || loading}
+                onClick={() => void loginWithIdentity(lastIdentity)}
+                className="glass-ghost-btn inline-flex cursor-pointer items-center gap-2 rounded-[14px] px-5 py-3.5 text-sm font-semibold text-slate-300 active:scale-[0.98] disabled:opacity-50 sm:py-4 sm:text-[15px]"
+              >
+                {enteringName === lastIdentity.name ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-[#2dd4bf]" />
+                ) : (
+                  <History className="h-4 w-4 text-slate-400" />
+                )}
+                <span className="whitespace-nowrap">继续上次：{lastIdentity.roleLabel}</span>
+              </button>
+            )}
           </div>
         </div>
-      </header>
 
-      {/* =================================================================== */}
-      {/* 2. CENTER HERO: Balanced 54:46 Golden Proportion & Rich Subcards    */}
-      {/* =================================================================== */}
-      <main className="mx-auto flex w-full max-w-[1360px] flex-1 items-center px-6 py-8 sm:px-10 lg:px-12 lg:py-6">
-        <div className="grid w-full grid-cols-1 items-center gap-10 lg:grid-cols-[54%_46%] lg:gap-8">
-          {/* Left Column: Eyebrow + Crisp Title + 3 Workspace Navy Subcards + CTA */}
-          <div className="order-2 flex flex-col items-start lg:order-1">
-            {/* Eyebrow Status Badge */}
-            <div className="inline-flex items-center gap-2 rounded-full border border-sky-400/25 bg-sky-500/10 px-3.5 py-1.5 text-xs font-semibold text-sky-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-              <span className="h-1.5 w-1.5 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8]" />
-              <span>GB/T 34014 国家标准编码体系 · 联盟链多方共治</span>
-            </div>
-
-            <h1
-              style={{ fontSize: 'clamp(2.35rem, 4.1vw, 3.85rem)' }}
-              className="mt-5 leading-[1.12] font-extrabold tracking-tight text-white"
-            >
-              智权链 · 锂安溯
-            </h1>
-
-            <p
-              style={{ fontSize: 'clamp(1.25rem, 2.05vw, 1.85rem)' }}
-              className="mt-2.5 font-bold tracking-tight text-sky-200/95"
-            >
-              动力电池全生命周期可信溯源与主动安全平台
-            </p>
-
-            <p className="mt-4 max-w-[590px] text-sm leading-relaxed text-slate-300/85 sm:text-[15px]">
-              串联电芯制造、成组装配、独立检测与退役回收四家联盟机构，让每一颗电芯的质量报告、流转交接与放行审批都在链上留痕、实时受控。
-            </p>
-
-            {/* 3 Workspace-Matched Navy Subcards (.navy-subcard material) */}
-            <div className="mt-6 grid w-full max-w-[620px] grid-cols-1 gap-2.5 sm:grid-cols-3">
-              {HERO_PILLARS.map(item => {
-                const Icon = item.icon;
-                return (
-                  <div key={item.title} className="navy-subcard flex items-start gap-2.5 p-3.5">
-                    <div
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${item.accent}`}
-                    >
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[13px] font-bold text-slate-100">{item.title}</div>
-                      <div className="mt-0.5 text-[11px] leading-snug text-slate-400">{item.desc}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Primary & Secondary Action Row */}
-            <div className="mt-7 flex flex-wrap items-center gap-3.5 sm:mt-8">
-              <button
-                type="button"
-                onClick={() => openPicker()}
-                className="brand-cta-lg group inline-flex cursor-pointer items-center gap-2.5 rounded-[14px] px-7 py-3.5 text-[15px] font-bold tracking-wide text-white active:scale-[0.98] sm:px-8 sm:py-4 sm:text-base"
-              >
-                <span>选择身份进入工作台</span>
-                <ArrowRight className="h-[18px] w-[18px] transition-transform duration-150 group-hover:translate-x-0.5" />
-              </button>
-
-              {lastIdentity && (
-                <button
-                  type="button"
-                  disabled={Boolean(enteringName) || switching || loading}
-                  onClick={() => void loginWithIdentity(lastIdentity)}
-                  className="glass-ghost-btn inline-flex cursor-pointer items-center gap-2 rounded-[14px] px-5 py-3.5 text-sm font-semibold text-slate-200 active:scale-[0.98] disabled:opacity-50 sm:py-4"
-                >
-                  {enteringName === lastIdentity.name ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-sky-400" />
-                  ) : (
-                    <History className="h-4 w-4 text-sky-300" />
-                  )}
-                  <span className="whitespace-nowrap">继续上次：{lastIdentity.roleLabel}</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Right Column: Centered Sculpture Stage + Subtle Orbital Rings & Floating Micro-Badges */}
-          <div className="order-1 flex items-center justify-center lg:order-2">
-            <div className="login-sculpture-stage">
-              {/* Subtle Precision Orbital Rings Behind Sculpture */}
-              <svg
-                viewBox="0 0 560 560"
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 m-auto h-[104%] w-[104%] opacity-75"
-              >
-                <circle
-                  cx="280"
-                  cy="265"
-                  r="225"
-                  fill="none"
-                  stroke="rgba(56, 189, 248, 0.14)"
-                  strokeWidth="1"
-                  strokeDasharray="4 7"
-                />
-                <circle
-                  cx="280"
-                  cy="265"
-                  r="178"
-                  fill="none"
-                  stroke="rgba(37, 99, 235, 0.18)"
-                  strokeWidth="1"
-                />
-                <circle cx="92" cy="142" r="3.5" fill="#38bdf8" opacity="0.7" />
-                <circle cx="472" cy="150" r="3.5" fill="#2dd4bf" opacity="0.7" />
-                <circle cx="76" cy="360" r="3" fill="#60a5fa" opacity="0.55" />
-                <circle cx="484" cy="362" r="3" fill="#34d399" opacity="0.55" />
-              </svg>
-
-              <div aria-hidden="true" className="login-sculpture-aura" />
-              <div aria-hidden="true" className="login-sculpture-floor" />
-
-              {/* Floating Glass Micro-Badge (Top-Left) */}
-              <div className="navy-subcard pointer-events-none absolute top-4 left-0 z-10 hidden items-center gap-2 px-3 py-2 text-xs shadow-lg sm:flex lg:-left-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-brand/25 text-sky-300">
-                  <Lock className="h-3.5 w-3.5" />
-                </span>
-                <div>
-                  <div className="text-[11.5px] font-bold text-white">服务端托管证书</div>
-                  <div className="text-[10px] text-slate-400">前端零私钥留存</div>
-                </div>
-              </div>
-
-              {/* Floating Glass Micro-Badge (Bottom-Right, Clickable) */}
-              <button
-                type="button"
-                onClick={() => openPicker()}
-                className="navy-subcard absolute right-0 bottom-6 z-10 hidden cursor-pointer items-center gap-2 px-3 py-2 text-left text-xs shadow-lg sm:flex lg:-right-2"
-              >
-                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-teal/25 text-teal-300">
-                  <Building2 className="h-3.5 w-3.5" />
-                </span>
-                <div>
-                  <div className="text-[11.5px] font-bold text-white">4 联盟机构 · 28 身份</div>
-                  <div className="text-[10px] text-sky-300">点击快速切换岗位 →</div>
-                </div>
-              </button>
-
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/visuals/login-logo-3d.webp"
-                alt="智权链·锂安溯 立体磨砂玻璃徽标雕塑"
-                width={792}
-                height={817}
-                className="login-sculpture-img h-[250px] w-auto object-contain select-none sm:h-[340px] lg:h-[min(37vw,485px)]"
-              />
-            </div>
+        {/* Right: Grounded True-Transparent 3D Frosted-Glass Sculpture in Shared Studio Light */}
+        <div className="order-1 flex items-center justify-center lg:order-2 lg:justify-end">
+          <div className="login-sculpture-stage">
+            <div aria-hidden="true" className="login-sculpture-aura" />
+            <div aria-hidden="true" className="login-sculpture-floor" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/visuals/login-logo-3d.webp"
+              alt="智权链·锂安溯 立体磨砂玻璃徽标雕塑"
+              width={792}
+              height={817}
+              className="login-sculpture-img h-[260px] w-auto object-contain select-none sm:h-[370px] lg:h-[min(43vw,580px)]"
+            />
           </div>
         </div>
       </main>
 
-      {/* =================================================================== */}
-      {/* 3. BOTTOM CONSORTIUM BAR: Anchors Vertical Balance & Direct Access  */}
-      {/* =================================================================== */}
-      <footer className="w-full border-t border-sky-400/12 bg-[#071324]/70 backdrop-blur-md">
-        <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center justify-between gap-3 px-6 py-3.5 text-xs text-slate-400 sm:px-10 lg:px-12">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-5">
-            <span className="font-semibold text-slate-300">联盟共识节点：</span>
-            {ORG_PROFILES.map(org => (
-              <button
-                key={org.mspId}
-                type="button"
-                onClick={() => openPicker(org.mspId)}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-slate-300/90 transition hover:bg-white/[0.06] hover:text-sky-300"
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                <span>{org.shortName}</span>
-                <span className="mono text-[11px] text-slate-500">{org.peerPort.replace('Peer ', '')}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="mono hidden text-[11px] text-slate-500 lg:block">
-            GB/T 34014—2017 · Hyperledger Fabric 2.5
-          </div>
-        </div>
-      </footer>
-
-      {/* =================================================================== */}
-      {/* 4. IDENTITY MODAL: Workspace-Aligned Deep Navy + Royal Tech Blue    */}
-      {/* =================================================================== */}
+      {/* Luxury 2-Column Frosted-Glass Identity Selection Modal */}
       {modalOpen && (
         <div
           role="dialog"
           aria-modal="true"
           aria-labelledby="identity-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#040a14]/75 px-4 py-5 backdrop-blur-lg"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#030811]/72 px-4 py-5 backdrop-blur-lg"
           onClick={e => {
             if (e.target === e.currentTarget && !enteringName) setModalOpen(false);
           }}
         >
-          <div className="identity-modal-shell animate-modal-in flex max-h-[90vh] w-full max-w-[740px] flex-col overflow-hidden rounded-[24px]">
+          <div className="identity-modal-shell animate-modal-in flex max-h-[90vh] w-full max-w-[740px] flex-col overflow-hidden rounded-[26px]">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-sky-400/12 px-6 pt-6 pb-5 sm:px-7">
+            <div className="flex items-center justify-between border-b border-white/[0.07] px-6 pt-6 pb-5 sm:px-7">
               <div>
                 <h2 id="identity-modal-title" className="text-[18px] font-bold tracking-wide text-white sm:text-[19px]">
                   选择联盟身份
                 </h2>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-xs text-[#8da2b8]">
                   点选所属机构与业务岗位，一步进入对应工作台
                 </p>
               </div>
@@ -571,7 +409,7 @@ export function LoginPortal() {
                 aria-label="关闭窗口"
                 disabled={Boolean(enteringName)}
                 onClick={() => setModalOpen(false)}
-                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-[10px] border border-sky-400/15 bg-white/[0.05] text-slate-400 transition hover:bg-white/10 hover:text-white disabled:opacity-40"
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.05] text-slate-400 transition hover:bg-white/10 hover:text-white disabled:opacity-40"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -580,7 +418,7 @@ export function LoginPortal() {
             <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5 sm:px-7">
               {/* Deep-Link Guide Banner */}
               {deepLinkMeta && (
-                <div className="flex items-center gap-2.5 rounded-2xl border border-sky-400/30 bg-brand/15 px-4 py-3 text-xs text-sky-200">
+                <div className="flex items-center gap-2.5 rounded-2xl border border-sky-400/30 bg-sky-500/12 px-4 py-3 text-xs text-sky-200">
                   <Compass className="h-4 w-4 shrink-0 text-sky-400" />
                   <span>
                     正在前往 <strong className="text-white">「{deepLinkMeta.label}」</strong>，点选下方具备查看权限的岗位即可自动直达。
@@ -594,16 +432,16 @@ export function LoginPortal() {
                   type="button"
                   disabled={Boolean(enteringName) || switching || loading}
                   onClick={() => void loginWithIdentity(lastIdentity)}
-                  className="group flex w-full cursor-pointer items-center justify-between gap-3 rounded-[15px] border border-sky-400/30 bg-gradient-to-r from-brand/[0.18] to-teal/[0.1] px-4 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] transition hover:border-sky-300/55 hover:from-brand/[0.26] disabled:opacity-50"
+                  className="group flex w-full cursor-pointer items-center justify-between gap-3 rounded-[15px] border border-teal-400/32 bg-gradient-to-r from-teal-500/[0.14] to-sky-500/[0.08] px-4 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] transition hover:border-teal-300/55 hover:from-teal-500/[0.2] disabled:opacity-50"
                 >
                   <div className="flex min-w-0 items-center gap-2.5 text-[13px] text-slate-300">
-                    <span className="h-2 w-2 shrink-0 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8]" />
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-[#2dd4bf] shadow-[0_0_8px_#2dd4bf]" />
                     <span className="truncate">
                       上次登录：<strong className="font-bold text-white">{lastIdentity.roleLabel}</strong> ·{' '}
                       {lastIdentity.orgLabel.split(' ')[0]}
                     </span>
                   </div>
-                  <span className="shrink-0 rounded-[9px] border border-sky-300/35 bg-brand/30 px-3 py-1 text-xs font-semibold text-sky-200 transition group-hover:bg-brand/45 group-hover:text-white">
+                  <span className="shrink-0 rounded-[9px] border border-teal-300/35 bg-teal-400/18 px-3 py-1 text-xs font-semibold text-[#5eead4] transition group-hover:bg-teal-400/28">
                     {enteringName === lastIdentity.name ? '正在进入…' : '一键恢复会话 →'}
                   </span>
                 </button>
@@ -623,14 +461,14 @@ export function LoginPortal() {
                       className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition ${
                         active
                           ? 'identity-org-pill-active text-white'
-                          : 'border border-transparent text-slate-400 hover:bg-white/[0.05] hover:text-slate-200'
+                          : 'border border-transparent text-[#8da2b8] hover:bg-white/[0.04] hover:text-slate-200'
                       }`}
                     >
                       <span className="whitespace-nowrap">{ORG_TAB_NAMES[org.mspId]}</span>
                       {totalCount > 0 && (
                         <span
                           className={`mono rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${
-                            active ? 'bg-white/20 text-white' : 'bg-white/[0.07] text-slate-400'
+                            active ? 'bg-teal-400/20 text-[#5eead4]' : 'bg-white/[0.07] text-slate-400'
                           }`}
                         >
                           {totalCount}
@@ -643,14 +481,14 @@ export function LoginPortal() {
 
               {/* Scope Tagline + Core/All Switch */}
               <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
-                <p className="text-xs text-slate-400">{selectedOrgProfile.tagline}</p>
+                <p className="text-xs text-[#7e95ad]">{selectedOrgProfile.tagline}</p>
 
-                <div className="inline-flex rounded-[10px] border border-sky-400/12 bg-[#06101e] p-[3px] text-[11.5px] font-semibold">
+                <div className="inline-flex rounded-[10px] border border-white/[0.07] bg-[#060e1a] p-[3px] text-[11.5px] font-semibold">
                   <button
                     type="button"
                     onClick={() => setRoleScopeTab('core')}
                     className={`cursor-pointer rounded-[7px] px-2.5 py-1 transition ${
-                      roleScopeTab === 'core' ? 'bg-brand text-white' : 'text-slate-400 hover:text-slate-200'
+                      roleScopeTab === 'core' ? 'bg-white/10 text-white' : 'text-[#7e95ad] hover:text-slate-200'
                     }`}
                   >
                     核心岗 ({orgIdentities.core.length})
@@ -659,7 +497,7 @@ export function LoginPortal() {
                     type="button"
                     onClick={() => setRoleScopeTab('all')}
                     className={`cursor-pointer rounded-[7px] px-2.5 py-1 transition ${
-                      roleScopeTab === 'all' ? 'bg-brand text-white' : 'text-slate-400 hover:text-slate-200'
+                      roleScopeTab === 'all' ? 'bg-white/10 text-white' : 'text-[#7e95ad] hover:text-slate-200'
                     }`}
                   >
                     全部 ({orgIdentities.all.length})
@@ -667,7 +505,7 @@ export function LoginPortal() {
                 </div>
               </div>
 
-              {/* 2-Column Layered Glass Role Cards */}
+              {/* 2-Column Luxury Layered Glass Role Cards */}
               {loading ? (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {Array.from({ length: 4 }).map((_, i) => (
@@ -699,7 +537,7 @@ export function LoginPortal() {
                         onClick={() => void loginWithIdentity(item)}
                         className="identity-role-card flex w-full cursor-pointer items-center gap-3.5 rounded-2xl px-4 py-3.5 text-left disabled:cursor-not-allowed disabled:opacity-55"
                       >
-                        <div className="identity-role-icon flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl text-sky-300">
+                        <div className="identity-role-icon flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl text-[#7dd3fc]">
                           {isEntering ? (
                             <Loader2 className="h-[18px] w-[18px] animate-spin text-white" />
                           ) : (
@@ -713,7 +551,7 @@ export function LoginPortal() {
                           </div>
                           <p
                             className={`mt-0.5 truncate text-xs transition-colors duration-150 ${
-                              isHovered || isEntering ? 'text-sky-200' : 'text-slate-400'
+                              isHovered || isEntering ? 'text-[#99f6e4]' : 'text-[#8da2b8]'
                             }`}
                           >
                             {isEntering
@@ -724,7 +562,7 @@ export function LoginPortal() {
                           </p>
                         </div>
 
-                        <div className="identity-role-arrow flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] text-slate-400">
+                        <div className="identity-role-arrow flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] text-slate-500">
                           <ArrowUpRight className="h-3.5 w-3.5" />
                         </div>
                       </button>
@@ -735,9 +573,9 @@ export function LoginPortal() {
             </div>
 
             {/* Minimal Security Footer */}
-            <div className="flex items-center justify-between border-t border-sky-400/12 bg-[#06101e]/85 px-6 py-3.5 text-[11.5px] text-slate-500 sm:px-7">
-              <span className="inline-flex items-center gap-1.5 text-slate-300">
-                <Lock className="h-3.5 w-3.5 text-sky-400" />
+            <div className="flex items-center justify-between border-t border-white/[0.06] bg-[#050c16]/75 px-6 py-3.5 text-[11.5px] text-slate-500 sm:px-7">
+              <span className="inline-flex items-center gap-1.5 text-slate-400">
+                <Lock className="h-3.5 w-3.5 text-[#2dd4bf]" />
                 服务端安全托管身份 · 零前端私钥留存
               </span>
               <span className="mono">GB/T 34014—2017</span>
