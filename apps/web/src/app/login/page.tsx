@@ -893,7 +893,13 @@ export function LoginPortal() {
               </div>
               <span className="mono text-[9.5px] text-slate-500">⌖ AUTO_CHECK :: ACTIVE</span>
             </div>
-            <div className="relative h-[54px] overflow-hidden">
+            <div
+              className="relative h-[56px] overflow-hidden"
+              style={{
+                maskImage: 'linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%)',
+              }}
+            >
               <div className="animate-terminal-stream mono space-y-1 text-[10.5px] leading-[17px] text-slate-400">
                 {[...terminalLogs, ...terminalLogs].map((line, idx) => (
                   <div key={idx} className="truncate">
@@ -1097,7 +1103,7 @@ export function LoginPortal() {
             </div>
 
             {/* Role List */}
-            <div className="max-h-[268px] space-y-1.5 overflow-y-auto pr-0.5 lg:min-h-[238px]">
+            <div className="max-h-[306px] space-y-1.5 overflow-y-auto pr-0.5 lg:min-h-[246px]">
               {loading ? (
                 Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="skeleton-block h-[60px] rounded-none" />
