@@ -3,24 +3,24 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  AlertTriangle,
   ArrowLeftRight,
   ArrowRight,
   BadgeCheck,
+  Compass,
   Eye,
   Factory,
   FileCheck2,
   History,
   Layers,
+  Loader2,
   Lock,
   Microscope,
   Recycle,
-  Search,
   Settings2,
   ShieldCheck,
-  Terminal,
   UserCheck,
   Wrench,
+  X,
 } from 'lucide-react';
 import { useIdentity } from '@/components/IdentityProvider';
 import { useToast } from '@/components/ToastProvider';
@@ -29,7 +29,6 @@ import {
   CORE_IDENTITY_NAMES,
   ORG_PROFILES,
   canAccessRoute,
-  getAllowedRoutes,
   getDefaultRouteForActor,
   getRoleSummaryForIdentity,
   type RouteMeta,
@@ -38,49 +37,19 @@ import type { OrganizationMSP, PublicIdentity } from '@/lib/types';
 
 const LAST_LOGIN_KEY = 'tg_last_login_actor';
 
-const ORG_TECH_META: Record<
-  OrganizationMSP,
-  {
-    code: string;
-    shortLabel: string;
-    nodeId: string;
-    port: string;
-    duty: string;
-    ledColor: string;
-  }
-> = {
-  CellOrgMSP: {
-    code: 'NODE_01',
-    shortLabel: '电芯制造',
-    nodeId: 'PEER0.CELLORG',
-    port: '17051',
-    duty: '电芯建档 · 供货授权',
-    ledColor: '#38BDF8',
-  },
-  PackOrgMSP: {
-    code: 'NODE_02',
-    shortLabel: 'PACK 装配',
-    nodeId: 'PEER0.PACKORG',
-    port: '19051',
-    duty: '模组成组 · 放行交接',
-    ledColor: '#2DD4BF',
-  },
-  LabOrgMSP: {
-    code: 'NODE_03',
-    shortLabel: '独立检测',
-    nodeId: 'PEER0.LABORG',
-    port: '21051',
-    duty: '加密质检 · 合规审计',
-    ledColor: '#60A5FA',
-  },
-  RecycleOrgMSP: {
-    code: 'NODE_04',
-    shortLabel: '退役回收',
-    nodeId: 'PEER0.RECYCLEORG',
-    port: '23051',
-    duty: '回收签收 · 报废核销',
-    ledColor: '#34D399',
-  },
+const NAV_SHORTCUTS: { label: string; msp: OrganizationMSP }[] = [
+  { label: '数字身份', msp: 'CellOrgMSP' },
+  { label: '谱系追溯', msp: 'PackOrgMSP' },
+  { label: '质量检测', msp: 'LabOrgMSP' },
+  { label: '联合审批', msp: 'PackOrgMSP' },
+  { label: '退役回收', msp: 'RecycleOrgMSP' },
+];
+
+const ORG_TAB_NAMES: Record<OrganizationMSP, string> = {
+  CellOrgMSP: '电芯制造',
+  PackOrgMSP: 'PACK 装配',
+  LabOrgMSP: '独立检测',
+  RecycleOrgMSP: '退役回收',
 };
 
 const ROLE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -96,13 +65,6 @@ const ROLE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = 
   admin: Settings2,
   viewer: Eye,
 };
-
-const AUTH_PROGRESS_FRAMES = [
-  '[ ■□□□□ ] AUTHENTICATING...',
-  '[ ■■□□□ ] VERIFYING_MTLS...',
-  '[ ■■■■□ ] BINDING_SESSION...',
-  '[ ■■■■■ ] GATE_UNLOCKED',
-];
 
 function readLastLoginActor(): string | null {
   try {
@@ -160,403 +122,18 @@ function pickBestIdentityForPath(
   return identities.find(id => canAccessRoute(id, targetPath)) ?? null;
 }
 
-/**
- * Isometric 3D Wireframe Power Battery Pack + 4-Org Hyperledger Fabric Topology
- * Clicking any of the 4 nodes syncs directly with the right-hand organization console.
- */
-function BatteryWireframeTopology({
-  selectedMsp,
-  onSelectMsp,
-}: {
-  selectedMsp: OrganizationMSP;
-  onSelectMsp: (msp: OrganizationMSP) => void;
-}) {
-  const isCell = selectedMsp === 'CellOrgMSP';
-  const isPack = selectedMsp === 'PackOrgMSP';
-  const isLab = selectedMsp === 'LabOrgMSP';
-  const isRecycle = selectedMsp === 'RecycleOrgMSP';
-
-  return (
-    <div className="relative w-full max-w-[680px] select-none">
-      <svg
-        viewBox="0 0 680 350"
-        className="h-auto w-full overflow-visible"
-        role="img"
-        aria-label="动力电池三维线框结构与四组织区块链节点拓扑图"
-      >
-        <defs>
-          <linearGradient id="packWireStroke" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.95" />
-            <stop offset="55%" stopColor="#7DD3FC" stopOpacity="0.7" />
-            <stop offset="100%" stopColor="#2DD4BF" stopOpacity="0.9" />
-          </linearGradient>
-          <linearGradient id="cellWireFill" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.18" />
-            <stop offset="100%" stopColor="#0F172A" stopOpacity="0.06" />
-          </linearGradient>
-          <linearGradient id="hvBusStroke" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#FF5722" stopOpacity="0.95" />
-            <stop offset="100%" stopColor="#FB923C" stopOpacity="0.75" />
-          </linearGradient>
-        </defs>
-
-        {/* Subtle technical measurement frame & datum crosshairs */}
-        <g stroke="rgba(148,163,184,0.18)" strokeWidth="1">
-          <line x1="200" y1="38" x2="480" y2="38" strokeDasharray="3 4" />
-          <line x1="200" y1="33" x2="200" y2="43" />
-          <line x1="480" y1="33" x2="480" y2="43" />
-          <line x1="172" y1="312" x2="508" y2="312" strokeDasharray="2 5" />
-        </g>
-        <text x="340" y="31" textAnchor="middle" fill="#64748B" fontSize="9.5" className="mono">
-          CAD_REF // EV_PRISMATIC_PACK_6S2P :: GB/T 34014-2017
-        </text>
-        <text x="340" y="328" textAnchor="middle" fill="#64748B" fontSize="9.5" className="mono">
-          BUS_SYNC // CHANNEL: batterybusiness :: ENDORSEMENT_ACTIVE
-        </text>
-
-        {/* 4 Data Bus Connections (Corners -> Pack Center) */}
-        {/* Top-Left: CellOrgMSP */}
-        <path
-          d="M 148 72 L 196 72 L 244 120"
-          fill="none"
-          stroke={isCell ? '#38BDF8' : 'rgba(148,163,184,0.28)'}
-          strokeWidth={isCell ? '1.8' : '1'}
-        />
-        {isCell && (
-          <path
-            d="M 148 72 L 196 72 L 244 120"
-            fill="none"
-            stroke="#BAE6FD"
-            strokeWidth="2"
-            className="wire-signal-flow"
-          />
-        )}
-
-        {/* Top-Right: LabOrgMSP */}
-        <path
-          d="M 532 72 L 484 72 L 436 120"
-          fill="none"
-          stroke={isLab ? '#38BDF8' : 'rgba(148,163,184,0.28)'}
-          strokeWidth={isLab ? '1.8' : '1'}
-        />
-        {isLab && (
-          <path
-            d="M 532 72 L 484 72 L 436 120"
-            fill="none"
-            stroke="#BAE6FD"
-            strokeWidth="2"
-            className="wire-signal-flow"
-          />
-        )}
-
-        {/* Bottom-Left: PackOrgMSP */}
-        <path
-          d="M 148 272 L 196 272 L 244 224"
-          fill="none"
-          stroke={isPack ? '#2DD4BF' : 'rgba(148,163,184,0.28)'}
-          strokeWidth={isPack ? '1.8' : '1'}
-        />
-        {isPack && (
-          <path
-            d="M 148 272 L 196 272 L 244 224"
-            fill="none"
-            stroke="#99F6E4"
-            strokeWidth="2"
-            className="wire-signal-flow"
-          />
-        )}
-
-        {/* Bottom-Right: RecycleOrgMSP */}
-        <path
-          d="M 532 272 L 484 272 L 436 224"
-          fill="none"
-          stroke={isRecycle ? '#34D399' : 'rgba(148,163,184,0.28)'}
-          strokeWidth={isRecycle ? '1.8' : '1'}
-        />
-        {isRecycle && (
-          <path
-            d="M 532 272 L 484 272 L 436 224"
-            fill="none"
-            stroke="#A7F3D0"
-            strokeWidth="2"
-            className="wire-signal-flow"
-          />
-        )}
-
-        {/* ===== CENTRAL 3D ISOMETRIC BATTERY PACK WIREFRAME ===== */}
-        <g transform="translate(0, 6)">
-          {/* Lower liquid-cooled base plate */}
-          <polygon
-            points="340,268 188,188 340,108 492,188"
-            fill="rgba(15,23,42,0.72)"
-            stroke="rgba(56,189,248,0.35)"
-            strokeWidth="1"
-          />
-          {/* Chassis outer extrusion walls */}
-          <polygon
-            points="188,188 340,268 340,248 188,168"
-            fill="rgba(15,23,42,0.85)"
-            stroke="url(#packWireStroke)"
-            strokeWidth="1.2"
-          />
-          <polygon
-            points="492,188 340,268 340,248 492,168"
-            fill="rgba(12,24,42,0.9)"
-            stroke="url(#packWireStroke)"
-            strokeWidth="1.2"
-          />
-          {/* Main upper deck rim */}
-          <polygon
-            points="340,248 188,168 340,88 492,168"
-            fill="rgba(14,32,58,0.38)"
-            stroke="url(#packWireStroke)"
-            strokeWidth="1.5"
-          />
-
-          {/* Left Bank: 6 Prismatic Cells in Isometric Projection */}
-          {[0, 1, 2, 3, 4, 5].map(idx => {
-            const dx = idx * 18;
-            const dy = idx * 9.5;
-            const x0 = 228 + dx;
-            const y0 = 158 - dy;
-            return (
-              <g key={`bankL-${idx}`}>
-                {/* Top face of prismatic cell */}
-                <polygon
-                  points={`${x0},${y0} ${x0 + 44},${y0 + 23} ${x0 + 57},${y0 + 16} ${x0 + 13},${y0 - 7}`}
-                  fill="url(#cellWireFill)"
-                  stroke={isCell ? '#38BDF8' : 'rgba(125,211,252,0.58)'}
-                  strokeWidth={isCell ? '1.3' : '0.95'}
-                />
-                {/* Side wall */}
-                <polygon
-                  points={`${x0},${y0} ${x0 + 44},${y0 + 23} ${x0 + 44},${y0 + 36} ${x0},${y0 + 13}`}
-                  fill="rgba(14,165,233,0.08)"
-                  stroke="rgba(56,189,248,0.32)"
-                  strokeWidth="0.75"
-                />
-                {/* Cell vent valve ellipse */}
-                <circle cx={x0 + 28} cy={y0 + 8} r="1.5" fill={isCell ? '#38BDF8' : '#7DD3FC'} opacity="0.75" />
-              </g>
-            );
-          })}
-
-          {/* Right Bank: 6 Prismatic Cells in Isometric Projection */}
-          {[0, 1, 2, 3, 4, 5].map(idx => {
-            const dx = idx * 18;
-            const dy = idx * 9.5;
-            const x0 = 294 + dx;
-            const y0 = 193 - dy;
-            return (
-              <g key={`bankR-${idx}`}>
-                <polygon
-                  points={`${x0},${y0} ${x0 + 44},${y0 + 23} ${x0 + 57},${y0 + 16} ${x0 + 13},${y0 - 7}`}
-                  fill="url(#cellWireFill)"
-                  stroke={isPack ? '#2DD4BF' : 'rgba(125,211,252,0.58)'}
-                  strokeWidth={isPack ? '1.3' : '0.95'}
-                />
-                <polygon
-                  points={`${x0},${y0} ${x0 + 44},${y0 + 23} ${x0 + 44},${y0 + 36} ${x0},${y0 + 13}`}
-                  fill="rgba(45,212,191,0.07)"
-                  stroke="rgba(45,212,191,0.3)"
-                  strokeWidth="0.75"
-                />
-                <circle cx={x0 + 28} cy={y0 + 8} r="1.5" fill={isPack ? '#2DD4BF' : '#7DD3FC'} opacity="0.75" />
-              </g>
-            );
-          })}
-
-          {/* Central High-Voltage Busbar Spine (Industrial Warning Orange Accent) */}
-          <line
-            x1="286"
-            y1="196"
-            x2="394"
-            y2="139"
-            stroke="url(#hvBusStroke)"
-            strokeWidth="2.4"
-            strokeLinecap="square"
-          />
-          <circle cx="286" cy="196" r="3" fill="#FF5722" />
-          <circle cx="394" cy="139" r="3" fill="#FF5722" />
-
-          {/* Floating Upper Protective Cover Wireframe (Exploded Offset) */}
-          <polygon
-            points="340,218 198,144 340,70 482,144"
-            fill="none"
-            stroke="rgba(186,230,253,0.28)"
-            strokeWidth="1"
-            strokeDasharray="4 4"
-          />
-          {/* Corner vertical datum guides */}
-          <line x1="198" y1="144" x2="188" y2="168" stroke="rgba(148,163,184,0.28)" strokeWidth="0.8" strokeDasharray="2 3" />
-          <line x1="482" y1="144" x2="492" y2="168" stroke="rgba(148,163,184,0.28)" strokeWidth="0.8" strokeDasharray="2 3" />
-          <line x1="340" y1="70" x2="340" y2="88" stroke="rgba(148,163,184,0.35)" strokeWidth="0.8" strokeDasharray="2 3" />
-          <line x1="340" y1="218" x2="340" y2="248" stroke="rgba(148,163,184,0.35)" strokeWidth="0.8" strokeDasharray="2 3" />
-
-          {/* Precision Reticle Crosshair at Pack Center */}
-          <g stroke="#38BDF8" strokeWidth="1" opacity="0.75">
-            <circle cx="340" cy="168" r="14" fill="none" strokeDasharray="3 3" />
-            <line x1="340" y1="148" x2="340" y2="156" />
-            <line x1="340" y1="180" x2="340" y2="188" />
-            <line x1="320" y1="168" x2="328" y2="168" />
-            <line x1="352" y1="168" x2="360" y2="168" />
-          </g>
-        </g>
-
-        {/* ===== 4 CLICKABLE CONSORTIUM NODE TERMINALS ===== */}
-        {/* Node 1: CellOrgMSP (Top-Left) */}
-        <g
-          role="button"
-          tabIndex={0}
-          aria-label="选择电芯制造企业节点"
-          onClick={() => onSelectMsp('CellOrgMSP')}
-          onKeyDown={e => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              onSelectMsp('CellOrgMSP');
-            }
-          }}
-          className="cursor-pointer"
-        >
-          <polygon
-            points="6,46 138,46 148,56 148,100 16,100 6,90"
-            fill={isCell ? 'rgba(56,189,248,0.16)' : 'rgba(15,23,42,0.88)'}
-            stroke={isCell ? '#38BDF8' : 'rgba(148,163,184,0.32)'}
-            strokeWidth={isCell ? '1.5' : '1'}
-          />
-          <rect x="16" y="57" width="6" height="6" fill={isCell ? '#38BDF8' : '#475569'} />
-          <text x="28" y="64" fill={isCell ? '#E0F2FE' : '#CBD5E1'} fontSize="11.5" fontWeight="700">
-            电芯制造
-          </text>
-          <text x="16" y="80" fill="#7DD3FC" fontSize="9.5" className="mono">
-            CellOrg :17051
-          </text>
-          <text x="16" y="92" fill="#94A3B8" fontSize="9">
-            建档 · 供货授权
-          </text>
-        </g>
-
-        {/* Node 2: LabOrgMSP (Top-Right) */}
-        <g
-          role="button"
-          tabIndex={0}
-          aria-label="选择第三方检测机构节点"
-          onClick={() => onSelectMsp('LabOrgMSP')}
-          onKeyDown={e => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              onSelectMsp('LabOrgMSP');
-            }
-          }}
-          className="cursor-pointer"
-        >
-          <polygon
-            points="532,46 664,46 674,56 674,100 542,100 532,90"
-            fill={isLab ? 'rgba(56,189,248,0.16)' : 'rgba(15,23,42,0.88)'}
-            stroke={isLab ? '#38BDF8' : 'rgba(148,163,184,0.32)'}
-            strokeWidth={isLab ? '1.5' : '1'}
-          />
-          <rect x="542" y="57" width="6" height="6" fill={isLab ? '#38BDF8' : '#475569'} />
-          <text x="554" y="64" fill={isLab ? '#E0F2FE' : '#CBD5E1'} fontSize="11.5" fontWeight="700">
-            独立检测
-          </text>
-          <text x="542" y="80" fill="#7DD3FC" fontSize="9.5" className="mono">
-            LabOrg :21051
-          </text>
-          <text x="542" y="92" fill="#94A3B8" fontSize="9">
-            加密质检 · 审计
-          </text>
-        </g>
-
-        {/* Node 3: PackOrgMSP (Bottom-Left) */}
-        <g
-          role="button"
-          tabIndex={0}
-          aria-label="选择 PACK 装配企业节点"
-          onClick={() => onSelectMsp('PackOrgMSP')}
-          onKeyDown={e => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              onSelectMsp('PackOrgMSP');
-            }
-          }}
-          className="cursor-pointer"
-        >
-          <polygon
-            points="6,244 138,244 148,254 148,298 16,298 6,288"
-            fill={isPack ? 'rgba(45,212,191,0.15)' : 'rgba(15,23,42,0.88)'}
-            stroke={isPack ? '#2DD4BF' : 'rgba(148,163,184,0.32)'}
-            strokeWidth={isPack ? '1.5' : '1'}
-          />
-          <rect x="16" y="255" width="6" height="6" fill={isPack ? '#2DD4BF' : '#475569'} />
-          <text x="28" y="262" fill={isPack ? '#CCFBF1' : '#CBD5E1'} fontSize="11.5" fontWeight="700">
-            PACK 装配
-          </text>
-          <text x="16" y="278" fill="#5EEAD4" fontSize="9.5" className="mono">
-            PackOrg :19051
-          </text>
-          <text x="16" y="290" fill="#94A3B8" fontSize="9">
-            成组装配 · 放行
-          </text>
-        </g>
-
-        {/* Node 4: RecycleOrgMSP (Bottom-Right) */}
-        <g
-          role="button"
-          tabIndex={0}
-          aria-label="选择退役回收企业节点"
-          onClick={() => onSelectMsp('RecycleOrgMSP')}
-          onKeyDown={e => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              onSelectMsp('RecycleOrgMSP');
-            }
-          }}
-          className="cursor-pointer"
-        >
-          <polygon
-            points="532,244 664,244 674,254 674,298 542,298 532,288"
-            fill={isRecycle ? 'rgba(52,211,153,0.15)' : 'rgba(15,23,42,0.88)'}
-            stroke={isRecycle ? '#34D399' : 'rgba(148,163,184,0.32)'}
-            strokeWidth={isRecycle ? '1.5' : '1'}
-          />
-          <rect x="542" y="255" width="6" height="6" fill={isRecycle ? '#34D399' : '#475569'} />
-          <text x="554" y="262" fill={isRecycle ? '#D1FAE5' : '#CBD5E1'} fontSize="11.5" fontWeight="700">
-            退役回收
-          </text>
-          <text x="542" y="278" fill="#6EE7B7" fontSize="9.5" className="mono">
-            Recycle :23051
-          </text>
-          <text x="542" y="290" fill="#94A3B8" fontSize="9">
-            签收交接 · 核销
-          </text>
-        </g>
-      </svg>
-    </div>
-  );
-}
-
 export function LoginPortal() {
   const router = useRouter();
   const { identities, loading, switching, switchActor } = useIdentity();
   const { notify } = useToast();
 
+  const [modalOpen, setModalOpen] = useState(false);
   const [selectedMsp, setSelectedMsp] = useState<OrganizationMSP>('CellOrgMSP');
-  const [selectedName, setSelectedName] = useState<string>('');
   const [roleScopeTab, setRoleScopeTab] = useState<'core' | 'all'>('core');
-  const [roleFilter, setRoleFilter] = useState('');
-  const [filterFocused, setFilterFocused] = useState(false);
-
-  const [entering, setEntering] = useState(false);
-  const [unlockSliding, setUnlockSliding] = useState(false);
-  const [authFrameIdx, setAuthFrameIdx] = useState(0);
-
+  const [enteringName, setEnteringName] = useState<string | null>(null);
   const [lastActorName, setLastActorName] = useState<string | null>(null);
   const [deepLinkPath, setDeepLinkPath] = useState<string | null>(null);
-  const [chainBlockHeight, setChainBlockHeight] = useState<number | null>(null);
-
-  const initializedSelectionRef = useRef(false);
-  const roleBtnRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const deepLinkHandledRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -572,30 +149,6 @@ export function LoginPortal() {
     };
   }, []);
 
-  // Quietly probe chain height; falls back gracefully without console noise
-  useEffect(() => {
-    let active = true;
-    void (async () => {
-      try {
-        const res = await fetch('/api/bff/dashboard', { cache: 'no-store' });
-        if (!active || !res.ok) return;
-        const json = (await res.json()) as {
-          chain?: { blockHeight?: number };
-          summary?: { blockHeight?: number };
-        };
-        const height = json.chain?.blockHeight ?? json.summary?.blockHeight ?? null;
-        if (typeof height === 'number' && height > 0) {
-          setChainBlockHeight(height);
-        }
-      } catch {
-        // graceful fallback
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
-
   const lastIdentity = useMemo(
     () => (lastActorName ? identities.find(i => i.name === lastActorName) ?? null : null),
     [identities, lastActorName],
@@ -603,103 +156,53 @@ export function LoginPortal() {
 
   const deepLinkMeta = useMemo(() => findRouteMeta(deepLinkPath), [deepLinkPath]);
 
+  // Automatically open identity modal & pre-select authorized org when arriving via deep link
   useEffect(() => {
-    if (initializedSelectionRef.current || identities.length === 0) return;
-    initializedSelectionRef.current = true;
+    if (deepLinkHandledRef.current || identities.length === 0) return;
     if (deepLinkPath && deepLinkMeta) {
+      deepLinkHandledRef.current = true;
       const recommended = pickBestIdentityForPath(identities, deepLinkPath, lastIdentity);
-      if (recommended) {
-        queueMicrotask(() => {
+      queueMicrotask(() => {
+        if (recommended) {
           setSelectedMsp(recommended.mspId);
-          setSelectedName(recommended.name);
           if (!CORE_IDENTITY_NAMES.has(recommended.name)) {
             setRoleScopeTab('all');
           }
-        });
-      }
+        }
+        setModalOpen(true);
+      });
     }
   }, [deepLinkMeta, deepLinkPath, identities, lastIdentity]);
 
-  const roleCountsByMsp = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const id of identities) {
-      counts[id.mspId] = (counts[id.mspId] ?? 0) + 1;
+  useEffect(() => {
+    if (!modalOpen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !enteringName) {
+        setModalOpen(false);
+      }
     }
-    return counts;
-  }, [identities]);
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [enteringName, modalOpen]);
 
-  const allOrgIdentities = useMemo(() => {
+  const orgIdentities = useMemo(() => {
     const filtered = identities.filter(id => id.mspId === selectedMsp);
     const core = filtered.filter(id => CORE_IDENTITY_NAMES.has(id.name));
     const aux = filtered.filter(id => !CORE_IDENTITY_NAMES.has(id.name));
-    return { core, aux, all: [...core, ...aux] };
+    return { core, all: [...core, ...aux] };
   }, [identities, selectedMsp]);
 
-  const visibleIdentities = useMemo(() => {
-    const base = roleScopeTab === 'core' ? allOrgIdentities.core : allOrgIdentities.all;
-    const kw = roleFilter.trim().toLowerCase();
-    if (!kw) return base;
-    return allOrgIdentities.all.filter(
-      item =>
-        item.roleLabel.toLowerCase().includes(kw) ||
-        item.name.toLowerCase().includes(kw) ||
-        getRoleSummaryForIdentity(item).toLowerCase().includes(kw),
-    );
-  }, [allOrgIdentities, roleFilter, roleScopeTab]);
-
-  const activeSelection = useMemo(() => {
-    const matched = visibleIdentities.find(id => id.name === selectedName);
-    if (matched) return matched;
-    return visibleIdentities[0] ?? allOrgIdentities.all[0] ?? null;
-  }, [allOrgIdentities.all, selectedName, visibleIdentities]);
-
-  const allowedRoutes = useMemo(() => getAllowedRoutes(activeSelection), [activeSelection]);
-  const allowedRouteMetas = useMemo(
-    () => ALL_ROUTES.filter(r => allowedRoutes.includes(r.href)),
-    [allowedRoutes],
-  );
+  const visibleRoles = roleScopeTab === 'core' ? orgIdentities.core : orgIdentities.all;
 
   const selectedOrgProfile = useMemo(
     () => ORG_PROFILES.find(o => o.mspId === selectedMsp) ?? ORG_PROFILES[0],
     [selectedMsp],
   );
-  const selectedTechMeta = ORG_TECH_META[selectedMsp];
-
-  const defaultLandingMeta = useMemo(() => {
-    if (!activeSelection) return null;
-    if (deepLinkPath && canAccessRoute(activeSelection, deepLinkPath) && deepLinkMeta) {
-      return deepLinkMeta;
-    }
-    const defHref = getDefaultRouteForActor(activeSelection);
-    return ALL_ROUTES.find(r => r.href === defHref) ?? ALL_ROUTES[0];
-  }, [activeSelection, deepLinkMeta, deepLinkPath]);
-
-  const terminalLogs = useMemo(() => {
-    const fp = activeSelection?.fingerprintPrefix ?? 'EE:69:FA:A0:9A:D1';
-    const actorCode = activeSelection?.name ?? 'cell-manufacturer';
-    const blk = chainBlockHeight ? `#${chainBlockHeight}` : '#SYNC';
-    return [
-      `[GB34014] VERIFY DMAPB010000001E113420837 -> TYPE:PACK CHEM:LFP CHECKSUM:OK`,
-      `[MTLS_ID] SUBJECT=${actorCode} ORG=${selectedMsp} FP=${fp}`,
-      `[FABRIC ] CHANNEL=batterybusiness PEER=${selectedTechMeta.nodeId}:${selectedTechMeta.port} HEIGHT=${blk}`,
-      `[RISK_AI] QUALITY_IFOREST + OP_GRAPH_COLLUSION :: STATUS=ARMED (FAIL-CLOSED)`,
-      `[KMS_KEY] AEAD_AES256GCM REPORT_BROKER :: ZERO_CLIENT_PRIVATE_KEY`,
-      `[POLICY ] RELEASE_GATE=3_ORG_STD / 4_ORG_HIGH_RISK :: VERSION=v2`,
-      `[AUDIT  ] ED25519_LOG_ANCHOR -> MERKLE_ROOT VERIFIED ON LEDGER`,
-    ];
-  }, [activeSelection?.fingerprintPrefix, activeSelection?.name, chainBlockHeight, selectedMsp, selectedTechMeta.nodeId, selectedTechMeta.port]);
-
-  const selectOrganization = useCallback((msp: OrganizationMSP) => {
-    setSelectedMsp(msp);
-    setSelectedName('');
-    setRoleFilter('');
-  }, []);
 
   const loginWithIdentity = useCallback(
     async (target: PublicIdentity | null) => {
-      if (!target || switching || loading || entering) return;
-      setEntering(true);
-      setAuthFrameIdx(0);
+      if (!target || switching || loading || enteringName) return;
+      setEnteringName(target.name);
       saveLastLoginActor(target.name);
 
       const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/login';
@@ -707,23 +210,17 @@ export function LoginPortal() {
       const params = new URLSearchParams(currentSearch);
       const redirectParam = params.get('redirect') ?? '';
 
-      const t1 = window.setTimeout(() => setAuthFrameIdx(1), 90);
-      const t2 = window.setTimeout(() => setAuthFrameIdx(2), 190);
-
       try {
         await switchActor(target.name, { enableRoleScope: true });
-        setAuthFrameIdx(3);
-        setUnlockSliding(true);
         notify({
           tone: 'success',
-          title: `身份已核验：${target.roleLabel}`,
-          description: `${target.orgLabel.split(' ')[0]} · 正在解锁工作台`,
+          title: `欢迎回来，${target.roleLabel}`,
+          description: `${target.orgLabel.split(' ')[0]} · 已进入专属工作台`,
         });
-
         window.setTimeout(() => {
           if (currentPath !== '/login' && canAccessRoute(target, currentPath)) {
-            setEntering(false);
-            setUnlockSliding(false);
+            setEnteringName(null);
+            setModalOpen(false);
             return;
           }
           if (redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
@@ -734,528 +231,303 @@ export function LoginPortal() {
             }
           }
           router.push(getDefaultRouteForActor(target));
-        }, 280);
+        }, 160);
       } catch {
-        setEntering(false);
-        setUnlockSliding(false);
-      } finally {
-        window.clearTimeout(t1);
-        window.clearTimeout(t2);
+        setEnteringName(null);
       }
     },
-    [entering, loading, notify, router, switchActor, switching],
+    [enteringName, loading, notify, router, switchActor, switching],
   );
 
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key !== 'Enter') return;
-      const tag = (e.target as HTMLElement | null)?.tagName;
-      if (tag === 'SELECT' || tag === 'TEXTAREA' || tag === 'A') return;
-      if (activeSelection && !switching && !loading && !entering) {
-        e.preventDefault();
-        void loginWithIdentity(activeSelection);
-      }
-    }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeSelection, entering, loading, loginWithIdentity, switching]);
-
-  function handleRoleKeyDown(e: React.KeyboardEvent, idx: number) {
-    const len = visibleIdentities.length;
-    if (len === 0) return;
-    let nextIdx = -1;
-    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') nextIdx = (idx + 1) % len;
-    else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') nextIdx = (idx - 1 + len) % len;
-    if (nextIdx >= 0) {
-      e.preventDefault();
-      setSelectedName(visibleIdentities[nextIdx].name);
-      roleBtnRefs.current[nextIdx]?.focus();
-    }
+  function openPicker(msp?: OrganizationMSP) {
+    if (msp) setSelectedMsp(msp);
+    setModalOpen(true);
   }
 
   return (
-    <div className="relative grid min-h-screen w-full grid-cols-1 overflow-x-hidden bg-[#0b1424] lg:grid-cols-[60%_40%]">
-      {/* =================================================================== */}
-      {/* LEFT (60% Desktop / Compact Header Mobile): Matte Navy Command Deck */}
-      {/* =================================================================== */}
-      <section className="industrial-navy-deck relative flex flex-col justify-between overflow-hidden px-5 py-4 text-slate-100 lg:border-r lg:border-[#040914] lg:px-10 lg:py-7 lg:shadow-[inset_-1px_0_0_rgba(148,163,184,0.28)]">
-        {/* Matte anodized aluminum micro-noise overlay */}
-        <div aria-hidden="true" className="industrial-matte-noise pointer-events-none absolute inset-0" />
-
-        {/* Corner Precision Reticles & Engineering Scale Ticks (Desktop) */}
-        <div aria-hidden="true" className="pointer-events-none absolute top-4 left-4 hidden text-sky-400/45 lg:block">
-          <div className="h-3 w-3 border-t border-l border-sky-400/55" />
-        </div>
-        <div aria-hidden="true" className="pointer-events-none absolute top-4 right-5 hidden text-sky-400/45 lg:block">
-          <div className="h-3 w-3 border-t border-r border-sky-400/55" />
-        </div>
-        <div aria-hidden="true" className="pointer-events-none absolute bottom-4 left-4 hidden text-sky-400/45 lg:block">
-          <div className="h-3 w-3 border-b border-l border-sky-400/55" />
-        </div>
-        <div aria-hidden="true" className="pointer-events-none absolute right-5 bottom-4 hidden text-sky-400/45 lg:block">
-          <div className="h-3 w-3 border-b border-r border-sky-400/55" />
+    <div className="login-minimal-canvas relative flex min-h-screen w-full flex-col overflow-x-hidden text-white selection:bg-teal-400/25">
+      {/* Minimalist Top Bar */}
+      <header className="mx-auto flex h-20 w-full max-w-[1220px] items-center justify-between px-6 sm:px-10">
+        <div className="flex items-center gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/logo-mark.png"
+            alt="智权链·锂安溯"
+            width={34}
+            height={34}
+            className="h-8 w-8 object-contain select-none sm:h-[34px] sm:w-[34px]"
+          />
+          <span className="text-base font-bold tracking-wide text-white">智权链·锂安溯</span>
         </div>
 
-        {/* Left vertical engineering coordinate ruler */}
-        <div
-          aria-hidden="true"
-          className="mono pointer-events-none absolute top-1/2 left-3 hidden -translate-y-1/2 flex-col items-center gap-3 text-[9px] text-slate-500/75 xl:flex"
+        <nav aria-label="平台核心能力" className="hidden items-center gap-8 md:flex">
+          {NAV_SHORTCUTS.map(item => (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => openPicker(item.msp)}
+              className="cursor-pointer text-[13.5px] font-medium text-slate-400 transition hover:text-white"
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        <button
+          type="button"
+          onClick={() => openPicker()}
+          className="cursor-pointer rounded-xl bg-gradient-to-r from-[#2563eb] via-[#0ea5e9] to-[#10b981] px-4 py-2 text-xs font-semibold text-white shadow-[0_8px_22px_-8px_rgba(14,165,233,0.65)] transition hover:brightness-110 active:scale-[0.98] sm:px-5 sm:py-2.5 sm:text-[13px]"
         >
-          <span>⌖</span>
-          <span className="h-10 w-px bg-slate-600/40" />
-          <span style={{ writingMode: 'vertical-rl' }} className="tracking-[0.2em]">
-            SYS_AUTH // {selectedTechMeta.code}
-          </span>
-          <span className="h-10 w-px bg-slate-600/40" />
-          <span>⌖</span>
+          选择身份
+        </button>
+      </header>
+
+      {/* Ultra-Clean 2-Column Hero Stage */}
+      <main className="mx-auto grid w-full max-w-[1220px] flex-1 grid-cols-1 items-center gap-10 px-6 pt-4 pb-12 sm:px-10 lg:grid-cols-12 lg:gap-8 lg:py-0">
+        {/* Left: Crisp Display Typography + Single Action */}
+        <div className="order-2 flex flex-col items-start lg:order-1 lg:col-span-6">
+          <h1 className="text-4xl leading-[1.12] font-extrabold tracking-tight text-white sm:text-5xl xl:text-[58px]">
+            智权链 · 锂安溯
+          </h1>
+          <p className="mt-3 text-2xl font-bold tracking-tight text-slate-200 sm:text-3xl xl:text-[34px]">
+            - TrustGuard Battery -
+          </p>
+
+          <div className="mt-8 space-y-1.5">
+            <p className="text-lg font-semibold text-[#2dd4bf] sm:text-[21px]">
+              每一颗电芯，全周期可信。
+            </p>
+            <p className="text-[15px] leading-relaxed text-[#7c93aa] sm:text-[17px]">
+              四方联盟多点背书。
+            </p>
+            <p className="text-[15px] leading-relaxed text-[#7c93aa] sm:text-[17px]">
+              主动风控实时把关。
+            </p>
+          </div>
+
+          <div className="mt-9 flex flex-wrap items-center gap-5">
+            <button
+              type="button"
+              onClick={() => openPicker()}
+              className="group inline-flex cursor-pointer items-center gap-2 rounded-xl bg-gradient-to-r from-[#2563eb] via-[#0ea5e9] to-[#10b981] px-7 py-3.5 text-[15px] font-semibold text-white shadow-[0_14px_32px_-10px_rgba(14,165,233,0.6)] transition hover:brightness-110 active:scale-[0.98]"
+            >
+              <span>选择身份登录</span>
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </button>
+
+            {lastIdentity && (
+              <button
+                type="button"
+                disabled={Boolean(enteringName) || switching || loading}
+                onClick={() => void loginWithIdentity(lastIdentity)}
+                className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-medium text-slate-300 transition hover:text-[#2dd4bf] disabled:opacity-50"
+              >
+                {enteringName === lastIdentity.name ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-[#2dd4bf]" />
+                ) : (
+                  <History className="h-4 w-4 text-slate-400" />
+                )}
+                <span>继续上次：{lastIdentity.roleLabel}</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Top Telemetry Strip + Official Logo Lockup */}
-        <div className="relative z-10 flex items-center justify-between gap-3 border-b border-slate-700/55 pb-3.5">
-          <div className="flex items-center gap-3">
+        {/* Right: 3D Frosted-Glass Sculpture of the Official Brand Logo */}
+        <div className="order-1 flex items-center justify-center lg:order-2 lg:col-span-6 lg:justify-end">
+          <div className="animate-logo-float relative flex items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/brand/logo-mark.png"
-              alt="智权链·锂安溯 官方徽标"
-              width={44}
-              height={44}
-              className="h-9 w-9 shrink-0 object-contain drop-shadow-[0_4px_12px_rgba(56,189,248,0.28)] select-none lg:h-11 lg:w-11"
+              src="/visuals/login-logo-3d.jpg"
+              alt="智权链·锂安溯 立体磨砂玻璃徽标雕塑"
+              width={1024}
+              height={1024}
+              className="login-3d-blend h-[270px] w-[270px] object-contain select-none sm:h-[380px] sm:w-[380px] lg:h-[470px] lg:w-[470px] xl:h-[530px] xl:w-[530px]"
             />
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold tracking-wider text-white lg:text-lg">智权链 · 锂安溯</h1>
-                <span className="mono hidden border border-sky-400/35 bg-sky-400/10 px-1.5 py-0.5 text-[10px] font-semibold text-sky-300 sm:inline-block">
-                  V2.1
-                </span>
-              </div>
-              <p className="mono text-[10px] tracking-[0.16em] text-slate-400 uppercase">
-                TRUSTGUARD BATTERY // SYS_AUTH
-              </p>
-            </div>
-          </div>
-
-          {/* Focused LED Status Indicator */}
-          <div className="flex items-center gap-2.5 border border-slate-700/75 bg-[#08101e] px-3 py-1.5">
-            <span className="h-2 w-2 bg-emerald-400 shadow-[0_0_6px_#34d399]" />
-            <span className="mono text-[10.5px] font-medium text-slate-200">
-              {chainBlockHeight ? `LEDGER #${chainBlockHeight}` : 'FABRIC_4ORG // ONLINE'}
-            </span>
           </div>
         </div>
+      </main>
 
-        {/* Centerpiece (Desktop): Engineering Spec Header + 3D Wireframe Battery Pack & 4-Org Topology */}
-        <div className="relative z-10 my-auto hidden flex-col items-center py-4 lg:flex">
-          <div className="mb-3 flex w-full max-w-[680px] items-end justify-between border-l-2 border-sky-400 pl-3.5">
-            <div>
-              <div className="mono text-[10.5px] tracking-[0.14em] text-sky-400 uppercase">
-                POWER BATTERY LIFECYCLE & ACTIVE SECURITY CONSOLE
-              </div>
-              <h2 className="mt-1 text-2xl font-bold tracking-tight text-white xl:text-[26px]">
-                动力电池全生命周期可信溯源与主动安全控制台
-              </h2>
-            </div>
-            <div className="mono hidden text-right text-[10px] leading-relaxed text-slate-400 xl:block">
-              <div>FOCUS: {selectedTechMeta.nodeId}</div>
-              <div className="text-sky-300">{`PORT :${selectedTechMeta.port} // ACTIVE`}</div>
-            </div>
-          </div>
-
-          <BatteryWireframeTopology selectedMsp={selectedMsp} onSelectMsp={selectOrganization} />
-
-          {/* 4-Metric Precision Hardware Readout Bar */}
-          <div className="mt-3 grid w-full max-w-[680px] grid-cols-4 border border-slate-700/65 bg-[#08101e]/90">
-            <div className="border-r border-slate-700/65 px-3 py-2">
-              <div className="mono text-[9.5px] text-slate-400">STD_SPEC</div>
-              <div className="mono mt-0.5 text-xs font-semibold text-slate-100">GB/T 34014</div>
-            </div>
-            <div className="border-r border-slate-700/65 px-3 py-2">
-              <div className="mono text-[9.5px] text-slate-400">CONSORTIUM</div>
-              <div className="mono mt-0.5 text-xs font-semibold text-sky-300">4 ORG / 28 ID</div>
-            </div>
-            <div className="border-r border-slate-700/65 px-3 py-2">
-              <div className="mono text-[9.5px] text-slate-400">AUTH_VAULT</div>
-              <div className="mono mt-0.5 text-xs font-semibold text-emerald-300">ZERO_PRIVKEY</div>
-            </div>
-            <div className="px-3 py-2">
-              <div className="mono text-[9.5px] text-slate-400">RISK_GATE</div>
-              <div className="mono mt-0.5 text-xs font-semibold text-[#FF7A45]">FAIL-CLOSED</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom (Desktop): Quietly Scrolling Monospace Verification Terminal Stream */}
-        <div className="relative z-10 hidden flex-col gap-2 lg:flex">
-          <div className="border border-slate-700/70 bg-[#060d18]/95 px-3.5 py-2.5">
-            <div className="mb-1.5 flex items-center justify-between border-b border-slate-800 pb-1.5">
-              <div className="mono flex items-center gap-1.5 text-[10px] font-semibold text-sky-400">
-                <Terminal className="h-3 w-3" />
-                <span>KERNEL_VERIFY_STREAM // REALTIME TELEMETRY</span>
-              </div>
-              <span className="mono text-[9.5px] text-slate-500">⌖ AUTO_CHECK :: ACTIVE</span>
-            </div>
-            <div
-              className="relative h-[56px] overflow-hidden"
-              style={{
-                maskImage: 'linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%)',
-                WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, #000 18%, #000 82%, transparent 100%)',
-              }}
-            >
-              <div className="animate-terminal-stream mono space-y-1 text-[10.5px] leading-[17px] text-slate-400">
-                {[...terminalLogs, ...terminalLogs].map((line, idx) => (
-                  <div key={idx} className="truncate">
-                    <span className="mr-1.5 text-sky-500/80">&gt;</span>
-                    <span className={line.includes('RISK_AI') ? 'text-[#FF8A65]' : line.includes('MTLS_ID') ? 'text-sky-300' : 'text-slate-300/90'}>
-                      {line}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="mono flex items-center justify-between text-[10px] text-slate-500">
-            <span>© 2026 TRUSTGUARD_BATTERY // 智权链·锂安溯</span>
-            <span>HYPERLEDGER FABRIC 2.5 :: TLS_MUTUAL</span>
-          </div>
-        </div>
-      </section>
-
-      {/* =================================================================== */}
-      {/* RIGHT (40% Desktop): Cold Lab Slate Operations Bay (Mechanical Gate) */}
-      {/* =================================================================== */}
-      <section
-        className={`industrial-lab-bay relative flex flex-col justify-between border-t border-slate-300 px-5 py-5 text-slate-900 transition-transform duration-300 ease-in-out sm:px-7 lg:border-t-0 lg:border-l lg:border-[#b9c7d8] lg:px-8 lg:py-7 ${
-          unlockSliding ? 'translate-x-full opacity-90' : 'translate-x-0 opacity-100'
-        }`}
-      >
-        {/* Top Metallic Rivet / Calibration Line */}
-        <div className="mx-auto flex w-full max-w-[490px] flex-1 flex-col justify-between gap-4">
-          {/* Header Block */}
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-300/90 pb-3">
+      {/* Connect-Wallet-Style Minimalist Identity Selection Modal */}
+      {modalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="identity-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#030812]/75 px-4 py-6 backdrop-blur-md"
+          onClick={e => {
+            if (e.target === e.currentTarget && !enteringName) setModalOpen(false);
+          }}
+        >
+          <div className="animate-modal-in flex max-h-[88vh] w-full max-w-[540px] flex-col overflow-hidden rounded-2xl border border-white/12 bg-[#0c192b]/95 shadow-[0_32px_80px_-20px_rgba(0,0,0,0.85)]">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
               <div>
-                <div className="mono flex items-center gap-1.5 text-[10px] font-bold tracking-[0.14em] text-slate-500 uppercase">
-                  <span className="inline-block h-1.5 w-1.5 bg-[#0284C7]" />
-                  <span>OPERATOR_BAY // 身份接入终端</span>
-                </div>
-                <h2 className="mt-1 text-xl font-bold tracking-tight text-[#0F172A]">选择机构与作业岗位</h2>
+                <h2 id="identity-modal-title" className="text-base font-bold text-white">
+                  选择联盟身份
+                </h2>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  点选所属机构与岗位，一步进入专属工作台
+                </p>
               </div>
+              <button
+                type="button"
+                aria-label="关闭窗口"
+                disabled={Boolean(enteringName)}
+                onClick={() => setModalOpen(false)}
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-white disabled:opacity-40"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
+            <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
+              {/* Deep-Link Guide Banner */}
+              {deepLinkMeta && (
+                <div className="flex items-center gap-2 rounded-xl border border-sky-400/25 bg-sky-500/10 px-3.5 py-2.5 text-xs text-sky-200">
+                  <Compass className="h-4 w-4 shrink-0 text-sky-400" />
+                  <span>
+                    正在前往 <strong className="text-white">「{deepLinkMeta.label}」</strong>，选择有权限的岗位即可自动直达。
+                  </span>
+                </div>
+              )}
+
+              {/* Quick Resume Last Login */}
               {lastIdentity && (
                 <button
                   type="button"
-                  disabled={switching || loading || entering}
+                  disabled={Boolean(enteringName) || switching || loading}
                   onClick={() => void loginWithIdentity(lastIdentity)}
-                  className="chamfer-sm inline-flex cursor-pointer items-center gap-1.5 border border-[#0284C7]/40 bg-white px-2.5 py-1.5 text-[11px] font-bold text-[#0369A1] transition duration-150 hover:border-[#0284C7] hover:bg-[#0284C7] hover:text-white disabled:opacity-50"
+                  className="flex w-full cursor-pointer items-center justify-between rounded-xl border border-teal-400/25 bg-teal-500/10 px-3.5 py-2.5 text-left text-xs transition hover:border-teal-400/50 hover:bg-teal-500/15 disabled:opacity-50"
                 >
-                  <History className="h-3 w-3" />
-                  <span className="max-w-[130px] truncate">上次：{lastIdentity.roleLabel}</span>
+                  <div className="flex items-center gap-2 text-teal-200">
+                    <History className="h-3.5 w-3.5 text-teal-300" />
+                    <span>
+                      上次登录：<strong className="text-white">{lastIdentity.roleLabel}</strong> ·{' '}
+                      {lastIdentity.orgLabel.split(' ')[0]}
+                    </span>
+                  </div>
+                  <span className="font-semibold text-teal-300">一键进入 →</span>
                 </button>
               )}
-            </div>
 
-            {/* Deep-link Warning/Direct-Route Bar (Industrial Orange Accent) */}
-            {deepLinkMeta && (
-              <div className="mt-3 flex items-start gap-2 border-l-[3px] border-[#FF5722] bg-[#FFF4F0] px-3 py-2 text-xs text-[#7C2D12]">
-                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#FF5722]" />
-                <div className="leading-relaxed">
-                  <span className="mono mr-1.5 font-bold text-[#FF5722]">[REDIRECT]</span>
-                  目标页面为<strong>「{deepLinkMeta.label}」</strong>，已自动锁定有权限的作业岗位。
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* MODULE 01: Organization Selector Matrix (Hard-edge interlocked tiles) */}
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <span className="mono text-[11px] font-bold tracking-wide text-slate-700">
-                01 // 所属联盟机构
-              </span>
-              <span className="mono text-[10.5px] font-semibold text-[#0369A1]">
-                {selectedOrgProfile.mspId} :{selectedTechMeta.port}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-1.5">
-              {ORG_PROFILES.map(org => {
-                const active = selectedMsp === org.mspId;
-                const tech = ORG_TECH_META[org.mspId];
-                const count = roleCountsByMsp[org.mspId] ?? 0;
-                return (
-                  <button
-                    key={org.mspId}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => selectOrganization(org.mspId)}
-                    className={`chamfer-sm relative flex cursor-pointer flex-col justify-between border px-3 py-2.5 text-left transition duration-150 ${
-                      active
-                        ? 'border-[#0284C7] bg-[#0F172A] text-white shadow-[inset_3px_0_0_#38BDF8]'
-                        : 'border-slate-300 bg-white/90 text-slate-800 hover:border-[#0284C7]/60 hover:bg-white'
-                    }`}
-                  >
-                    <div className="flex w-full items-center justify-between gap-1.5">
-                      <span className="flex items-center gap-1.5 text-xs font-bold">
-                        {active && (
-                          <span className="animate-cursor-block inline-block h-2 w-2 bg-[#38BDF8]" />
-                        )}
-                        <span className="truncate">{org.shortName}</span>
-                      </span>
-                      <span
-                        className={`mono text-[10px] font-semibold ${
-                          active ? 'text-sky-300' : 'text-slate-500'
+              {/* 4-Organization Segmented Tabs */}
+              <div>
+                <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-[#07111e] p-1 sm:grid-cols-4">
+                  {ORG_PROFILES.map(org => {
+                    const active = selectedMsp === org.mspId;
+                    return (
+                      <button
+                        key={org.mspId}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => setSelectedMsp(org.mspId)}
+                        className={`cursor-pointer rounded-lg px-2 py-2 text-xs font-semibold transition ${
+                          active
+                            ? 'bg-gradient-to-r from-[#2563eb]/90 to-[#0f9d8a]/90 text-white shadow-sm'
+                            : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
                         }`}
                       >
-                        {count}G
-                      </span>
-                    </div>
-                    <div
-                      className={`mono mt-1 flex items-center justify-between text-[10px] ${
-                        active ? 'text-slate-300' : 'text-slate-500'
-                      }`}
-                    >
-                      <span>{tech.code}</span>
-                      <span>:{tech.port}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="mt-1.5 border border-slate-300/80 bg-white/70 px-3 py-1.5 text-[11.5px] leading-snug text-slate-600">
-              <span className="mono mr-1.5 font-bold text-[#0F172A]">SCOPE:</span>
-              {selectedOrgProfile.tagline}
-            </div>
-          </div>
-
-          {/* MODULE 02: Role Selection + Precision Terminal Filter Input */}
-          <div className="flex flex-1 flex-col">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <span className="mono text-[11px] font-bold tracking-wide text-slate-700">
-                02 // 作业岗位认证
-              </span>
-
-              <div role="tablist" aria-label="岗位筛选" className="inline-flex border border-slate-300 bg-white">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={roleScopeTab === 'core'}
-                  onClick={() => {
-                    setRoleScopeTab('core');
-                    setRoleFilter('');
-                  }}
-                  className={`mono cursor-pointer px-2.5 py-1 text-[10.5px] font-bold transition duration-150 ${
-                    roleScopeTab === 'core'
-                      ? 'bg-[#0F172A] text-[#38BDF8]'
-                      : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  核心 ({allOrgIdentities.core.length})
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={roleScopeTab === 'all'}
-                  onClick={() => setRoleScopeTab('all')}
-                  className={`mono cursor-pointer border-l border-slate-300 px-2.5 py-1 text-[10.5px] font-bold transition duration-150 ${
-                    roleScopeTab === 'all'
-                      ? 'bg-[#0F172A] text-[#38BDF8]'
-                      : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  全部 ({allOrgIdentities.all.length})
-                </button>
-              </div>
-            </div>
-
-            {/* Mechanical Terminal Filter Input (0.15s crisp border + blinking ■ block on focus) */}
-            <div
-              className={`mb-2 flex items-center gap-2 border bg-white px-2.5 py-1.5 transition duration-150 ${
-                filterFocused
-                  ? 'border-[#0284C7] shadow-[inset_3px_0_0_#38BDF8]'
-                  : 'border-slate-300'
-              }`}
-            >
-              {filterFocused ? (
-                <span className="animate-cursor-block inline-block h-2.5 w-2.5 shrink-0 bg-[#0284C7]" />
-              ) : (
-                <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-              )}
-              <input
-                type="text"
-                value={roleFilter}
-                onChange={e => setRoleFilter(e.target.value)}
-                onFocus={() => setFilterFocused(true)}
-                onBlur={() => setFilterFocused(false)}
-                placeholder="输入岗位名称或职责快速定位（如：审批、质检、装配）"
-                aria-label="筛选岗位"
-                className="w-full bg-transparent text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none"
-              />
-              {roleFilter && (
-                <button
-                  type="button"
-                  onClick={() => setRoleFilter('')}
-                  className="mono cursor-pointer text-[10px] font-bold text-slate-500 hover:text-[#FF5722]"
-                >
-                  CLR
-                </button>
-              )}
-            </div>
-
-            {/* Role List */}
-            <div className="max-h-[306px] space-y-1.5 overflow-y-auto pr-0.5 lg:min-h-[246px]">
-              {loading ? (
-                Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="skeleton-block h-[60px] rounded-none" />
-                ))
-              ) : visibleIdentities.length === 0 ? (
-                <div className="border border-dashed border-[#FF5722]/60 bg-[#FFF4F0] px-3 py-4 text-center text-xs text-[#9A3412]">
-                  未匹配到「{roleFilter}」相关岗位，请清空条件或切换其他企业。
+                        {ORG_TAB_NAMES[org.mspId]}
+                      </button>
+                    );
+                  })}
                 </div>
-              ) : (
-                visibleIdentities.map((item, idx) => {
-                  const selected = activeSelection?.name === item.name;
-                  const isCore = CORE_IDENTITY_NAMES.has(item.name);
-                  const RoleIcon = ROLE_ICONS[item.role] ?? UserCheck;
-                  return (
+                <p className="mt-2 px-1 text-[11.5px] leading-relaxed text-slate-400">
+                  {selectedOrgProfile.tagline}
+                </p>
+              </div>
+
+              {/* Role Scope Filter + 1-Click Role List */}
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-300">选择岗位（点击即登录）</span>
+                  <div className="inline-flex rounded-lg bg-[#07111e] p-0.5 text-[11px]">
                     <button
-                      key={item.name}
-                      ref={el => {
-                        roleBtnRefs.current[idx] = el;
-                      }}
                       type="button"
-                      aria-pressed={selected}
-                      onClick={() => setSelectedName(item.name)}
-                      onDoubleClick={() => {
-                        setSelectedName(item.name);
-                        void loginWithIdentity(item);
-                      }}
-                      onKeyDown={e => handleRoleKeyDown(e, idx)}
-                      className={`group flex w-full cursor-pointer items-center gap-3 border px-3 py-2.5 text-left transition duration-150 ${
-                        selected
-                          ? 'border-[#0284C7] bg-[#0F172A] text-white shadow-[inset_3px_0_0_#38BDF8]'
-                          : 'border-slate-300 bg-white/95 text-slate-800 hover:border-[#0284C7]/65 hover:bg-white'
+                      onClick={() => setRoleScopeTab('core')}
+                      className={`cursor-pointer rounded-md px-2.5 py-1 font-medium transition ${
+                        roleScopeTab === 'core' ? 'bg-white/12 text-white' : 'text-slate-400 hover:text-slate-200'
                       }`}
                     >
-                      <div
-                        className={`flex h-7 w-7 shrink-0 items-center justify-center border ${
-                          selected
-                            ? 'border-sky-400/50 bg-sky-500/15 text-[#38BDF8]'
-                            : 'border-slate-200 bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        <RoleIcon className="h-3.5 w-3.5" />
-                      </div>
+                      核心 ({orgIdentities.core.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRoleScopeTab('all')}
+                      className={`cursor-pointer rounded-md px-2.5 py-1 font-medium transition ${
+                        roleScopeTab === 'all' ? 'bg-white/12 text-white' : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      全部 ({orgIdentities.all.length})
+                    </button>
+                  </div>
+                </div>
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex min-w-0 items-center gap-1.5">
-                            {selected && (
-                              <span className="animate-cursor-block inline-block h-2 w-2 shrink-0 bg-[#38BDF8]" />
-                            )}
-                            <span className="truncate text-[13px] font-bold">{item.roleLabel}</span>
-                            {roleScopeTab === 'all' && isCore && (
-                              <span
-                                className={`mono shrink-0 px-1 py-0.5 text-[9.5px] font-bold ${
-                                  selected
-                                    ? 'bg-sky-400/20 text-sky-300'
-                                    : 'bg-slate-200 text-slate-700'
-                                }`}
-                              >
-                                CORE
-                              </span>
+                {loading ? (
+                  <div className="space-y-2">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="skeleton-block-dark h-[64px]" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {visibleRoles.map(item => {
+                      const RoleIcon = ROLE_ICONS[item.role] ?? UserCheck;
+                      const isEntering = enteringName === item.name;
+                      const destHref =
+                        deepLinkPath && canAccessRoute(item, deepLinkPath)
+                          ? deepLinkPath
+                          : getDefaultRouteForActor(item);
+                      const destLabel = findRouteMeta(destHref)?.label ?? '工作台';
+                      return (
+                        <button
+                          key={item.name}
+                          type="button"
+                          disabled={Boolean(enteringName) || switching}
+                          onClick={() => void loginWithIdentity(item)}
+                          className="group flex w-full cursor-pointer items-center gap-3.5 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left transition hover:border-sky-400/50 hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-55"
+                        >
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-500/12 text-sky-300 transition group-hover:bg-sky-500/20 group-hover:text-teal-300">
+                            {isEntering ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RoleIcon className="h-4 w-4" />
                             )}
                           </div>
-                          <span
-                            className={`mono shrink-0 text-[10px] ${
-                              selected ? 'text-sky-300' : 'text-slate-400'
-                            }`}
-                          >
-                            {selected && defaultLandingMeta ? `→ ${defaultLandingMeta.label}` : item.role.toUpperCase()}
-                          </span>
-                        </div>
-                        <p
-                          className={`mt-0.5 truncate text-[11.5px] ${
-                            selected ? 'text-slate-300' : 'text-slate-500'
-                          }`}
-                        >
-                          {getRoleSummaryForIdentity(item)}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })
-              )}
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="truncate text-[13.5px] font-bold text-white">
+                                {item.roleLabel}
+                              </span>
+                              <span className="shrink-0 text-[11px] font-medium text-teal-300/90 opacity-80 transition group-hover:opacity-100">
+                                {isEntering ? '正在进入…' : `进入${destLabel} →`}
+                              </span>
+                            </div>
+                            <p className="mt-0.5 truncate text-xs text-slate-400">
+                              {getRoleSummaryForIdentity(item)}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Minimal Security Footer */}
+            <div className="flex items-center justify-between border-t border-white/10 bg-[#081322]/90 px-6 py-3 text-[11px] text-slate-400">
+              <span className="inline-flex items-center gap-1.5">
+                <Lock className="h-3 w-3 text-teal-400" />
+                服务端安全托管身份 · 零前端私钥
+              </span>
+              <span className="mono text-slate-500">GB/T 34014</span>
             </div>
           </div>
-
-          {/* MODULE 03: mTLS Hardware Credential Readout + Chamfered Trigger Button */}
-          <div className="sticky bottom-0 z-20 -mx-5 border-t border-slate-300 bg-[#edf2f7]/95 px-5 pt-3 pb-1 backdrop-blur-sm sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:pt-3 sm:pb-0">
-            {activeSelection && (
-              <div className="mb-2.5 border border-slate-300 bg-white px-3 py-2">
-                <div className="flex flex-wrap items-center justify-between gap-1.5 border-b border-slate-200 pb-1.5">
-                  <div className="mono flex min-w-0 items-center gap-1.5 text-[11px]">
-                    <span className="inline-block h-2 w-2 bg-emerald-500" />
-                    <strong className="truncate text-[#0F172A]">{activeSelection.roleLabel}</strong>
-                    <span className="text-slate-400">/</span>
-                    <span className="text-slate-600">{activeSelection.fingerprintPrefix}</span>
-                  </div>
-                  <span className="mono inline-flex items-center gap-1 bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
-                    <Lock className="h-2.5 w-2.5 text-[#0284C7]" />
-                    SERVER_CUSTODY
-                  </span>
-                </div>
-
-                <div className="mt-1.5 flex flex-wrap items-center gap-1" aria-label="可访问工作台模块">
-                  <span className="mono mr-1 text-[10px] font-semibold text-slate-500">ACCESS:</span>
-                  {allowedRouteMetas.slice(0, 4).map(r => (
-                    <span
-                      key={r.href}
-                      className="border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10.5px] font-medium text-slate-700"
-                    >
-                      {r.label}
-                    </span>
-                  ))}
-                  {allowedRouteMetas.length > 4 && (
-                    <span
-                      title={allowedRouteMetas.map(r => r.label).join('、')}
-                      className="mono border border-[#0284C7]/35 bg-[#E0F2FE] px-1.5 py-0.5 text-[10px] font-bold text-[#0369A1]"
-                    >
-                      +{allowedRouteMetas.length - 4}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <button
-              type="button"
-              disabled={switching || loading || entering || !activeSelection}
-              onClick={() => void loginWithIdentity(activeSelection)}
-              className="chamfer-btn led-btn-primary group relative inline-flex w-full cursor-pointer items-center justify-center gap-2.5 bg-[#0F172A] px-6 py-3.5 text-sm font-bold tracking-wide text-white shadow-[inset_0_1px_0_rgba(56,189,248,0.65)] active:translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {entering || switching ? (
-                <span className="mono text-xs tracking-wider text-[#38BDF8]">
-                  {AUTH_PROGRESS_FRAMES[authFrameIdx] ?? AUTH_PROGRESS_FRAMES[0]}
-                </span>
-              ) : (
-                <>
-                  <span className="h-2 w-2 bg-[#38BDF8] shadow-[0_0_6px_#38BDF8]" />
-                  <span>
-                    {defaultLandingMeta
-                      ? `接入工作台 · 进入「${defaultLandingMeta.label}」`
-                      : '确认身份接入工作台'}
-                  </span>
-                  <ArrowRight className="h-4 w-4 text-[#38BDF8] transition-transform duration-150 group-hover:translate-x-1" />
-                  <kbd className="mono ml-1 hidden border border-slate-600 bg-slate-800 px-1.5 py-0.5 text-[10px] font-semibold text-slate-300 sm:inline-block">
-                    ENTER ↵
-                  </kbd>
-                </>
-              )}
-            </button>
-          </div>
         </div>
-      </section>
+      )}
     </div>
   );
 }
