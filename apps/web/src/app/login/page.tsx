@@ -365,16 +365,18 @@ export function LoginPortal() {
           </div>
         </div>
 
-        {/* Right: Full-Presence 3D Frosted-Glass Sculpture of the Official Logo */}
+        {/* Right: Grounded True-Transparent 3D Frosted-Glass Sculpture in Shared Studio Light */}
         <div className="order-1 flex items-center justify-center lg:order-2 lg:justify-end">
-          <div className="animate-logo-float relative flex items-center justify-center">
+          <div className="login-sculpture-stage">
+            <div aria-hidden="true" className="login-sculpture-aura" />
+            <div aria-hidden="true" className="login-sculpture-floor" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/visuals/login-logo-3d.jpg"
+              src="/visuals/login-logo-3d.webp"
               alt="智权链·锂安溯 立体磨砂玻璃徽标雕塑"
-              width={960}
-              height={960}
-              className="login-3d-blend h-[280px] w-[280px] object-contain select-none sm:h-[400px] sm:w-[400px] lg:h-[min(45vw,650px)] lg:w-[min(45vw,650px)]"
+              width={792}
+              height={817}
+              className="login-sculpture-img h-[260px] w-auto object-contain select-none sm:h-[370px] lg:h-[min(43vw,580px)]"
             />
           </div>
         </div>
