@@ -53,6 +53,57 @@ const ORG_TAB_NAMES: Record<OrganizationMSP, string> = {
   RecycleOrgMSP: '退役回收',
 };
 
+const ORG_MODAL_TONES: Record<OrganizationMSP, React.CSSProperties> = {
+  CellOrgMSP: {
+    ['--org-accent-a' as string]: 'rgba(37, 99, 235, 0.38)',
+    ['--org-accent-b' as string]: 'rgba(14, 165, 233, 0.28)',
+    ['--org-hover-a' as string]: 'rgba(37, 99, 235, 0.26)',
+    ['--org-hover-b' as string]: 'rgba(14, 165, 233, 0.18)',
+    ['--org-border' as string]: 'rgba(125, 211, 252, 0.56)',
+    ['--org-shadow' as string]: 'rgba(37, 99, 235, 0.34)',
+    ['--org-icon-a' as string]: '#2563eb',
+    ['--org-icon-b' as string]: '#0284c7',
+    ['--org-arrow-bg' as string]: 'rgba(56, 189, 248, 0.24)',
+    ['--org-arrow-fg' as string]: '#7dd3fc',
+  },
+  PackOrgMSP: {
+    ['--org-accent-a' as string]: 'rgba(29, 111, 242, 0.32)',
+    ['--org-accent-b' as string]: 'rgba(13, 148, 136, 0.34)',
+    ['--org-hover-a' as string]: 'rgba(29, 111, 242, 0.24)',
+    ['--org-hover-b' as string]: 'rgba(20, 184, 166, 0.2)',
+    ['--org-border' as string]: 'rgba(94, 234, 212, 0.54)',
+    ['--org-shadow' as string]: 'rgba(14, 165, 233, 0.34)',
+    ['--org-icon-a' as string]: '#1d6ff2',
+    ['--org-icon-b' as string]: '#0d9488',
+    ['--org-arrow-bg' as string]: 'rgba(20, 184, 166, 0.26)',
+    ['--org-arrow-fg' as string]: '#5eead4',
+  },
+  LabOrgMSP: {
+    ['--org-accent-a' as string]: 'rgba(2, 132, 199, 0.36)',
+    ['--org-accent-b' as string]: 'rgba(56, 189, 248, 0.26)',
+    ['--org-hover-a' as string]: 'rgba(2, 132, 199, 0.24)',
+    ['--org-hover-b' as string]: 'rgba(56, 189, 248, 0.18)',
+    ['--org-border' as string]: 'rgba(125, 211, 252, 0.58)',
+    ['--org-shadow' as string]: 'rgba(14, 165, 233, 0.34)',
+    ['--org-icon-a' as string]: '#0284c7',
+    ['--org-icon-b' as string]: '#0ea5e9',
+    ['--org-arrow-bg' as string]: 'rgba(56, 189, 248, 0.24)',
+    ['--org-arrow-fg' as string]: '#bae6fd',
+  },
+  RecycleOrgMSP: {
+    ['--org-accent-a' as string]: 'rgba(13, 148, 136, 0.34)',
+    ['--org-accent-b' as string]: 'rgba(16, 185, 129, 0.32)',
+    ['--org-hover-a' as string]: 'rgba(13, 148, 136, 0.24)',
+    ['--org-hover-b' as string]: 'rgba(16, 185, 129, 0.2)',
+    ['--org-border' as string]: 'rgba(110, 231, 183, 0.54)',
+    ['--org-shadow' as string]: 'rgba(16, 185, 129, 0.32)',
+    ['--org-icon-a' as string]: '#0d9488',
+    ['--org-icon-b' as string]: '#10b981',
+    ['--org-arrow-bg' as string]: 'rgba(16, 185, 129, 0.24)',
+    ['--org-arrow-fg' as string]: '#6ee7b7',
+  },
+};
+
 const ROLE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   manufacturer: Factory,
   assembler: Layers,
@@ -270,9 +321,9 @@ export function LoginPortal() {
             alt="智权链·锂安溯"
             width={42}
             height={42}
-            className="h-9 w-9 object-contain drop-shadow-[0_4px_14px_rgba(20,184,166,0.32)] select-none sm:h-[42px] sm:w-[42px]"
+            className="h-9 w-9 object-contain drop-shadow-[0_4px_16px_rgba(14,165,233,0.36)] select-none sm:h-[42px] sm:w-[42px]"
           />
-          <span className="text-lg font-bold tracking-wide text-slate-50 sm:text-[19px]">
+          <span className="bg-gradient-to-b from-white to-[#dbeafe] bg-clip-text text-lg font-bold tracking-wide text-transparent sm:text-[19px]">
             智权链·锂安溯
           </span>
         </div>
@@ -283,7 +334,7 @@ export function LoginPortal() {
               key={item.label}
               type="button"
               onClick={() => openPicker(item.msp)}
-              className="cursor-pointer text-[14.5px] font-medium text-slate-400 transition hover:text-white"
+              className="cursor-pointer text-[14.5px] font-medium text-[#93adc8] transition hover:text-[#a5f3fc]"
             >
               {item.label}
             </button>
@@ -305,13 +356,13 @@ export function LoginPortal() {
         <div className="order-2 flex flex-col items-start lg:order-1 lg:-mt-4">
           <h1
             style={{ fontSize: 'clamp(2.5rem, 5.1vw, 4.75rem)' }}
-            className="leading-[1.08] font-extrabold tracking-tight text-white"
+            className="bg-gradient-to-b from-white via-white to-[#dbeafe] bg-clip-text leading-[1.08] font-extrabold tracking-tight text-transparent"
           >
             智权链 · 锂安溯
           </h1>
           <p
             style={{ fontSize: 'clamp(1.5rem, 2.9vw, 2.65rem)' }}
-            className="mt-3.5 font-bold tracking-tight text-slate-200 sm:mt-4"
+            className="mt-3.5 bg-gradient-to-r from-[#dbeafe] via-[#93c5fd] to-[#99f6e4] bg-clip-text font-bold tracking-tight text-transparent sm:mt-4"
           >
             - TrustGuard Battery -
           </p>
@@ -319,19 +370,19 @@ export function LoginPortal() {
           <div className="mt-7 space-y-2 sm:mt-9">
             <p
               style={{ fontSize: 'clamp(1.15rem, 1.72vw, 1.56rem)' }}
-              className="font-bold tracking-wide text-[#2dd4bf]"
+              className="bg-gradient-to-r from-[#38bdf8] via-[#2dd4bf] to-[#34d399] bg-clip-text font-bold tracking-wide text-transparent"
             >
               每一颗电芯，全周期可信。
             </p>
             <p
               style={{ fontSize: 'clamp(1rem, 1.45vw, 1.32rem)' }}
-              className="leading-snug font-medium text-[#7089a4]"
+              className="leading-snug font-medium text-[#8ea6c2]"
             >
               四方联盟多点背书。
             </p>
             <p
               style={{ fontSize: 'clamp(1rem, 1.45vw, 1.32rem)' }}
-              className="leading-snug font-medium text-[#7089a4]"
+              className="leading-snug font-medium text-[#8ea6c2]"
             >
               主动风控实时把关。
             </p>
@@ -352,12 +403,12 @@ export function LoginPortal() {
                 type="button"
                 disabled={Boolean(enteringName) || switching || loading}
                 onClick={() => void loginWithIdentity(lastIdentity)}
-                className="glass-ghost-btn inline-flex cursor-pointer items-center gap-2 rounded-[14px] px-5 py-3.5 text-sm font-semibold text-slate-300 active:scale-[0.98] disabled:opacity-50 sm:py-4 sm:text-[15px]"
+                className="glass-ghost-btn inline-flex cursor-pointer items-center gap-2 rounded-[14px] px-5 py-3.5 text-sm font-semibold text-[#d6e6f7] active:scale-[0.98] disabled:opacity-50 sm:py-4 sm:text-[15px]"
               >
                 {enteringName === lastIdentity.name ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-[#2dd4bf]" />
+                  <Loader2 className="h-4 w-4 animate-spin text-[#38bdf8]" />
                 ) : (
-                  <History className="h-4 w-4 text-slate-400" />
+                  <History className="h-4 w-4 text-[#7dd3fc]" />
                 )}
                 <span className="whitespace-nowrap">继续上次：{lastIdentity.roleLabel}</span>
               </button>
@@ -393,14 +444,17 @@ export function LoginPortal() {
             if (e.target === e.currentTarget && !enteringName) setModalOpen(false);
           }}
         >
-          <div className="identity-modal-shell animate-modal-in flex max-h-[90vh] w-full max-w-[740px] flex-col overflow-hidden rounded-[26px]">
+          <div
+            style={ORG_MODAL_TONES[selectedMsp]}
+            className="identity-modal-shell animate-modal-in flex max-h-[90vh] w-full max-w-[740px] flex-col overflow-hidden rounded-[26px]"
+          >
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-white/[0.07] px-6 pt-6 pb-5 sm:px-7">
+            <div className="flex items-center justify-between border-b border-sky-300/10 px-6 pt-6 pb-5 sm:px-7">
               <div>
-                <h2 id="identity-modal-title" className="text-[18px] font-bold tracking-wide text-white sm:text-[19px]">
+                <h2 id="identity-modal-title" className="text-[18px] font-bold tracking-wide text-slate-50 sm:text-[19px]">
                   选择联盟身份
                 </h2>
-                <p className="mt-1 text-xs text-[#8da2b8]">
+                <p className="mt-1 text-xs text-[#849db8]">
                   点选所属机构与业务岗位，一步进入对应工作台
                 </p>
               </div>
@@ -409,7 +463,7 @@ export function LoginPortal() {
                 aria-label="关闭窗口"
                 disabled={Boolean(enteringName)}
                 onClick={() => setModalOpen(false)}
-                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-[10px] border border-white/10 bg-white/[0.05] text-slate-400 transition hover:bg-white/10 hover:text-white disabled:opacity-40"
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-[10px] border border-sky-300/16 bg-[#0f223a]/70 text-[#93adc8] transition hover:border-sky-300/35 hover:text-white disabled:opacity-40"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -432,16 +486,16 @@ export function LoginPortal() {
                   type="button"
                   disabled={Boolean(enteringName) || switching || loading}
                   onClick={() => void loginWithIdentity(lastIdentity)}
-                  className="group flex w-full cursor-pointer items-center justify-between gap-3 rounded-[15px] border border-teal-400/32 bg-gradient-to-r from-teal-500/[0.14] to-sky-500/[0.08] px-4 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] transition hover:border-teal-300/55 hover:from-teal-500/[0.2] disabled:opacity-50"
+                  className="group flex w-full cursor-pointer items-center justify-between gap-3 rounded-[15px] border border-sky-400/34 bg-gradient-to-r from-[#1d6ff2]/[0.16] to-teal-500/[0.14] px-4 py-3 text-left shadow-[inset_0_1px_0_rgba(186,230,253,0.14)] transition hover:border-sky-300/55 hover:from-[#1d6ff2]/[0.24] disabled:opacity-50"
                 >
-                  <div className="flex min-w-0 items-center gap-2.5 text-[13px] text-slate-300">
+                  <div className="flex min-w-0 items-center gap-2.5 text-[13px] text-[#d6e6f7]">
                     <span className="h-2 w-2 shrink-0 rounded-full bg-[#2dd4bf] shadow-[0_0_8px_#2dd4bf]" />
                     <span className="truncate">
                       上次登录：<strong className="font-bold text-white">{lastIdentity.roleLabel}</strong> ·{' '}
                       {lastIdentity.orgLabel.split(' ')[0]}
                     </span>
                   </div>
-                  <span className="shrink-0 rounded-[9px] border border-teal-300/35 bg-teal-400/18 px-3 py-1 text-xs font-semibold text-[#5eead4] transition group-hover:bg-teal-400/28">
+                  <span className="shrink-0 rounded-[9px] border border-sky-300/38 bg-gradient-to-r from-[#1d6ff2]/28 to-teal-500/28 px-3 py-1 text-xs font-semibold text-[#a5f3fc] transition group-hover:brightness-115">
                     {enteringName === lastIdentity.name ? '正在进入…' : '一键恢复会话 →'}
                   </span>
                 </button>
@@ -461,14 +515,14 @@ export function LoginPortal() {
                       className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition ${
                         active
                           ? 'identity-org-pill-active text-white'
-                          : 'border border-transparent text-[#8da2b8] hover:bg-white/[0.04] hover:text-slate-200'
+                          : 'border border-transparent text-[#849db8] hover:bg-sky-400/[0.06] hover:text-slate-200'
                       }`}
                     >
                       <span className="whitespace-nowrap">{ORG_TAB_NAMES[org.mspId]}</span>
                       {totalCount > 0 && (
                         <span
                           className={`mono rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${
-                            active ? 'bg-teal-400/20 text-[#5eead4]' : 'bg-white/[0.07] text-slate-400'
+                            active ? 'bg-teal-400/24 text-[#99f6e4]' : 'bg-slate-400/12 text-[#93adc8]'
                           }`}
                         >
                           {totalCount}
@@ -481,14 +535,16 @@ export function LoginPortal() {
 
               {/* Scope Tagline + Core/All Switch */}
               <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
-                <p className="text-xs text-[#7e95ad]">{selectedOrgProfile.tagline}</p>
+                <p className="text-xs text-[#849db8]">{selectedOrgProfile.tagline}</p>
 
-                <div className="inline-flex rounded-[10px] border border-white/[0.07] bg-[#060e1a] p-[3px] text-[11.5px] font-semibold">
+                <div className="inline-flex rounded-[10px] border border-sky-300/10 bg-[#040b15] p-[3px] text-[11.5px] font-semibold">
                   <button
                     type="button"
                     onClick={() => setRoleScopeTab('core')}
                     className={`cursor-pointer rounded-[7px] px-2.5 py-1 transition ${
-                      roleScopeTab === 'core' ? 'bg-white/10 text-white' : 'text-[#7e95ad] hover:text-slate-200'
+                      roleScopeTab === 'core'
+                        ? 'border border-sky-300/22 bg-[#1e406e]/65 text-slate-50'
+                        : 'border border-transparent text-[#849db8] hover:text-slate-200'
                     }`}
                   >
                     核心岗 ({orgIdentities.core.length})
@@ -497,7 +553,9 @@ export function LoginPortal() {
                     type="button"
                     onClick={() => setRoleScopeTab('all')}
                     className={`cursor-pointer rounded-[7px] px-2.5 py-1 transition ${
-                      roleScopeTab === 'all' ? 'bg-white/10 text-white' : 'text-[#7e95ad] hover:text-slate-200'
+                      roleScopeTab === 'all'
+                        ? 'border border-sky-300/22 bg-[#1e406e]/65 text-slate-50'
+                        : 'border border-transparent text-[#849db8] hover:text-slate-200'
                     }`}
                   >
                     全部 ({orgIdentities.all.length})
@@ -551,7 +609,7 @@ export function LoginPortal() {
                           </div>
                           <p
                             className={`mt-0.5 truncate text-xs transition-colors duration-150 ${
-                              isHovered || isEntering ? 'text-[#99f6e4]' : 'text-[#8da2b8]'
+                              isHovered || isEntering ? 'text-[#a5f3fc]' : 'text-[#8ea6c2]'
                             }`}
                           >
                             {isEntering
@@ -562,7 +620,7 @@ export function LoginPortal() {
                           </p>
                         </div>
 
-                        <div className="identity-role-arrow flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] text-slate-500">
+                        <div className="identity-role-arrow flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] text-[#6482a3]">
                           <ArrowUpRight className="h-3.5 w-3.5" />
                         </div>
                       </button>
@@ -573,9 +631,9 @@ export function LoginPortal() {
             </div>
 
             {/* Minimal Security Footer */}
-            <div className="flex items-center justify-between border-t border-white/[0.06] bg-[#050c16]/75 px-6 py-3.5 text-[11.5px] text-slate-500 sm:px-7">
-              <span className="inline-flex items-center gap-1.5 text-slate-400">
-                <Lock className="h-3.5 w-3.5 text-[#2dd4bf]" />
+            <div className="flex items-center justify-between border-t border-sky-300/10 bg-[#040a14]/82 px-6 py-3.5 text-[11.5px] text-[#6482a3] sm:px-7">
+              <span className="inline-flex items-center gap-1.5 text-[#93adc8]">
+                <Lock className="h-3.5 w-3.5 text-[#38bdf8]" />
                 服务端安全托管身份 · 零前端私钥留存
               </span>
               <span className="mono">GB/T 34014—2017</span>

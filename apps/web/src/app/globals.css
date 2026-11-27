@@ -246,18 +246,20 @@ body.presentation-mode .presentation-sidebar-hide {
   }
 }
 
-/* Minimalist Flagship Login Surface (Unified Studio Space + Grounded 3D Sculpture) */
+/* Minimalist Flagship Login Surface (Unified Sapphire-Cyan-Emerald Studio Space) */
 .login-minimal-canvas {
-  background-color: #060f1a;
+  background-color: #050d1a;
   background-image:
-    radial-gradient(ellipse 72% 34% at 46% -6%, rgba(16, 185, 129, 0.14), rgba(14, 165, 233, 0.05) 52%, transparent 80%),
-    radial-gradient(ellipse 58% 54% at 73% 52%, rgba(14, 165, 233, 0.09), rgba(16, 185, 129, 0.05) 46%, transparent 74%),
-    radial-gradient(ellipse 80% 24% at 62% 92%, rgba(15, 42, 74, 0.28), transparent 76%);
+    radial-gradient(ellipse 58% 48% at 18% 22%, rgba(37, 99, 235, 0.13), transparent 70%),
+    radial-gradient(ellipse 64% 34% at 52% -6%, rgba(14, 165, 233, 0.14), rgba(20, 184, 166, 0.06) 52%, transparent 80%),
+    radial-gradient(ellipse 52% 54% at 76% 54%, rgba(14, 165, 233, 0.11), rgba(16, 185, 129, 0.08) 46%, transparent 74%),
+    radial-gradient(ellipse 76% 26% at 64% 94%, rgba(14, 52, 92, 0.34), transparent 78%),
+    linear-gradient(160deg, #050d1a 0%, #071426 54%, #061120 100%);
 }
 
 @keyframes tg-aura-breathe {
   0%, 100% {
-    opacity: 0.82;
+    opacity: 0.84;
     transform: scale(1);
   }
   50% {
@@ -276,143 +278,149 @@ body.presentation-mode .presentation-sidebar-hide {
 /* Soft volumetric studio backlight shining behind the frosted shield & through the ring loops */
 .login-sculpture-aura {
   position: absolute;
-  inset: 4% 6% 14% 6%;
+  inset: 3% 4% 14% 4%;
   pointer-events: none;
   background:
-    radial-gradient(circle at 40% 42%, rgba(37, 99, 235, 0.24) 0%, transparent 56%),
-    radial-gradient(circle at 62% 44%, rgba(20, 184, 166, 0.22) 0%, transparent 56%);
-  filter: blur(28px);
+    radial-gradient(circle at 38% 42%, rgba(37, 99, 235, 0.3) 0%, transparent 56%),
+    radial-gradient(circle at 64% 44%, rgba(20, 184, 166, 0.26) 0%, transparent 56%);
+  filter: blur(30px);
   animation: tg-aura-breathe 5.5s ease-in-out infinite;
 }
 
 /* Grounded studio floor contact shadow + refracted sapphire/emerald glass caustics */
 .login-sculpture-floor {
   position: absolute;
-  left: -6%;
-  right: -6%;
-  bottom: -3%;
-  height: 30%;
+  left: -8%;
+  right: -8%;
+  bottom: -4%;
+  height: 32%;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 46% 36% at 50% 58%, rgba(1, 4, 10, 0.92) 0%, rgba(2, 7, 16, 0.68) 46%, transparent 78%),
-    radial-gradient(ellipse 34% 28% at 30% 54%, rgba(37, 99, 235, 0.34) 0%, transparent 72%),
-    radial-gradient(ellipse 36% 28% at 70% 54%, rgba(20, 184, 166, 0.36) 0%, transparent 72%);
-  filter: blur(10px);
+    radial-gradient(ellipse 46% 36% at 50% 58%, rgba(1, 4, 11, 0.94) 0%, rgba(2, 8, 18, 0.7) 46%, transparent 78%),
+    radial-gradient(ellipse 35% 28% at 29% 54%, rgba(37, 99, 235, 0.4) 0%, transparent 72%),
+    radial-gradient(ellipse 37% 28% at 71% 54%, rgba(20, 184, 166, 0.4) 0%, transparent 72%);
+  filter: blur(11px);
 }
 
 .login-sculpture-img {
   position: relative;
   z-index: 2;
   filter:
-    drop-shadow(0 26px 32px rgba(1, 5, 12, 0.82))
-    drop-shadow(0 4px 14px rgba(14, 165, 233, 0.12));
+    drop-shadow(0 28px 34px rgba(1, 5, 14, 0.86))
+    drop-shadow(0 4px 18px rgba(14, 165, 233, 0.16));
 }
 
 .crystal-cta-sm {
-  background: linear-gradient(180deg, #14b8a6 0%, #0d9488 100%);
-  border: 1px solid rgba(153, 246, 228, 0.42);
+  background: linear-gradient(135deg, #1d6ff2 0%, #0891b2 52%, #0d9488 100%);
+  border: 1px solid rgba(165, 243, 252, 0.42);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 8px 20px -6px rgba(20, 184, 166, 0.45);
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    inset 0 -1px 0 rgba(12, 74, 110, 0.55),
+    0 10px 24px -6px rgba(14, 165, 233, 0.42);
   transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
 }
 .crystal-cta-sm:hover:not(:disabled) {
-  filter: brightness(1.07);
-  transform: translateY(-1px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.48),
-    0 12px 26px -6px rgba(20, 184, 166, 0.58);
-}
-
-.crystal-cta-lg {
-  background: linear-gradient(180deg, #14b8a6 0%, #0d9488 100%);
-  border: 1px solid rgba(153, 246, 228, 0.48);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.38),
-    inset 0 -2px 0 rgba(15, 118, 110, 0.6),
-    0 16px 36px -10px rgba(20, 184, 166, 0.52);
-  transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
-}
-.crystal-cta-lg:hover:not(:disabled) {
-  filter: brightness(1.07);
+  filter: brightness(1.08);
   transform: translateY(-1px);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -2px 0 rgba(15, 118, 110, 0.6),
-    0 20px 42px -10px rgba(20, 184, 166, 0.65);
+    inset 0 -1px 0 rgba(12, 74, 110, 0.55),
+    0 14px 28px -6px rgba(14, 165, 233, 0.56);
+}
+
+.crystal-cta-lg {
+  background: linear-gradient(135deg, #1d6ff2 0%, #0891b2 52%, #0d9488 100%);
+  border: 1px solid rgba(165, 243, 252, 0.46);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    inset 0 -2px 0 rgba(12, 74, 110, 0.65),
+    0 18px 38px -10px rgba(14, 165, 233, 0.48),
+    0 8px 20px -8px rgba(20, 184, 166, 0.35);
+  transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+}
+.crystal-cta-lg:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.54),
+    inset 0 -2px 0 rgba(12, 74, 110, 0.65),
+    0 22px 44px -10px rgba(14, 165, 233, 0.62),
+    0 10px 24px -8px rgba(20, 184, 166, 0.45);
 }
 
 .glass-ghost-btn {
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+  background: linear-gradient(180deg, rgba(30, 58, 95, 0.38) 0%, rgba(15, 31, 56, 0.48) 100%);
+  border: 1px solid rgba(125, 211, 252, 0.24);
+  box-shadow: inset 0 1px 0 rgba(186, 230, 253, 0.14);
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
 .glass-ghost-btn:hover:not(:disabled) {
-  background: rgba(45, 212, 191, 0.1);
-  border-color: rgba(94, 234, 212, 0.42);
+  background: linear-gradient(180deg, rgba(29, 111, 242, 0.2) 0%, rgba(20, 184, 166, 0.14) 100%);
+  border-color: rgba(125, 211, 252, 0.48);
   color: #ffffff;
   transform: translateY(-1px);
 }
 
 .identity-modal-shell {
-  background: linear-gradient(180deg, rgba(16, 32, 54, 0.94) 0%, rgba(9, 20, 36, 0.97) 100%);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  background:
+    radial-gradient(ellipse 70% 35% at 50% 0%, rgba(14, 165, 233, 0.12), transparent 70%),
+    linear-gradient(180deg, rgba(11, 25, 46, 0.96) 0%, rgba(6, 15, 29, 0.98) 100%);
+  border: 1px solid rgba(125, 211, 252, 0.22);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 40px 90px -20px rgba(0, 0, 0, 0.88);
+    inset 0 1px 0 rgba(186, 230, 253, 0.18),
+    0 40px 90px -20px rgba(0, 0, 0, 0.9);
 }
 
 .identity-org-track {
-  background: #060e1a;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.45);
+  background: #040b15;
+  border: 1px solid rgba(125, 211, 252, 0.1);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.55);
 }
 
 .identity-org-pill-active {
-  background: linear-gradient(180deg, rgba(30, 58, 95, 0.96) 0%, rgba(19, 41, 70, 0.96) 100%);
-  border: 1px solid rgba(94, 234, 212, 0.4);
+  background: linear-gradient(135deg, var(--org-accent-a, rgba(29, 111, 242, 0.34)) 0%, var(--org-accent-b, rgba(13, 148, 136, 0.34)) 100%);
+  border: 1px solid var(--org-border, rgba(94, 234, 212, 0.48));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    0 4px 12px rgba(0, 0, 0, 0.35);
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 4px 14px var(--org-shadow, rgba(8, 145, 178, 0.25));
 }
 
 .identity-role-card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.02) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(18, 39, 68, 0.62) 0%, rgba(10, 23, 42, 0.72) 100%);
+  border: 1px solid rgba(125, 211, 252, 0.14);
+  box-shadow: inset 0 1px 0 rgba(186, 230, 253, 0.1);
   transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
 .identity-role-card:hover:not(:disabled) {
-  background: linear-gradient(180deg, rgba(20, 184, 166, 0.16) 0%, rgba(14, 165, 233, 0.07) 100%);
-  border-color: rgba(94, 234, 212, 0.55);
+  background: linear-gradient(135deg, var(--org-hover-a, rgba(29, 111, 242, 0.24)) 0%, var(--org-hover-b, rgba(20, 184, 166, 0.2)) 100%);
+  border-color: var(--org-border, rgba(94, 234, 212, 0.58));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 10px 24px -10px rgba(20, 184, 166, 0.35);
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 12px 26px -10px var(--org-shadow, rgba(14, 165, 233, 0.38));
   transform: translateY(-1px);
 }
 
 .identity-role-icon {
-  background: linear-gradient(145deg, rgba(30, 58, 92, 0.72), rgba(15, 31, 54, 0.92));
-  border: 1px solid rgba(125, 211, 252, 0.2);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  background: linear-gradient(145deg, rgba(29, 78, 140, 0.55), rgba(12, 29, 54, 0.85));
+  border: 1px solid rgba(125, 211, 252, 0.24);
+  box-shadow: inset 0 1px 0 rgba(186, 230, 253, 0.16);
   transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 .identity-role-card:hover:not(:disabled) .identity-role-icon {
-  background: linear-gradient(145deg, #14b8a6, #0284c7);
-  border-color: rgba(153, 246, 228, 0.6);
+  background: linear-gradient(135deg, var(--org-icon-a, #1d6ff2), var(--org-icon-b, #0d9488));
+  border-color: rgba(165, 243, 252, 0.65);
   color: #ffffff;
 }
 
 .identity-role-arrow {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 34, 58, 0.7);
+  border: 1px solid rgba(125, 211, 252, 0.14);
   transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 .identity-role-card:hover:not(:disabled) .identity-role-arrow {
-  background: rgba(45, 212, 191, 0.22);
-  border-color: rgba(94, 234, 212, 0.5);
-  color: #5eead4;
+  background: var(--org-arrow-bg, rgba(20, 184, 166, 0.26));
+  border-color: var(--org-border, rgba(94, 234, 212, 0.55));
+  color: var(--org-arrow-fg, #5eead4);
 }
 
 @keyframes tg-modal-in {
