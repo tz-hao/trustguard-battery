@@ -312,29 +312,29 @@ export function LoginPortal() {
 
   return (
     <div className="login-minimal-canvas relative flex min-h-screen w-full flex-col overflow-x-hidden text-white selection:bg-teal-400/25">
-      {/* Full-Bleed Edge-to-Edge Top Bar */}
-      <header className="flex h-20 w-full shrink-0 items-center justify-between px-6 sm:h-[88px] sm:px-10 lg:px-16">
+      {/* Aligned Top Bar (Snaps cleanly to the same architectural width as the hero) */}
+      <header className="mx-auto flex h-[76px] w-full max-w-[1380px] shrink-0 items-center justify-between px-6 sm:px-10 lg:px-14">
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/brand/logo-mark.png"
             alt="智权链·锂安溯"
-            width={42}
-            height={42}
-            className="h-9 w-9 object-contain drop-shadow-[0_4px_16px_rgba(14,165,233,0.36)] select-none sm:h-[42px] sm:w-[42px]"
+            width={40}
+            height={40}
+            className="h-9 w-9 object-contain drop-shadow-[0_4px_16px_rgba(14,165,233,0.36)] select-none sm:h-10 sm:w-10"
           />
-          <span className="bg-gradient-to-b from-white to-[#dbeafe] bg-clip-text text-lg font-bold tracking-wide text-transparent sm:text-[19px]">
+          <span className="bg-gradient-to-b from-white to-[#dbeafe] bg-clip-text text-[17px] font-bold tracking-wide text-transparent sm:text-[18px]">
             智权链·锂安溯
           </span>
         </div>
 
-        <nav aria-label="平台核心能力" className="hidden items-center gap-9 md:flex lg:gap-11">
+        <nav aria-label="平台核心能力" className="hidden items-center gap-8 md:flex lg:gap-10">
           {NAV_SHORTCUTS.map(item => (
             <button
               key={item.label}
               type="button"
               onClick={() => openPicker(item.msp)}
-              className="cursor-pointer text-[14.5px] font-medium text-[#93adc8] transition hover:text-[#a5f3fc]"
+              className="cursor-pointer text-[14px] font-medium text-[#93adc8] transition hover:text-[#a5f3fc]"
             >
               {item.label}
             </button>
@@ -344,55 +344,55 @@ export function LoginPortal() {
         <button
           type="button"
           onClick={() => openPicker()}
-          className="crystal-cta-sm cursor-pointer rounded-xl px-4 py-2 text-[13px] font-semibold tracking-wide text-white active:scale-[0.98] sm:px-5 sm:py-2.5 sm:text-sm"
+          className="crystal-cta-sm cursor-pointer rounded-xl px-4 py-2 text-[13px] font-semibold tracking-wide text-white active:scale-[0.98] sm:px-5 sm:py-2 sm:text-[13.5px]"
         >
           选择身份
         </button>
       </header>
 
-      {/* Full-Screen Responsive 2-Column Hero Stage */}
-      <main className="mx-auto grid w-full max-w-[1680px] flex-1 grid-cols-1 items-center gap-8 px-6 pt-2 pb-10 sm:px-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-6 lg:px-20 lg:pt-0 lg:pb-7 xl:px-24">
-        {/* Left: Viewport-Scaled Display Typography + Crystal Buttons */}
-        <div className="order-2 flex flex-col items-start lg:order-1 lg:-mt-4">
+      {/* Balanced 2-Column Hero Stage (Cohesive left-right rhythm & optical vertical center) */}
+      <main className="mx-auto grid w-full max-w-[1320px] flex-1 grid-cols-1 items-center gap-8 px-6 pt-2 pb-10 sm:px-10 lg:-mt-6 lg:grid-cols-[1.08fr_0.92fr] lg:gap-10 lg:px-14 lg:py-0">
+        {/* Left: Balanced Display Typography + Crystal Buttons */}
+        <div className="order-2 flex flex-col items-start lg:order-1">
           <h1
-            style={{ fontSize: 'clamp(2.5rem, 5.1vw, 4.75rem)' }}
-            className="bg-gradient-to-b from-white via-white to-[#dbeafe] bg-clip-text leading-[1.08] font-extrabold tracking-tight text-transparent"
+            style={{ fontSize: 'clamp(2.5rem, 4.4vw, 4.35rem)' }}
+            className="bg-gradient-to-b from-white via-white to-[#dbeafe] bg-clip-text leading-[1.1] font-extrabold tracking-tight text-transparent"
           >
             智权链 · 锂安溯
           </h1>
           <p
-            style={{ fontSize: 'clamp(1.5rem, 2.9vw, 2.65rem)' }}
+            style={{ fontSize: 'clamp(1.45rem, 2.5vw, 2.4rem)' }}
             className="mt-3.5 bg-gradient-to-r from-[#dbeafe] via-[#93c5fd] to-[#99f6e4] bg-clip-text font-bold tracking-tight text-transparent sm:mt-4"
           >
             - TrustGuard Battery -
           </p>
 
-          <div className="mt-7 space-y-2 sm:mt-9">
+          <div className="mt-8 space-y-2.5 sm:mt-10">
             <p
-              style={{ fontSize: 'clamp(1.15rem, 1.72vw, 1.56rem)' }}
+              style={{ fontSize: 'clamp(1.15rem, 1.58vw, 1.48rem)' }}
               className="bg-gradient-to-r from-[#38bdf8] via-[#2dd4bf] to-[#34d399] bg-clip-text font-bold tracking-wide text-transparent"
             >
               每一颗电芯，全周期可信。
             </p>
             <p
-              style={{ fontSize: 'clamp(1rem, 1.45vw, 1.32rem)' }}
-              className="leading-snug font-medium text-[#8ea6c2]"
+              style={{ fontSize: 'clamp(1rem, 1.32vw, 1.24rem)' }}
+              className="leading-relaxed font-medium text-[#8ea6c2]"
             >
               四方联盟多点背书。
             </p>
             <p
-              style={{ fontSize: 'clamp(1rem, 1.45vw, 1.32rem)' }}
-              className="leading-snug font-medium text-[#8ea6c2]"
+              style={{ fontSize: 'clamp(1rem, 1.32vw, 1.24rem)' }}
+              className="leading-relaxed font-medium text-[#8ea6c2]"
             >
               主动风控实时把关。
             </p>
           </div>
 
-          <div className="mt-8 flex flex-wrap items-center gap-4 sm:mt-11">
+          <div className="mt-9 flex flex-wrap items-center gap-4 sm:mt-11">
             <button
               type="button"
               onClick={() => openPicker()}
-              className="crystal-cta-lg group inline-flex cursor-pointer items-center gap-2.5 rounded-[14px] px-7 py-3.5 text-base font-bold tracking-wide text-white active:scale-[0.98] sm:px-8 sm:py-4 sm:text-[17px]"
+              className="crystal-cta-lg group inline-flex cursor-pointer items-center gap-2.5 rounded-[14px] px-7 py-3.5 text-[15px] font-bold tracking-wide text-white active:scale-[0.98] sm:px-8 sm:py-4 sm:text-base"
             >
               <span>选择身份登录</span>
               <ArrowRight className="h-[18px] w-[18px] transition-transform duration-150 group-hover:translate-x-0.5" />
@@ -403,7 +403,7 @@ export function LoginPortal() {
                 type="button"
                 disabled={Boolean(enteringName) || switching || loading}
                 onClick={() => void loginWithIdentity(lastIdentity)}
-                className="glass-ghost-btn inline-flex cursor-pointer items-center gap-2 rounded-[14px] px-5 py-3.5 text-sm font-semibold text-[#d6e6f7] active:scale-[0.98] disabled:opacity-50 sm:py-4 sm:text-[15px]"
+                className="glass-ghost-btn inline-flex cursor-pointer items-center gap-2 rounded-[14px] px-5 py-3.5 text-sm font-semibold text-[#d6e6f7] active:scale-[0.98] disabled:opacity-50 sm:py-4 sm:text-[14.5px]"
               >
                 {enteringName === lastIdentity.name ? (
                   <Loader2 className="h-4 w-4 animate-spin text-[#38bdf8]" />
@@ -416,8 +416,8 @@ export function LoginPortal() {
           </div>
         </div>
 
-        {/* Right: Grounded True-Transparent 3D Frosted-Glass Sculpture in Shared Studio Light */}
-        <div className="order-1 flex items-center justify-center lg:order-2 lg:justify-end">
+        {/* Right: Grounded 3D Sculpture Scaled Harmoniously (~0.82:1 ratio with left copy) */}
+        <div className="order-1 flex items-center justify-center lg:order-2">
           <div className="login-sculpture-stage">
             <div aria-hidden="true" className="login-sculpture-aura" />
             <div aria-hidden="true" className="login-sculpture-floor" />
@@ -427,7 +427,7 @@ export function LoginPortal() {
               alt="智权链·锂安溯 立体磨砂玻璃徽标雕塑"
               width={792}
               height={817}
-              className="login-sculpture-img h-[260px] w-auto object-contain select-none sm:h-[370px] lg:h-[min(43vw,580px)]"
+              className="login-sculpture-img h-[250px] w-auto object-contain select-none sm:h-[340px] lg:h-[min(35vw,64vh,495px)]"
             />
           </div>
         </div>
