@@ -312,18 +312,25 @@ export function LoginPortal() {
 
   return (
     <div className="login-minimal-canvas relative flex min-h-screen w-full flex-col overflow-x-hidden text-white selection:bg-teal-400/25">
-      {/* Aligned Top Bar (Proportionally scaled up ~20% to match monumental hero) */}
-      <header className="mx-auto flex h-20 w-full max-w-[1520px] shrink-0 items-center justify-between px-6 sm:h-[94px] sm:px-10 lg:px-14">
+      {/* Subtle Ambient Product-Page Atmosphere Layers (Zero Extra Text) */}
+      <div aria-hidden="true" className="login-ambient-dots pointer-events-none absolute inset-0" />
+      <div
+        aria-hidden="true"
+        className="login-horizon-floor pointer-events-none absolute inset-x-0 bottom-0 h-[26vh]"
+      />
+
+      {/* Aligned Top Bar (Proportionally scaled up with enlarged 56px brand emblem) */}
+      <header className="relative z-10 mx-auto flex h-20 w-full max-w-[1520px] shrink-0 items-center justify-between px-6 sm:h-[96px] sm:px-10 lg:px-14">
         <div className="flex items-center gap-3.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/brand/logo-mark.png"
             alt="智权链·锂安溯"
-            width={48}
-            height={48}
-            className="h-10 w-10 object-contain drop-shadow-[0_4px_16px_rgba(14,165,233,0.36)] select-none sm:h-12 sm:w-12"
+            width={56}
+            height={56}
+            className="h-11 w-11 object-contain drop-shadow-[0_6px_18px_rgba(14,165,233,0.42)] select-none sm:h-14 sm:w-14"
           />
-          <span className="bg-gradient-to-b from-white to-[#dbeafe] bg-clip-text text-lg font-bold tracking-wide text-transparent sm:text-[22px]">
+          <span className="bg-gradient-to-b from-white to-[#dbeafe] bg-clip-text text-xl font-bold tracking-wide text-transparent sm:text-[23px]">
             智权链·锂安溯
           </span>
         </div>
@@ -348,10 +355,12 @@ export function LoginPortal() {
         >
           选择身份
         </button>
+
+        <div aria-hidden="true" className="login-header-hairline pointer-events-none absolute inset-x-10 bottom-0 h-px" />
       </header>
 
-      {/* Balanced 2-Column Hero Stage (Uniformly scaled up ~20% with tight golden ratio) */}
-      <main className="mx-auto grid w-full max-w-[1460px] flex-1 grid-cols-1 items-center gap-8 px-6 pt-2 pb-10 sm:px-10 lg:-mt-4 lg:grid-cols-[1.08fr_0.92fr] lg:gap-12 lg:px-14 lg:py-0">
+      {/* Balanced 2-Column Hero Stage (Uniformly scaled up with flagship depth) */}
+      <main className="relative z-10 mx-auto grid w-full max-w-[1460px] flex-1 grid-cols-1 items-center gap-8 px-6 pt-2 pb-10 sm:px-10 lg:-mt-4 lg:grid-cols-[1.04fr_0.96fr] lg:gap-10 lg:px-14 lg:py-0">
         {/* Left: Proportionally Enlarged Display Typography + Crystal Buttons */}
         <div className="order-2 flex flex-col items-start lg:order-1">
           <h1
@@ -416,9 +425,11 @@ export function LoginPortal() {
           </div>
         </div>
 
-        {/* Right: Proportionally Enlarged Grounded 3D Sculpture */}
+        {/* Right: Enlarged Flagship 3D Sculpture Framed by Soft Concentric Halo Rings */}
         <div className="order-1 flex items-center justify-center lg:order-2">
           <div className="login-sculpture-stage">
+            <div aria-hidden="true" className="login-sculpture-ring-outer" />
+            <div aria-hidden="true" className="login-sculpture-ring-inner" />
             <div aria-hidden="true" className="login-sculpture-aura" />
             <div aria-hidden="true" className="login-sculpture-floor" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -427,7 +438,7 @@ export function LoginPortal() {
               alt="智权链·锂安溯 立体磨砂玻璃徽标雕塑"
               width={792}
               height={817}
-              className="login-sculpture-img h-[265px] w-auto object-contain select-none sm:h-[380px] lg:h-[min(41vw,73vh,590px)]"
+              className="login-sculpture-img h-[285px] w-auto object-contain select-none sm:h-[400px] lg:h-[min(44vw,79vh,650px)]"
             />
           </div>
         </div>

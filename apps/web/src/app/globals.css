@@ -246,15 +246,45 @@ body.presentation-mode .presentation-sidebar-hide {
   }
 }
 
-/* Minimalist Flagship Login Surface (Unified Sapphire-Cyan-Emerald Studio Space) */
+/* Minimalist Flagship Login Surface (Multi-Layered Showroom Gradient + Atmospheric Depth) */
 .login-minimal-canvas {
-  background-color: #050d1a;
+  background-color: #030812;
   background-image:
-    radial-gradient(ellipse 58% 48% at 18% 22%, rgba(37, 99, 235, 0.13), transparent 70%),
-    radial-gradient(ellipse 64% 34% at 52% -6%, rgba(14, 165, 233, 0.14), rgba(20, 184, 166, 0.06) 52%, transparent 80%),
-    radial-gradient(ellipse 52% 54% at 76% 54%, rgba(14, 165, 233, 0.11), rgba(16, 185, 129, 0.08) 46%, transparent 74%),
-    radial-gradient(ellipse 76% 26% at 64% 94%, rgba(14, 52, 92, 0.34), transparent 78%),
-    linear-gradient(160deg, #050d1a 0%, #071426 54%, #061120 100%);
+    radial-gradient(ellipse 72% 36% at 50% -8%, rgba(14, 165, 233, 0.2), rgba(20, 184, 166, 0.09) 46%, transparent 78%),
+    radial-gradient(ellipse 54% 52% at 14% 26%, rgba(37, 99, 235, 0.18), rgba(29, 78, 216, 0.05) 52%, transparent 74%),
+    radial-gradient(ellipse 56% 58% at 76% 52%, rgba(14, 165, 233, 0.15), rgba(16, 185, 129, 0.11) 46%, transparent 74%),
+    radial-gradient(ellipse 90% 26% at 58% 98%, rgba(15, 58, 98, 0.42), rgba(8, 32, 58, 0.18) 54%, transparent 80%),
+    linear-gradient(135deg, #040a16 0%, #07152a 38%, #071c2e 68%, #040b17 100%);
+}
+
+/* Whisper-quiet tactile micro-dot atmosphere masked strictly inside ambient light pools */
+.login-ambient-dots {
+  background-image: radial-gradient(rgba(186, 230, 253, 0.16) 1px, transparent 1px);
+  background-size: 28px 28px;
+  -webkit-mask-image:
+    radial-gradient(ellipse 58% 54% at 74% 52%, rgba(0, 0, 0, 0.85) 0%, transparent 74%),
+    radial-gradient(ellipse 46% 42% at 16% 24%, rgba(0, 0, 0, 0.55) 0%, transparent 70%);
+  mask-image:
+    radial-gradient(ellipse 58% 54% at 74% 52%, rgba(0, 0, 0, 0.85) 0%, transparent 74%),
+    radial-gradient(ellipse 46% 42% at 16% 24%, rgba(0, 0, 0, 0.55) 0%, transparent 70%);
+}
+
+/* Subtle showroom horizon floor sheen unifying left typography and right 3D pedestal */
+.login-horizon-floor {
+  background:
+    radial-gradient(ellipse 76% 100% at 62% 100%, rgba(14, 165, 233, 0.11) 0%, rgba(20, 184, 166, 0.06) 40%, transparent 74%),
+    linear-gradient(180deg, transparent 0%, rgba(7, 22, 42, 0.34) 100%);
+}
+
+.login-header-hairline {
+  background: linear-gradient(
+    90deg,
+    transparent 4%,
+    rgba(56, 189, 248, 0.18) 32%,
+    rgba(45, 212, 191, 0.24) 54%,
+    rgba(56, 189, 248, 0.14) 78%,
+    transparent 96%
+  );
 }
 
 @keyframes tg-aura-breathe {
@@ -275,39 +305,57 @@ body.presentation-mode .presentation-sidebar-hide {
   justify-content: center;
 }
 
+/* Soft concentric showroom halo rings subtly framing the 3D frosted-glass emblem */
+.login-sculpture-ring-outer {
+  position: absolute;
+  inset: -4% -6% 4% -6%;
+  border-radius: 9999px;
+  border: 1px solid rgba(125, 211, 252, 0.08);
+  background: radial-gradient(circle at 50% 48%, rgba(14, 165, 233, 0.05) 0%, transparent 68%);
+  pointer-events: none;
+}
+
+.login-sculpture-ring-inner {
+  position: absolute;
+  inset: 7% 6% 14% 6%;
+  border-radius: 9999px;
+  border: 1px solid rgba(45, 212, 191, 0.1);
+  pointer-events: none;
+}
+
 /* Soft volumetric studio backlight shining behind the frosted shield & through the ring loops */
 .login-sculpture-aura {
   position: absolute;
-  inset: 3% 4% 14% 4%;
+  inset: 2% 2% 12% 2%;
   pointer-events: none;
   background:
-    radial-gradient(circle at 38% 42%, rgba(37, 99, 235, 0.3) 0%, transparent 56%),
-    radial-gradient(circle at 64% 44%, rgba(20, 184, 166, 0.26) 0%, transparent 56%);
-  filter: blur(30px);
+    radial-gradient(circle at 36% 42%, rgba(37, 99, 235, 0.34) 0%, transparent 56%),
+    radial-gradient(circle at 66% 44%, rgba(20, 184, 166, 0.3) 0%, transparent 56%);
+  filter: blur(34px);
   animation: tg-aura-breathe 5.5s ease-in-out infinite;
 }
 
 /* Grounded studio floor contact shadow + refracted sapphire/emerald glass caustics */
 .login-sculpture-floor {
   position: absolute;
-  left: -8%;
-  right: -8%;
+  left: -10%;
+  right: -10%;
   bottom: -4%;
   height: 32%;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 46% 36% at 50% 58%, rgba(1, 4, 11, 0.94) 0%, rgba(2, 8, 18, 0.7) 46%, transparent 78%),
-    radial-gradient(ellipse 35% 28% at 29% 54%, rgba(37, 99, 235, 0.4) 0%, transparent 72%),
-    radial-gradient(ellipse 37% 28% at 71% 54%, rgba(20, 184, 166, 0.4) 0%, transparent 72%);
-  filter: blur(11px);
+    radial-gradient(ellipse 46% 36% at 50% 58%, rgba(1, 3, 9, 0.95) 0%, rgba(2, 7, 16, 0.74) 46%, transparent 78%),
+    radial-gradient(ellipse 36% 28% at 28% 54%, rgba(37, 99, 235, 0.44) 0%, transparent 72%),
+    radial-gradient(ellipse 38% 28% at 72% 54%, rgba(20, 184, 166, 0.44) 0%, transparent 72%);
+  filter: blur(12px);
 }
 
 .login-sculpture-img {
   position: relative;
   z-index: 2;
   filter:
-    drop-shadow(0 28px 34px rgba(1, 5, 14, 0.86))
-    drop-shadow(0 4px 18px rgba(14, 165, 233, 0.16));
+    drop-shadow(0 30px 38px rgba(1, 4, 12, 0.88))
+    drop-shadow(0 6px 22px rgba(14, 165, 233, 0.18));
 }
 
 .crystal-cta-sm {
